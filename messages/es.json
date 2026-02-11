@@ -1,0 +1,83 @@
+{
+  "common": {
+    "appName": "ClimaLab",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "back": "Volver",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "error": "Error",
+    "success": "Éxito"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "email": "Correo electrónico",
+    "sendMagicLink": "Enviar enlace mágico",
+    "checkEmail": "Revisa tu correo",
+    "checkEmailDescription": "Hemos enviado un enlace de acceso a tu correo electrónico. Haz clic en el enlace para iniciar sesión.",
+    "loginTitle": "Bienvenido a ClimaLab",
+    "loginDescription": "Ingresa tu correo electrónico para recibir un enlace de acceso."
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "organizations": "Organizaciones",
+    "instruments": "Instrumentos"
+  },
+  "dashboard": {
+    "title": "Panel de Control",
+    "welcome": "Bienvenido",
+    "orgCount": "{count} organizaciones",
+    "employees": "empleados",
+    "departments": "departamentos"
+  },
+  "organizations": {
+    "title": "Organizaciones",
+    "new": "Nueva Organización",
+    "name": "Nombre",
+    "slug": "Slug",
+    "industry": "Industria",
+    "country": "País",
+    "employeeCount": "Número de empleados",
+    "departments": "Departamentos",
+    "addDepartment": "Agregar departamento",
+    "removeDepartment": "Eliminar departamento",
+    "sizeCategory": "Categoría de tamaño",
+    "created": "Organización creada exitosamente",
+    "updated": "Organización actualizada exitosamente",
+    "info": "Información",
+    "departmentsList": "Departamentos",
+    "history": "Historial",
+    "noDepartments": "No hay departamentos registrados",
+    "noOrganizations": "No hay organizaciones registradas"
+  },
+  "instruments": {
+    "title": "Instrumentos",
+    "dimensions": "dimensiones",
+    "items": "ítems",
+    "version": "Versión",
+    "mode": "Modo",
+    "full": "Completo",
+    "pulse": "Pulso",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "reverse": "Reverso",
+    "anchor": "Ancla",
+    "attentionCheck": "Verificación",
+    "editItem": "Editar ítem",
+    "itemText": "Texto del ítem",
+    "itemUpdated": "Ítem actualizado exitosamente",
+    "noInstruments": "No hay instrumentos registrados"
+  },
+  "validation": {
+    "required": "Este campo es requerido",
+    "minLength": "Mínimo {min} caracteres",
+    "maxLength": "Máximo {max} caracteres",
+    "invalidEmail": "Correo electrónico inválido",
+    "employeeRange": "Debe ser entre 1 y 200 empleados"
+  }
+}
