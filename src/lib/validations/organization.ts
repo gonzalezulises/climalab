@@ -16,7 +16,7 @@ export const createOrganizationSchema = z.object({
     .number()
     .int()
     .min(1, "Mínimo 1 empleado")
-    .max(200, "Máximo 200 empleados"),
+    .max(500, "Máximo 500 empleados"),
   departments: z.array(z.string().min(1).max(100)).default([]),
 });
 
