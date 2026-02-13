@@ -30,6 +30,7 @@ import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
 import { CopyLinkButton } from "./copy-link-button";
 import { CopyAllLinksButton } from "./copy-all-links-button";
+import { MonitoringPanel } from "./monitoring-panel";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Borrador", variant: "secondary" },
@@ -249,55 +250,18 @@ export default async function CampaignDetailPage({
         </TabsContent>
 
         {/* Monitoring Tab */}
-        <TabsContent value="monitoring" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Completados</CardDescription>
-                <CardTitle className="text-3xl">{completedCount}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>En progreso</CardDescription>
-                <CardTitle className="text-3xl">{inProgressCount}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Pendientes</CardDescription>
-                <CardTitle className="text-3xl">{pendingCount}</CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {respondents.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Tasa de respuesta</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>
-                      {completedCount} de {respondents.length} participantes
-                    </span>
-                    <span>
-                      {Math.round((completedCount / respondents.length) * 100)}%
-                    </span>
-                  </div>
-                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full transition-all"
-                      style={{
-                        width: `${(completedCount / respondents.length) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="monitoring">
+          <MonitoringPanel
+            campaignId={campaign.id}
+            isActive={campaign.status === "active"}
+            initialStats={{
+              completed: completedCount,
+              in_progress: inProgressCount,
+              pending: pendingCount,
+              disqualified: respondents.filter((r) => r.status === "disqualified").length,
+              total: respondents.length,
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
