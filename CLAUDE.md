@@ -91,6 +91,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 ```bash
 supabase start          # Start local Supabase
 supabase db reset       # Apply migrations + seed
+npm run seed:results    # Calculate demo campaign results
 npm run dev             # Start Next.js dev server
 ```
 
