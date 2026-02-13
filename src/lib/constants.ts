@@ -17,6 +17,13 @@ export const COUNTRIES = [
   { code: "CL", name: "Chile" },
   { code: "PE", name: "Perú" },
   { code: "EC", name: "Ecuador" },
+  { code: "PA", name: "Panamá" },
+  { code: "CR", name: "Costa Rica" },
+  { code: "GT", name: "Guatemala" },
+  { code: "SV", name: "El Salvador" },
+  { code: "HN", name: "Honduras" },
+  { code: "NI", name: "Nicaragua" },
+  { code: "DO", name: "República Dominicana" },
   { code: "US", name: "Estados Unidos" },
   { code: "ES", name: "España" },
 ] as const;

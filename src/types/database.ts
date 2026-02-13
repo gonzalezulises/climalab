@@ -1,3 +1,4 @@
+Connecting to db 5432
 export type Json =
   | string
   | number
@@ -34,6 +35,134 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_results: {
+        Row: {
+          avg_score: number | null
+          calculated_at: string
+          campaign_id: string
+          dimension_code: string | null
+          favorability_pct: number | null
+          id: string
+          metadata: Json | null
+          respondent_count: number | null
+          response_count: number | null
+          result_type: string
+          segment_key: string | null
+          segment_type: string | null
+          std_score: number | null
+        }
+        Insert: {
+          avg_score?: number | null
+          calculated_at?: string
+          campaign_id: string
+          dimension_code?: string | null
+          favorability_pct?: number | null
+          id?: string
+          metadata?: Json | null
+          respondent_count?: number | null
+          response_count?: number | null
+          result_type: string
+          segment_key?: string | null
+          segment_type?: string | null
+          std_score?: number | null
+        }
+        Update: {
+          avg_score?: number | null
+          calculated_at?: string
+          campaign_id?: string
+          dimension_code?: string | null
+          favorability_pct?: number | null
+          id?: string
+          metadata?: Json | null
+          respondent_count?: number | null
+          response_count?: number | null
+          result_type?: string
+          segment_key?: string | null
+          segment_type?: string | null
+          std_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_results_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          allow_comments: boolean
+          anonymous: boolean
+          confidence_level: number | null
+          created_at: string
+          ends_at: string | null
+          id: string
+          instrument_id: string
+          margin_of_error: number | null
+          name: string
+          organization_id: string
+          population_n: number | null
+          response_rate: number | null
+          sample_n: number | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          updated_at: string
+        }
+        Insert: {
+          allow_comments?: boolean
+          anonymous?: boolean
+          confidence_level?: number | null
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          instrument_id: string
+          margin_of_error?: number | null
+          name: string
+          organization_id: string
+          population_n?: number | null
+          response_rate?: number | null
+          sample_n?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+        }
+        Update: {
+          allow_comments?: boolean
+          anonymous?: boolean
+          confidence_level?: number | null
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          instrument_id?: string
+          margin_of_error?: number | null
+          name?: string
+          organization_id?: string
+          population_n?: number | null
+          response_rate?: number | null
+          sample_n?: number | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "instruments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dimensions: {
         Row: {
           code: string
@@ -155,6 +284,48 @@ export type Database = {
           },
         ]
       }
+      open_responses: {
+        Row: {
+          created_at: string
+          dimension_id: string | null
+          id: string
+          question_type: string
+          respondent_id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          dimension_id?: string | null
+          id?: string
+          question_type?: string
+          respondent_id: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          dimension_id?: string | null
+          id?: string
+          question_type?: string
+          respondent_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_responses_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_responses_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "respondents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           country: string
@@ -238,6 +409,95 @@ export type Database = {
           },
         ]
       }
+      respondents: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          created_at: string
+          department: string | null
+          gender: string | null
+          id: string
+          ip_hash: string | null
+          started_at: string | null
+          status: string
+          tenure: string | null
+          token: string
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          gender?: string | null
+          id?: string
+          ip_hash?: string | null
+          started_at?: string | null
+          status?: string
+          tenure?: string | null
+          token?: string
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          created_at?: string
+          department?: string | null
+          gender?: string | null
+          id?: string
+          ip_hash?: string | null
+          started_at?: string | null
+          status?: string
+          tenure?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "respondents_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          answered_at: string
+          id: string
+          item_id: string
+          respondent_id: string
+          score: number | null
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          item_id: string
+          respondent_id: string
+          score?: number | null
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          item_id?: string
+          respondent_id?: string
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responses_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "respondents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -252,6 +512,7 @@ export type Database = {
       }
     }
     Enums: {
+      campaign_status: "draft" | "active" | "closed" | "archived"
       instrument_mode: "full" | "pulse"
       size_category: "micro" | "small" | "medium"
       target_size: "all" | "small" | "medium"
@@ -386,6 +647,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      campaign_status: ["draft", "active", "closed", "archived"],
       instrument_mode: ["full", "pulse"],
       size_category: ["micro", "small", "medium"],
       target_size: ["all", "small", "medium"],
@@ -393,3 +655,6 @@ export const Constants = {
     },
   },
 } as const
+
+A new version of Supabase CLI is available: v2.75.0 (currently installed v2.72.7)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

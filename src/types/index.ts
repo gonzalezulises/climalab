@@ -15,11 +15,19 @@ export type Dimension = Database["public"]["Tables"]["dimensions"]["Row"];
 export type Item = Database["public"]["Tables"]["items"]["Row"];
 export type ItemUpdate = Database["public"]["Tables"]["items"]["Update"];
 
+export type Campaign = Database["public"]["Tables"]["campaigns"]["Row"];
+export type CampaignInsert = Database["public"]["Tables"]["campaigns"]["Insert"];
+export type Respondent = Database["public"]["Tables"]["respondents"]["Row"];
+export type Response = Database["public"]["Tables"]["responses"]["Row"];
+export type OpenResponse = Database["public"]["Tables"]["open_responses"]["Row"];
+export type CampaignResult = Database["public"]["Tables"]["campaign_results"]["Row"];
+
 // Enum types
 export type SizeCategory = Database["public"]["Enums"]["size_category"];
 export type UserRole = Database["public"]["Enums"]["user_role"];
 export type InstrumentMode = Database["public"]["Enums"]["instrument_mode"];
 export type TargetSize = Database["public"]["Enums"]["target_size"];
+export type CampaignStatus = Database["public"]["Enums"]["campaign_status"];
 
 // Composite types for queries
 export type InstrumentWithDimensions = Instrument & {
