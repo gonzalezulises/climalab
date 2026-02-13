@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Building2, ClipboardList, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,7 @@ import type { Profile } from "@/types";
 const navItems = [
   { title: "Panel", href: "/dashboard", icon: LayoutDashboard },
   { title: "Organizaciones", href: "/organizations", icon: Building2 },
+  { title: "Campañas", href: "/campaigns", icon: BarChart3 },
   { title: "Instrumentos", href: "/instruments", icon: ClipboardList },
 ];
 

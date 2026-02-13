@@ -60,10 +60,13 @@ async function getSurveyData(token: string) {
   }
 
   // Fetch existing responses for auto-save recovery
-  const { data: existingResponses } = await supabase
+  const { data: rawExistingResponses } = await supabase
     .from("responses")
     .select("item_id, score")
     .eq("respondent_id", respondent.id);
+
+  const existingResponses = (rawExistingResponses ?? [])
+    .filter((r): r is typeof r & { score: number } => r.score !== null);
 
   const org = campaign.organizations as unknown as {
     name: string;
@@ -75,7 +78,7 @@ async function getSurveyData(token: string) {
     respondent,
     campaign,
     dimensions,
-    existingResponses: existingResponses ?? [],
+    existingResponses,
     organization: org,
   };
 }

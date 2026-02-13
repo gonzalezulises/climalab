@@ -11,6 +11,7 @@ import {
   type GenerateLinksInput,
 } from "@/lib/validations/campaign";
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
+import type { Json } from "@/types/database";
 
 // ---------------------------------------------------------------------------
 // getCampaigns — list campaigns with basic stats
@@ -389,7 +390,7 @@ export async function calculateResults(
     favorability_pct: number;
     response_count: number;
     respondent_count: number;
-    metadata: Record<string, unknown>;
+    metadata: Json;
   }> = [];
 
   const dimensionCodes = dimensions
@@ -422,7 +423,7 @@ export async function calculateResults(
       favorability_pct: Math.round(favorability(allDimScores) * 10) / 10,
       response_count: allDimScores.length,
       respondent_count: respondentCount,
-      metadata: {},
+      metadata: {} as Json,
     });
   }
 
@@ -477,7 +478,7 @@ export async function calculateResults(
           favorability_pct: Math.round(favorability(scores) * 10) / 10,
           response_count: scores.length,
           respondent_count: respondentCount,
-          metadata: {},
+          metadata: {} as Json,
         });
       }
     }
@@ -530,7 +531,7 @@ export async function calculateResults(
       favorability_pct: Math.round(favorability(data.scores) * 10) / 10,
       response_count: data.scores.length,
       respondent_count: data.respondentCount,
-      metadata: { item_text: itemTextMap.get(itemId) },
+      metadata: { item_text: itemTextMap.get(itemId) ?? null } as Json,
     });
   }
 
@@ -569,23 +570,11 @@ export async function calculateResults(
           neutral: { count: profiles.neutral, pct: Math.round((profiles.neutral / total) * 1000) / 10 },
           disengaged: { count: profiles.disengaged, pct: Math.round((profiles.disengaged / total) * 1000) / 10 },
         },
-      },
+      } as Json,
     });
   }
 
-  // 11. Calculate eNPS if data exists
-  const { data: openResponses } = await supabase
-    .from("campaign_results")
-    .select("metadata")
-    .eq("campaign_id", campaignId)
-    .eq("result_type", "enps")
-    .maybeSingle();
-
-  // eNPS is stored separately via survey - check open_responses for eNPS scores
-  // eNPS scores will be stored in campaign_results metadata during survey submission
-  // For now, calculate if there's existing eNPS data in metadata
-
-  // 12. Ficha técnica
+  // 11. Ficha técnica
   const org = campaign.organizations as unknown as { employee_count: number } | null;
   const populationN = org?.employee_count ?? 0;
   const sampleN = validRespondentIds.size;

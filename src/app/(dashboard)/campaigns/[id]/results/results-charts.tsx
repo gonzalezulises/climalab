@@ -100,7 +100,7 @@ export function ResultsCharts({
                 fillOpacity={0.3}
               />
               <Tooltip
-                formatter={(value: number) => [value.toFixed(2), "Score"]}
+                formatter={(value) => [Number(value).toFixed(2), "Score"]}
               />
             </RadarChart>
           </ResponsiveContainer>
@@ -131,7 +131,7 @@ export function ResultsCharts({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [`${value}%`, ""]}
+                  formatter={(value) => [`${value}%`, ""]}
                 />
                 <Legend
                   formatter={(value) => (

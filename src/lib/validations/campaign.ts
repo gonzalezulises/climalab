@@ -23,6 +23,6 @@ export const generateLinksSchema = z.object({
   count: z.number().int().min(1, "Mínimo 1 enlace").max(1000, "Máximo 1000 enlaces"),
 });
 
-export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
+export type CreateCampaignInput = z.input<typeof createCampaignSchema>;
 export type UpdateCampaignStatusInput = z.infer<typeof updateCampaignStatusSchema>;
 export type GenerateLinksInput = z.infer<typeof generateLinksSchema>;

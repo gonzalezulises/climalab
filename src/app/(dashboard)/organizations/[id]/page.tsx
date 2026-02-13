@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getOrganization } from "@/actions/organizations";
+import { getCampaigns } from "@/actions/campaigns";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -32,6 +34,9 @@ export default async function OrganizationDetailPage({
   const org = result.data;
   const countryName =
     COUNTRIES.find((c) => c.code === org.country)?.name || org.country;
+
+  const campaignsResult = await getCampaigns(id);
+  const campaigns = campaignsResult.success ? campaignsResult.data : [];
 
   return (
     <div className="space-y-6">
@@ -127,16 +132,57 @@ export default async function OrganizationDetailPage({
         <TabsContent value="history" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Historial</CardTitle>
+              <CardTitle>Historial de mediciones</CardTitle>
               <CardDescription>
-                Historial de mediciones y actividad
+                {campaigns.length} campañas registradas
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                No hay mediciones registradas aún. Esta funcionalidad estará
-                disponible en futuras versiones.
-              </p>
+              {campaigns.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No hay mediciones registradas aún.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map((campaign) => (
+                    <Link
+                      key={campaign.id}
+                      href={
+                        campaign.status === "closed"
+                          ? `/campaigns/${campaign.id}/results`
+                          : `/campaigns/${campaign.id}`
+                      }
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{campaign.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(campaign.created_at).toLocaleDateString("es-MX")}
+                          {campaign.response_rate !== null &&
+                            ` · Respuesta: ${campaign.response_rate}%`}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          campaign.status === "active"
+                            ? "default"
+                            : campaign.status === "closed"
+                              ? "outline"
+                              : "secondary"
+                        }
+                      >
+                        {campaign.status === "draft"
+                          ? "Borrador"
+                          : campaign.status === "active"
+                            ? "Activa"
+                            : campaign.status === "closed"
+                              ? "Cerrada"
+                              : "Archivada"}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
