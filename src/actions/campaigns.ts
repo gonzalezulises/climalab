@@ -491,22 +491,22 @@ export async function calculateResults(
   }
 
   // 9. Calculate per-item results (global)
-  const itemScoresMap = new Map<string, { scores: number[]; respondentCount: number }>();
+  const itemScoresGlobal = new Map<string, { scores: number[]; respondentCount: number }>();
 
-  for (const [, rd] of respondentData) {
-    const responses = respondentResponseMap.get([...respondentData].find(([, v]) => v === rd)?.[0] ?? "");
+  for (const [respondentId, rd] of respondentData) {
+    const responses = respondentResponseMap.get(respondentId);
     if (!responses) continue;
 
-    for (const [itemId, score] of responses) {
+    for (const [itemId, rawScore] of responses) {
       const itemInfo = itemMap.get(itemId);
       if (!itemInfo || itemInfo.is_attention_check) continue;
 
-      const adjustedScore = itemInfo.is_reverse ? 6 - score : score;
+      const adjustedScore = itemInfo.is_reverse ? 6 - rawScore : rawScore;
 
-      if (!itemScoresMap.has(itemId)) {
-        itemScoresMap.set(itemId, { scores: [], respondentCount: 0 });
+      if (!itemScoresGlobal.has(itemId)) {
+        itemScoresGlobal.set(itemId, { scores: [], respondentCount: 0 });
       }
-      const entry = itemScoresMap.get(itemId)!;
+      const entry = itemScoresGlobal.get(itemId)!;
       entry.scores.push(adjustedScore);
       entry.respondentCount++;
     }
@@ -522,7 +522,7 @@ export async function calculateResults(
     }
   }
 
-  for (const [itemId, data] of itemScoresMap) {
+  for (const [itemId, data] of itemScoresGlobal) {
     const itemInfo = itemMap.get(itemId);
     if (!itemInfo) continue;
 
@@ -537,7 +537,10 @@ export async function calculateResults(
       favorability_pct: Math.round(favorability(data.scores) * 10) / 10,
       response_count: data.scores.length,
       respondent_count: data.respondentCount,
-      metadata: { item_text: itemTextMap.get(itemId) ?? null } as Json,
+      metadata: {
+        item_text: itemTextMap.get(itemId) ?? null,
+        dimension_name: dimensionNameMap.get(itemInfo.dimension_code) ?? null,
+      } as Json,
     });
   }
 
