@@ -516,7 +516,7 @@ export type Database = {
     Enums: {
       campaign_status: "draft" | "active" | "closed" | "archived"
       instrument_mode: "full" | "pulse"
-      size_category: "micro" | "small" | "medium"
+      size_category: "micro" | "small" | "medium" | "large"
       target_size: "all" | "small" | "medium"
       user_role: "super_admin" | "org_admin" | "member"
     }
@@ -651,7 +651,7 @@ export const Constants = {
     Enums: {
       campaign_status: ["draft", "active", "closed", "archived"],
       instrument_mode: ["full", "pulse"],
-      size_category: ["micro", "small", "medium"],
+      size_category: ["micro", "small", "medium", "large"],
       target_size: ["all", "small", "medium"],
       user_role: ["super_admin", "org_admin", "member"],
     },

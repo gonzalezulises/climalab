@@ -8,6 +8,7 @@ export const SIZE_CATEGORIES = {
   micro: "Micro (1-10)",
   small: "Pequeña (11-50)",
   medium: "Mediana (51-200)",
+  large: "Grande (201-500)",
 } as const;
 
 export const COUNTRIES = [
