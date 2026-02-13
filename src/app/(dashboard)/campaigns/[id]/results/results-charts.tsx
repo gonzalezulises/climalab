@@ -22,6 +22,7 @@ import {
 
 type DimensionData = {
   code: string;
+  name: string;
   avg: number;
   fav: number;
 };
@@ -50,7 +51,7 @@ export function ResultsCharts({
 }) {
   // Radar chart data
   const radarData = dimensionResults.map((d) => ({
-    dimension: d.code,
+    dimension: d.name,
     score: d.avg,
     fullMark: 5,
   }));

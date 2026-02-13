@@ -97,6 +97,15 @@ export default async function ResultsPage({
         ) / dimensionResults.length
       : 0;
 
+  // Build dimension name map from metadata
+  const dimNameMap: Record<string, string> = {};
+  for (const r of dimensionResults) {
+    const name = (r.metadata as { dimension_name?: string })?.dimension_name;
+    if (name && r.dimension_code) {
+      dimNameMap[r.dimension_code] = name;
+    }
+  }
+
   // Top/Bottom items
   const sortedItems = [...itemResults].sort(
     (a, b) => (b.avg_score ?? 0) - (a.avg_score ?? 0)
@@ -209,6 +218,7 @@ export default async function ResultsPage({
       <ResultsCharts
         dimensionResults={dimensionResults.map((d) => ({
           code: d.dimension_code!,
+          name: dimNameMap[d.dimension_code!] ?? d.dimension_code!,
           avg: d.avg_score ?? 0,
           fav: d.favorability_pct ?? 0,
         }))}
@@ -253,7 +263,9 @@ export default async function ResultsPage({
             return (
               <div key={dim.dimension_code} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{dim.dimension_code}</span>
+                  <span className="font-medium">
+                    {(dim.metadata as { dimension_name?: string })?.dimension_name ?? dim.dimension_code}
+                  </span>
                   <div className="flex items-center gap-2">
                     <span>{dim.avg_score?.toFixed(2)}</span>
                     <span
@@ -417,8 +429,8 @@ export default async function ResultsPage({
                           <tr className="border-b">
                             <th className="text-left py-2 pr-4">Segmento</th>
                             {dimCodes.map((code) => (
-                              <th key={code} className="text-center px-2 py-2">
-                                {code}
+                              <th key={code} className="text-center px-2 py-2 text-xs">
+                                {dimNameMap[code] ?? code}
                               </th>
                             ))}
                           </tr>

@@ -252,6 +252,12 @@ export async function calculateResults(
     }
   }
 
+  // Build dimension name map
+  const dimensionNameMap = new Map<string, string>();
+  for (const dim of dimensions) {
+    dimensionNameMap.set(dim.code, dim.name);
+  }
+
   // 3. Fetch all respondents for the campaign
   const { data: respondents, error: respError } = await supabase
     .from("respondents")
@@ -423,7 +429,7 @@ export async function calculateResults(
       favorability_pct: Math.round(favorability(allDimScores) * 10) / 10,
       response_count: allDimScores.length,
       respondent_count: respondentCount,
-      metadata: {} as Json,
+      metadata: { dimension_name: dimensionNameMap.get(code) ?? code } as Json,
     });
   }
 
@@ -478,7 +484,7 @@ export async function calculateResults(
           favorability_pct: Math.round(favorability(scores) * 10) / 10,
           response_count: scores.length,
           respondent_count: respondentCount,
-          metadata: {} as Json,
+          metadata: { dimension_name: dimensionNameMap.get(code) ?? code } as Json,
         });
       }
     }
