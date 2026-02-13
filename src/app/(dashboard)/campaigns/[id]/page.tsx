@@ -28,6 +28,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
+import { CopyLinkButton } from "./copy-link-button";
+import { CopyAllLinksButton } from "./copy-all-links-button";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Borrador", variant: "secondary" },
@@ -176,9 +178,16 @@ export default async function CampaignDetailPage({
           <Card>
             <CardHeader>
               <CardTitle>Enlaces de participación</CardTitle>
-              <CardDescription>
-                Genera y comparte enlaces para que los participantes respondan la encuesta.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription>
+                  Genera y comparte enlaces para que los participantes respondan la encuesta.
+                </CardDescription>
+                {respondents.length > 0 && (
+                  <CopyAllLinksButton
+                    links={respondents.map((r) => `${baseUrl}/survey/${r.token}`)}
+                  />
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {respondents.length === 0 ? (
@@ -217,9 +226,12 @@ export default async function CampaignDetailPage({
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <code className="text-xs text-muted-foreground">
-                              {baseUrl}/survey/{resp.token}
-                            </code>
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {baseUrl}/survey/{resp.token}
+                              </code>
+                              <CopyLinkButton url={`${baseUrl}/survey/${resp.token}`} />
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
