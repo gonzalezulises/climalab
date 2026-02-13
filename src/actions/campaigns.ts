@@ -574,6 +574,40 @@ export async function calculateResults(
     });
   }
 
+  // 10b. Calculate eNPS
+  const { data: enpsData } = await supabase
+    .from("respondents")
+    .select("enps_score")
+    .eq("campaign_id", campaignId)
+    .in("id", [...validRespondentIds])
+    .not("enps_score", "is", null);
+
+  if (enpsData && enpsData.length > 0) {
+    const enpsScoresArr = enpsData.map((r) => r.enps_score!);
+    const promoters = enpsScoresArr.filter((s) => s >= 9).length;
+    const detractors = enpsScoresArr.filter((s) => s <= 6).length;
+    const enpsTotal = enpsScoresArr.length;
+    const enpsValue = Math.round(((promoters - detractors) / enpsTotal) * 100);
+
+    results.push({
+      campaign_id: campaignId,
+      result_type: "enps",
+      dimension_code: null,
+      segment_key: "global",
+      segment_type: "global",
+      avg_score: enpsValue,
+      std_score: 0,
+      favorability_pct: Math.round((promoters / enpsTotal) * 1000) / 10,
+      response_count: enpsTotal,
+      respondent_count: enpsTotal,
+      metadata: {
+        promoters: { count: promoters, pct: Math.round((promoters / enpsTotal) * 1000) / 10 },
+        passives: { count: enpsTotal - promoters - detractors, pct: Math.round(((enpsTotal - promoters - detractors) / enpsTotal) * 1000) / 10 },
+        detractors: { count: detractors, pct: Math.round((detractors / enpsTotal) * 1000) / 10 },
+      } as Json,
+    });
+  }
+
   // 11. Ficha técnica
   const org = campaign.organizations as unknown as { employee_count: number } | null;
   const populationN = org?.employee_count ?? 0;

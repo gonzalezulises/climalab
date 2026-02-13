@@ -267,13 +267,12 @@ export function SurveyClient({
       await supabase.from("open_responses").insert(rows);
     }
 
-    // Save eNPS as a campaign result metadata (via a special response)
+    // Save eNPS score
     if (enpsScore !== null) {
-      // Store eNPS in campaign_results via the respondent's metadata
-      // We'll accumulate individual eNPS scores during calculateResults
-      // For now, store it as a response with a special item_id convention
-      // Actually, we store it in campaign_results metadata during calculation
-      // Let's store it as part of the respondent's data in a simple way
+      await supabase
+        .from("respondents")
+        .update({ enps_score: enpsScore })
+        .eq("id", respondentId);
     }
   }, [supabase, respondentId, openStrength, openImprovement, openGeneral, enpsScore]);
 

@@ -75,6 +75,7 @@ export default async function ResultsPage({
   const segmentResults = results.filter(
     (r) => r.result_type === "dimension" && r.segment_type !== "global"
   );
+  const enpsResult = results.find((r) => r.result_type === "enps");
 
   // Sort dimensions by score
   const sortedDimensions = [...dimensionResults].sort(
@@ -153,9 +154,11 @@ export default async function ResultsPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Score promedio</CardDescription>
+            <CardDescription>eNPS</CardDescription>
             <CardTitle className="text-3xl">
-              {globalAvg.toFixed(2)}
+              {enpsResult
+                ? `${(enpsResult.avg_score ?? 0) > 0 ? "+" : ""}${enpsResult.avg_score}`
+                : "—"}
             </CardTitle>
           </CardHeader>
         </Card>

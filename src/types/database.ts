@@ -414,6 +414,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           department: string | null
+          enps_score: number | null
           gender: string | null
           id: string
           ip_hash: string | null
@@ -427,6 +428,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           department?: string | null
+          enps_score?: number | null
           gender?: string | null
           id?: string
           ip_hash?: string | null
@@ -440,6 +442,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           department?: string | null
+          enps_score?: number | null
           gender?: string | null
           id?: string
           ip_hash?: string | null
