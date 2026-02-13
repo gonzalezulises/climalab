@@ -92,7 +92,7 @@ export default function NewOrganizationPage() {
       return;
     }
 
-    toast.success("Organizacion creada exitosamente");
+    toast.success("Organización creada exitosamente");
     router.push(`/organizations/${result.data.id}`);
   }
 
@@ -100,9 +100,9 @@ export default function NewOrganizationPage() {
     <div className="mx-auto max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle>Nueva Organizacion</CardTitle>
+          <CardTitle>Nueva Organización</CardTitle>
           <CardDescription>
-            Registra una nueva organizacion en la plataforma.
+            Registra una nueva organización en la plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -144,7 +144,7 @@ export default function NewOrganizationPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="country">Pais</Label>
+              <Label htmlFor="country">País</Label>
               <Select name="country" defaultValue="MX">
                 <SelectTrigger>
                   <SelectValue />
@@ -163,7 +163,7 @@ export default function NewOrganizationPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="employee_count">Numero de empleados</Label>
+              <Label htmlFor="employee_count">Número de empleados</Label>
               <Input
                 id="employee_count"
                 name="employee_count"
@@ -221,7 +221,7 @@ export default function NewOrganizationPage() {
 
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={loading}>
-                {loading ? "Creando..." : "Crear Organizacion"}
+                {loading ? "Creando..." : "Crear Organización"}
               </Button>
               <Button
                 type="button"

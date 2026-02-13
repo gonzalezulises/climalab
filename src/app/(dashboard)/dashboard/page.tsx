@@ -30,7 +30,7 @@ export default async function DashboardPage() {
         <Button asChild>
           <Link href="/organizations/new">
             <Plus className="mr-2 h-4 w-4" />
-            Nueva Organizacion
+            Nueva Organización
           </Link>
         </Button>
       </div>

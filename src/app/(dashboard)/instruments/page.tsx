@@ -20,7 +20,7 @@ export default async function InstrumentsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Instrumentos</h1>
         <p className="text-muted-foreground">
-          Instrumentos de medicion de clima organizacional
+          Instrumentos de medición de clima organizacional
         </p>
       </div>
 

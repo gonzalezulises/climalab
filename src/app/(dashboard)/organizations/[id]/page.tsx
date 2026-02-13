@@ -47,7 +47,7 @@ export default async function OrganizationDetailPage({
 
       <Tabs defaultValue="info">
         <TabsList>
-          <TabsTrigger value="info">Informacion</TabsTrigger>
+          <TabsTrigger value="info">Información</TabsTrigger>
           <TabsTrigger value="departments">Departamentos</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
         </TabsList>
@@ -55,7 +55,7 @@ export default async function OrganizationDetailPage({
         <TabsContent value="info" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Informacion General</CardTitle>
+              <CardTitle>Información General</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -67,7 +67,7 @@ export default async function OrganizationDetailPage({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Pais
+                    País
                   </p>
                   <p>{countryName}</p>
                 </div>
@@ -79,7 +79,7 @@ export default async function OrganizationDetailPage({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Categoria
+                    Categoría
                   </p>
                   <p>{SIZE_CATEGORIES[org.size_category]}</p>
                 </div>
@@ -134,7 +134,7 @@ export default async function OrganizationDetailPage({
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                No hay mediciones registradas aun. Esta funcionalidad estara
+                No hay mediciones registradas aún. Esta funcionalidad estará
                 disponible en futuras versiones.
               </p>
             </CardContent>

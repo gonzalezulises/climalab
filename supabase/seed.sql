@@ -22,7 +22,7 @@ VALUES (
   'b0000000-0000-0000-0000-000000000001',
   'ClimaLab Core',
   'climalab-core',
-  'Instrumento completo de medición de clima organizacional. 6 dimensiones, 28 ítems + 1 verificación de atención.',
+  'Instrumento completo de medición de clima organizacional. 6 indicadores, 28 ítems + 1 verificación de atención.',
   'full',
   'all',
   '1.0'
@@ -30,12 +30,12 @@ VALUES (
 
 -- Dimensions for ClimaLab Core
 INSERT INTO dimensions (id, instrument_id, name, code, description, sort_order) VALUES
-  ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Liderazgo', 'LID', 'Percepción sobre el estilo de liderazgo y la relación con supervisores directos.', 1),
-  ('c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'Justicia Organizacional', 'JUS', 'Percepción de equidad en procesos, distribución de recursos y trato interpersonal.', 2),
-  ('c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001', 'Pertenencia', 'PER', 'Sentido de identificación y conexión emocional con la organización.', 3),
-  ('c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001', 'Innovación', 'INN', 'Apertura al cambio, creatividad y adopción de nuevas ideas.', 4),
-  ('c0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001', 'Carga de Trabajo', 'CAR', 'Equilibrio entre demandas laborales y recursos disponibles.', 5),
-  ('c0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000001', 'Claridad de Rol', 'CLA', 'Comprensión de responsabilidades, expectativas y objetivos del puesto.', 6);
+  ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Liderazgo', 'LID', 'Percepción sobre la calidad del liderazgo y la relación con el supervisor directo.', 1),
+  ('c0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'Justicia y equidad', 'JUS', 'Percepción de trato justo en evaluaciones, oportunidades y compensación.', 2),
+  ('c0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001', 'Sentimiento de pertenencia', 'PER', 'Orgullo de formar parte de la organización y conexión con sus valores.', 3),
+  ('c0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001', 'Innovación y gestión del cambio', 'INN', 'Apertura a nuevas ideas y capacidad de la organización para gestionar transformaciones.', 4),
+  ('c0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001', 'Equilibrio y bienestar laboral', 'CAR', 'Balance entre las demandas del trabajo y los recursos disponibles para cumplirlas.', 5),
+  ('c0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000001', 'Claridad y desarrollo', 'CLA', 'Comprensión de las responsabilidades del puesto y oportunidades de crecimiento profesional.', 6);
 
 -- Items for ClimaLab Core — Liderazgo (LID)
 INSERT INTO items (dimension_id, text, is_reverse, sort_order) VALUES
@@ -96,7 +96,7 @@ VALUES (
   'b0000000-0000-0000-0000-000000000002',
   'ClimaLab Pulso',
   'climalab-pulso',
-  'Versión rápida con 1 ítem ancla por dimensión. Ideal para seguimiento frecuente.',
+  'Versión rápida con 1 ítem ancla por indicador. Ideal para seguimiento frecuente.',
   'pulse',
   'all',
   '1.0'
@@ -104,12 +104,12 @@ VALUES (
 
 -- Dimensions for ClimaLab Pulso (same 6)
 INSERT INTO dimensions (id, instrument_id, name, code, description, sort_order) VALUES
-  ('d0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', 'Liderazgo', 'LID', 'Percepción sobre el estilo de liderazgo.', 1),
-  ('d0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'Justicia Organizacional', 'JUS', 'Percepción de equidad.', 2),
-  ('d0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000002', 'Pertenencia', 'PER', 'Sentido de identificación.', 3),
-  ('d0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000002', 'Innovación', 'INN', 'Apertura al cambio.', 4),
-  ('d0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000002', 'Carga de Trabajo', 'CAR', 'Equilibrio de demandas.', 5),
-  ('d0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002', 'Claridad de Rol', 'CLA', 'Comprensión de responsabilidades.', 6);
+  ('d0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', 'Liderazgo', 'LID', 'Percepción sobre la calidad del liderazgo y la relación con el supervisor directo.', 1),
+  ('d0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'Justicia y equidad', 'JUS', 'Percepción de trato justo en evaluaciones, oportunidades y compensación.', 2),
+  ('d0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000002', 'Sentimiento de pertenencia', 'PER', 'Orgullo de formar parte de la organización y conexión con sus valores.', 3),
+  ('d0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000002', 'Innovación y gestión del cambio', 'INN', 'Apertura a nuevas ideas y capacidad de la organización para gestionar transformaciones.', 4),
+  ('d0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000002', 'Equilibrio y bienestar laboral', 'CAR', 'Balance entre las demandas del trabajo y los recursos disponibles para cumplirlas.', 5),
+  ('d0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002', 'Claridad y desarrollo', 'CLA', 'Comprensión de las responsabilidades del puesto y oportunidades de crecimiento profesional.', 6);
 
 -- Anchor items for ClimaLab Pulso (1 per dimension)
 INSERT INTO items (dimension_id, text, is_anchor, sort_order) VALUES

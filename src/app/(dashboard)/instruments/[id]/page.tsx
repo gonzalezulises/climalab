@@ -59,7 +59,7 @@ export default async function InstrumentDetailPage({
         </div>
         <p className="text-muted-foreground">{instrument.description}</p>
         <p className="text-sm text-muted-foreground mt-1">
-          {instrument.dimensions.length} dimensiones, {totalItems} items
+          {instrument.dimensions.length} indicadores · {totalItems} ítems
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export default async function InstrumentDetailPage({
                         {dimension.name}
                       </CardTitle>
                       <span className="text-sm text-muted-foreground">
-                        ({dimension.items.length} items)
+                        ({dimension.items.length} ítems)
                       </span>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
