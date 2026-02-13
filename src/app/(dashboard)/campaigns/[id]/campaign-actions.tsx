@@ -23,13 +23,17 @@ import { Label } from "@/components/ui/label";
 import type { Campaign } from "@/types";
 import { Link2, Play, Lock, Calculator } from "lucide-react";
 
-export function CampaignActions({ campaign }: { campaign: Campaign }) {
+export function CampaignActions({ campaign, respondentCount }: { campaign: Campaign; respondentCount: number }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [linkCount, setLinkCount] = useState(20);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   const handleActivate = async () => {
+    if (respondentCount === 0) {
+      toast.error("Genera al menos un enlace de participación antes de activar la campaña.");
+      return;
+    }
     setLoading(true);
     const result = await updateCampaignStatus({
       id: campaign.id,

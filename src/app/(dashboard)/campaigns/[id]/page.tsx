@@ -95,7 +95,7 @@ export default async function CampaignDetailPage({
               </Button>
             </Link>
           )}
-          <CampaignActions campaign={campaign} />
+          <CampaignActions campaign={campaign} respondentCount={respondents.length} />
         </div>
       </div>
 
