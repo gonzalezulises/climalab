@@ -124,3 +124,31 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  nav, aside, header, footer, .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+
+  .card, [class*="Card"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

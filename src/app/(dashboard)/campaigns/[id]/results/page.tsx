@@ -17,6 +17,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ResultsCharts } from "./results-charts";
+import { ExportButton } from "./export-button";
 
 function classifyScore(score: number) {
   if (score >= 4.5)
@@ -136,11 +137,14 @@ export default async function ResultsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Resultados: {campaign.name}
-        </h1>
-        <p className="text-muted-foreground">{orgName}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Resultados: {campaign.name}
+          </h1>
+          <p className="text-muted-foreground">{orgName}</p>
+        </div>
+        <ExportButton />
       </div>
 
       {/* KPIs Header */}
