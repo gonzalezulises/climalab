@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCampaign, getCampaignResults } from "@/actions/campaigns";
+import { getCampaign, getCampaignResults, getOpenResponses } from "@/actions/campaigns";
 import { getOrganization } from "@/actions/organizations";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,9 +35,10 @@ export default async function ResultsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [campaignResult, resultsResult] = await Promise.all([
+  const [campaignResult, resultsResult, openResponsesResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
+    getOpenResponses(id),
   ]);
 
   if (!campaignResult.success) {
@@ -77,6 +78,12 @@ export default async function ResultsPage({
     (r) => r.result_type === "dimension" && r.segment_type !== "global"
   );
   const enpsResult = results.find((r) => r.result_type === "enps");
+
+  // Open responses
+  const openResponses = openResponsesResult.success ? openResponsesResult.data : [];
+  const strengths = openResponses.filter((r) => r.question_type === "strength");
+  const improvements = openResponses.filter((r) => r.question_type === "improvement");
+  const generalComments = openResponses.filter((r) => r.question_type === "general");
 
   // Sort dimensions by score
   const sortedDimensions = [...dimensionResults].sort(
@@ -396,6 +403,62 @@ export default async function ResultsPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Open Responses */}
+      {openResponses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Comentarios de los participantes</CardTitle>
+            <CardDescription>
+              Respuestas abiertas anónimas ({openResponses.length} comentarios)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue={strengths.length > 0 ? "strength" : improvements.length > 0 ? "improvement" : "general"}>
+              <TabsList>
+                {strengths.length > 0 && (
+                  <TabsTrigger value="strength">
+                    Fortalezas ({strengths.length})
+                  </TabsTrigger>
+                )}
+                {improvements.length > 0 && (
+                  <TabsTrigger value="improvement">
+                    Áreas de mejora ({improvements.length})
+                  </TabsTrigger>
+                )}
+                {generalComments.length > 0 && (
+                  <TabsTrigger value="general">
+                    General ({generalComments.length})
+                  </TabsTrigger>
+                )}
+              </TabsList>
+
+              {[
+                { key: "strength", items: strengths },
+                { key: "improvement", items: improvements },
+                { key: "general", items: generalComments },
+              ].map(({ key, items }) =>
+                items.length > 0 ? (
+                  <TabsContent key={key} value={key}>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {items.map((comment, idx) => (
+                        <div
+                          key={idx}
+                          className="border-l-2 border-muted pl-4 py-2"
+                        >
+                          <p className="text-sm text-foreground">
+                            &ldquo;{comment.text}&rdquo;
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                ) : null
+              )}
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Demographic Segments */}
       {segmentResults.length > 0 && (

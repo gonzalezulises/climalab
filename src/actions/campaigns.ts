@@ -200,6 +200,37 @@ export async function getCampaignResults(
 }
 
 // ---------------------------------------------------------------------------
+// getOpenResponses — anonymous open comments for a campaign
+// ---------------------------------------------------------------------------
+export async function getOpenResponses(
+  campaignId: string
+): Promise<ActionResult<{ question_type: string; text: string }[]>> {
+  const supabase = await createClient();
+
+  const { data: respondents } = await supabase
+    .from("respondents")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .in("status", ["completed"]);
+
+  if (!respondents || respondents.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const { data, error } = await supabase
+    .from("open_responses")
+    .select("question_type, text")
+    .in("respondent_id", respondents.map((r) => r.id))
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+// ---------------------------------------------------------------------------
 // calculateResults — the statistical calculation engine
 // ---------------------------------------------------------------------------
 export async function calculateResults(
