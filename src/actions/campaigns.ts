@@ -231,6 +231,54 @@ export async function getOpenResponses(
 }
 
 // ---------------------------------------------------------------------------
+// compareCampaigns — wave-over-wave dimension comparison
+// ---------------------------------------------------------------------------
+export async function compareCampaigns(
+  currentId: string,
+  previousId: string
+): Promise<ActionResult<{
+  current: { code: string; name: string; avg: number; fav: number }[];
+  previous: { code: string; name: string; avg: number; fav: number }[];
+}>> {
+  const supabase = await createClient();
+
+  const [currentResults, previousResults] = await Promise.all([
+    supabase
+      .from("campaign_results")
+      .select("*")
+      .eq("campaign_id", currentId)
+      .eq("result_type", "dimension")
+      .eq("segment_type", "global"),
+    supabase
+      .from("campaign_results")
+      .select("*")
+      .eq("campaign_id", previousId)
+      .eq("result_type", "dimension")
+      .eq("segment_type", "global"),
+  ]);
+
+  if (currentResults.error || previousResults.error) {
+    return { success: false, error: "Error obteniendo resultados" };
+  }
+
+  const mapResults = (data: typeof currentResults.data) =>
+    (data ?? []).map((r) => ({
+      code: r.dimension_code!,
+      name: (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code!,
+      avg: r.avg_score ?? 0,
+      fav: r.favorability_pct ?? 0,
+    }));
+
+  return {
+    success: true,
+    data: {
+      current: mapResults(currentResults.data),
+      previous: mapResults(previousResults.data),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // calculateResults — the statistical calculation engine
 // ---------------------------------------------------------------------------
 export async function calculateResults(

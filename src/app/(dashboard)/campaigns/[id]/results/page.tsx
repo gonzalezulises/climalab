@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCampaign, getCampaignResults, getOpenResponses } from "@/actions/campaigns";
+import { getCampaign, getCampaigns, getCampaignResults, getOpenResponses } from "@/actions/campaigns";
 import { getOrganization } from "@/actions/organizations";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tabs";
 import { ResultsCharts } from "./results-charts";
 import { ExportButton } from "./export-button";
+import { ComparisonChart } from "./comparison-chart";
 
 function classifyScore(score: number) {
   if (score >= 4.5)
@@ -63,8 +64,16 @@ export default async function ResultsPage({
     );
   }
 
-  const orgResult = await getOrganization(campaign.organization_id);
+  const [orgResult, allCampaignsResult] = await Promise.all([
+    getOrganization(campaign.organization_id),
+    getCampaigns(campaign.organization_id),
+  ]);
   const orgName = orgResult.success ? orgResult.data.name : "—";
+  const previousCampaigns = allCampaignsResult.success
+    ? allCampaignsResult.data
+        .filter((c) => c.id !== id && c.status === "closed")
+        .map((c) => ({ id: c.id, name: c.name }))
+    : [];
 
   // Parse results
   const dimensionResults = results.filter(
@@ -223,6 +232,14 @@ export default async function ResultsPage({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Wave comparison */}
+      {previousCampaigns.length > 0 && (
+        <ComparisonChart
+          currentCampaignId={id}
+          previousCampaigns={previousCampaigns}
+        />
       )}
 
       {/* Charts (client component) */}
