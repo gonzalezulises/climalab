@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS, ANALYSIS_LEVELS } from "@/lib/constants";
 import { AnalysisLevelCards } from "@/components/results/analysis-level-cards";
+import { CsvDownloadButton } from "@/components/results/csv-download-button";
 
 type DimensionResult = {
   code: string;
@@ -121,19 +122,42 @@ export function DimensionsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Análisis por Dimensión</h1>
-        <div className="flex items-center gap-1 rounded-md border p-0.5">
-          <button
-            onClick={() => setView("category")}
-            className={`px-3 py-1 text-xs rounded ${view === "category" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-          >
-            Por Categoría
-          </button>
-          <button
-            onClick={() => setView("level")}
-            className={`px-3 py-1 text-xs rounded ${view === "level" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-          >
-            Por Nivel de Análisis
-          </button>
+        <div className="flex items-center gap-2">
+          <CsvDownloadButton
+            data={dimensionResults.map((d) => ({
+              code: d.code,
+              name: d.name,
+              category: d.category,
+              avg: d.avg,
+              fav: d.fav,
+              std: d.std,
+              n: d.n,
+            }))}
+            filename="dimensiones"
+            columns={{
+              code: "Código",
+              name: "Nombre",
+              category: "Categoría",
+              avg: "Score",
+              fav: "Fav %",
+              std: "Desv. Est.",
+              n: "n",
+            }}
+          />
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            <button
+              onClick={() => setView("category")}
+              className={`px-3 py-1 text-xs rounded ${view === "category" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Por Categoría
+            </button>
+            <button
+              onClick={() => setView("level")}
+              className={`px-3 py-1 text-xs rounded ${view === "level" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Por Nivel de Análisis
+            </button>
+          </div>
         </div>
       </div>
 

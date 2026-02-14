@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { AgreementBadge } from "@/components/results/agreement-badge";
+import { CsvDownloadButton } from "@/components/results/csv-download-button";
 import { profileSegments } from "@/actions/ai-insights";
 import type { SegmentProfiles } from "@/actions/ai-insights";
 
@@ -156,9 +157,32 @@ export function SegmentsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Segmentación Demográfica</h1>
-        <p className="text-sm text-muted-foreground">
-          Engagement global: {globalEngScore.toFixed(2)}
-        </p>
+        <div className="flex items-center gap-3">
+          <CsvDownloadButton
+            data={heatmapData.map((d) => ({
+              segment_type: d.segment_type,
+              segment_key: d.segment_key,
+              dimension_code: d.dimension_code,
+              avg_score: d.avg_score,
+              favorability_pct: d.favorability_pct,
+              respondent_count: d.respondent_count,
+              rwg: d.rwg,
+            }))}
+            filename="segmentos"
+            columns={{
+              segment_type: "Tipo",
+              segment_key: "Segmento",
+              dimension_code: "Dimensión",
+              avg_score: "Score",
+              favorability_pct: "Fav %",
+              respondent_count: "n",
+              rwg: "rwg",
+            }}
+          />
+          <p className="text-sm text-muted-foreground">
+            Engagement global: {globalEngScore.toFixed(2)}
+          </p>
+        </div>
       </div>
       <p className="text-xs text-muted-foreground">
         Nota: Segmentos con menos de 5 respondentes no se muestran para proteger el anonimato.

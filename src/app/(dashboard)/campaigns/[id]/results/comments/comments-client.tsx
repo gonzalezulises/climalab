@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
+import { CsvDownloadButton } from "@/components/results/csv-download-button";
 import { analyzeComments } from "@/actions/ai-insights";
 import type { CommentAnalysis } from "@/actions/ai-insights";
 
@@ -73,6 +74,14 @@ export function CommentsClient({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Comentarios Abiertos</h1>
         <div className="flex items-center gap-2">
+          <CsvDownloadButton
+            data={comments.map((c) => ({
+              question_type: c.question_type,
+              text: c.text,
+            }))}
+            filename="comentarios"
+            columns={{ question_type: "Tipo", text: "Texto" }}
+          />
           <Badge variant="outline">{comments.length} comentarios</Badge>
           {comments.length > 0 && (
             <Button

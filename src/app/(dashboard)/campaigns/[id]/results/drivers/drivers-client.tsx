@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Zap } from "lucide-react";
+import { CsvDownloadButton } from "@/components/results/csv-download-button";
 import { interpretDrivers } from "@/actions/ai-insights";
 import type { DriverInsights } from "@/actions/ai-insights";
 
@@ -59,7 +60,26 @@ export function DriversClient({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">Engagement Drivers</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Engagement Drivers</h1>
+        <CsvDownloadButton
+          data={drivers.map((d) => ({
+            code: d.code,
+            name: d.name,
+            r: d.r,
+            pValue: d.pValue,
+            n: d.n,
+          }))}
+          filename="drivers"
+          columns={{
+            code: "Código",
+            name: "Nombre",
+            r: "r",
+            pValue: "p-value",
+            n: "n",
+          }}
+        />
+      </div>
 
       {/* Insight card */}
       {topDriver && (

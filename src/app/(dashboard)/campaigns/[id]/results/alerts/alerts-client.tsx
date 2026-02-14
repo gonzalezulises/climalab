@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
+import { CsvDownloadButton } from "@/components/results/csv-download-button";
 import { contextualizeAlerts } from "@/actions/ai-insights";
 import type { AlertContext } from "@/actions/ai-insights";
 
@@ -59,26 +60,47 @@ export function AlertsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Alertas y Áreas de Riesgo</h1>
-        {alerts.length > 0 && (
-          <Button
-            size="sm"
-            variant={context ? "outline" : "default"}
-            onClick={() => {
-              startTransition(async () => {
-                const result = await contextualizeAlerts(campaignId);
-                if (result.success) setContext(result.data);
-              });
+        <div className="flex items-center gap-2">
+          <CsvDownloadButton
+            data={alerts.map((a) => ({
+              severity: a.severity,
+              type: a.type,
+              dimension_code: a.dimension_code ?? "",
+              message: a.message,
+              value: a.value,
+              threshold: a.threshold,
+            }))}
+            filename="alertas"
+            columns={{
+              severity: "Severidad",
+              type: "Tipo",
+              dimension_code: "Dimensión",
+              message: "Mensaje",
+              value: "Valor",
+              threshold: "Umbral",
             }}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {context ? "Regenerar contexto" : "Contextualizar con IA"}
-          </Button>
-        )}
+          />
+          {alerts.length > 0 && (
+            <Button
+              size="sm"
+              variant={context ? "outline" : "default"}
+              onClick={() => {
+                startTransition(async () => {
+                  const result = await contextualizeAlerts(campaignId);
+                  if (result.success) setContext(result.data);
+                });
+              }}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              {context ? "Regenerar contexto" : "Contextualizar con IA"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Summary cards */}

@@ -4,6 +4,45 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult, CampaignAnalytics } from "@/types";
 
 // ---------------------------------------------------------------------------
+// getAvailableSegments — distinct segment types/keys with n >= 5
+// ---------------------------------------------------------------------------
+export async function getAvailableSegments(
+  campaignId: string
+): Promise<ActionResult<{ department: string[]; tenure: string[]; gender: string[] }>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("campaign_results")
+    .select("segment_type, segment_key, respondent_count")
+    .eq("campaign_id", campaignId)
+    .eq("result_type", "dimension")
+    .neq("segment_type", "global");
+
+  if (error) return { success: false, error: error.message };
+
+  const segments: { department: Set<string>; tenure: Set<string>; gender: Set<string> } = {
+    department: new Set(),
+    tenure: new Set(),
+    gender: new Set(),
+  };
+
+  for (const row of data ?? []) {
+    const st = row.segment_type as keyof typeof segments;
+    if (st in segments && row.segment_key && (row.respondent_count ?? 0) >= 5) {
+      segments[st].add(row.segment_key);
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      department: [...segments.department].sort(),
+      tenure: [...segments.tenure].sort(),
+      gender: [...segments.gender].sort(),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // getCorrelationMatrix — Pearson correlation matrix between dimensions
 // ---------------------------------------------------------------------------
 export async function getCorrelationMatrix(
@@ -196,6 +235,145 @@ export async function getHeatmapData(campaignId: string): Promise<
       respondent_count: r.respondent_count!,
       rwg: (r.metadata as { rwg?: number | null })?.rwg ?? null,
     })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// getBenchmarkData — department comparison and gap analysis
+// ---------------------------------------------------------------------------
+export async function getBenchmarkData(campaignId: string): Promise<
+  ActionResult<{
+    overallRanking: Array<{
+      department: string;
+      avgScore: number;
+      avgFav: number;
+      n: number;
+      strengths: string[];
+      weaknesses: string[];
+    }>;
+    dimensionGaps: Array<{
+      code: string;
+      name: string;
+      gap: number;
+      best: { dept: string; score: number };
+      worst: { dept: string; score: number };
+    }>;
+    heatmapData: Array<{
+      segment_key: string;
+      dimension_code: string;
+      avg_score: number;
+      favorability_pct: number;
+      respondent_count: number;
+    }>;
+  }>
+> {
+  const heatmapResult = await getHeatmapData(campaignId);
+  if (!heatmapResult.success) return { success: false, error: heatmapResult.error };
+
+  // Filter to department segments only
+  const deptData = heatmapResult.data.filter((r) => r.segment_type === "department");
+  if (deptData.length === 0) {
+    return {
+      success: true,
+      data: { overallRanking: [], dimensionGaps: [], heatmapData: [] },
+    };
+  }
+
+  const departments = [...new Set(deptData.map((d) => d.segment_key))];
+  const dimCodes = [...new Set(deptData.map((d) => d.dimension_code))];
+
+  // Fetch dimension names from global results
+  const supabase = await createClient();
+  const { data: globalDims } = await supabase
+    .from("campaign_results")
+    .select("dimension_code, metadata")
+    .eq("campaign_id", campaignId)
+    .eq("result_type", "dimension")
+    .eq("segment_type", "global");
+
+  const dimNameMap = new Map<string, string>();
+  for (const d of globalDims ?? []) {
+    if (d.dimension_code) {
+      dimNameMap.set(
+        d.dimension_code,
+        (d.metadata as { dimension_name?: string })?.dimension_name ?? d.dimension_code
+      );
+    }
+  }
+
+  // Build lookup: dept -> dimCode -> score
+  const lookup = new Map<string, Map<string, { score: number; fav: number }>>();
+  for (const d of deptData) {
+    if (!lookup.has(d.segment_key)) lookup.set(d.segment_key, new Map());
+    lookup.get(d.segment_key)!.set(d.dimension_code, {
+      score: d.avg_score,
+      fav: d.favorability_pct,
+    });
+  }
+
+  // Overall ranking
+  const overallRanking = departments
+    .map((dept) => {
+      const scores = lookup.get(dept)!;
+      const allScores = [...scores.values()];
+      const avgScore =
+        allScores.length > 0
+          ? Math.round((allScores.reduce((s, v) => s + v.score, 0) / allScores.length) * 100) / 100
+          : 0;
+      const avgFav =
+        allScores.length > 0
+          ? Math.round((allScores.reduce((s, v) => s + v.fav, 0) / allScores.length) * 10) / 10
+          : 0;
+      const n = deptData.find((d) => d.segment_key === dept)?.respondent_count ?? 0;
+
+      // Sort dimensions by score for strengths/weaknesses
+      const sorted = [...scores.entries()].sort((a, b) => b[1].score - a[1].score);
+      const strengths = sorted.slice(0, 3).map(([code]) => dimNameMap.get(code) ?? code);
+      const weaknesses = sorted
+        .slice(-3)
+        .reverse()
+        .map(([code]) => dimNameMap.get(code) ?? code);
+
+      return { department: dept, avgScore, avgFav, n, strengths, weaknesses };
+    })
+    .sort((a, b) => b.avgScore - a.avgScore);
+
+  // Dimension gap analysis
+  const dimensionGaps = dimCodes
+    .map((code) => {
+      let best = { dept: "", score: -Infinity };
+      let worst = { dept: "", score: Infinity };
+
+      for (const dept of departments) {
+        const val = lookup.get(dept)?.get(code);
+        if (!val) continue;
+        if (val.score > best.score) best = { dept, score: val.score };
+        if (val.score < worst.score) worst = { dept, score: val.score };
+      }
+
+      return {
+        code,
+        name: dimNameMap.get(code) ?? code,
+        gap: Math.round((best.score - worst.score) * 100) / 100,
+        best: { dept: best.dept, score: best.score },
+        worst: { dept: worst.dept, score: worst.score },
+      };
+    })
+    .sort((a, b) => b.gap - a.gap);
+
+  return {
+    success: true,
+    data: {
+      overallRanking,
+      dimensionGaps,
+      heatmapData: deptData.map((d) => ({
+        segment_key: d.segment_key,
+        dimension_code: d.dimension_code,
+        avg_score: d.avg_score,
+        favorability_pct: d.favorability_pct,
+        respondent_count: d.respondent_count,
+      })),
+    },
   };
 }
 

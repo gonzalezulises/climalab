@@ -4,9 +4,17 @@ import { getAlerts, getCategoryScores } from "@/actions/analytics";
 import { getBusinessIndicators } from "@/actions/business-indicators";
 import { getDashboardNarrative } from "@/actions/ai-insights";
 import { DashboardClient } from "./dashboard-client";
+import { SEGMENT_TYPE_LABELS } from "@/lib/constants";
 
-export default async function DashboardPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DashboardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ segment_type?: string; segment_key?: string }>;
+}) {
   const { id } = await params;
+  const { segment_type, segment_key } = await searchParams;
 
   const [
     campaignResult,
@@ -33,9 +41,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ id: 
   const indicators = indicatorsResult.success ? indicatorsResult.data : [];
   const narrative = narrativeResult.success ? narrativeResult.data : null;
 
-  // Extract dimension results (global)
+  // Determine which segment to use for dimension results
+  const hasSegmentFilter = segment_type && segment_key;
+  const segType = hasSegmentFilter ? segment_type : "global";
+  const segKey = hasSegmentFilter ? segment_key : undefined;
+
+  // Extract dimension results (filtered or global)
   const dimensionResults = results
-    .filter((r) => r.result_type === "dimension" && r.segment_type === "global")
+    .filter(
+      (r) =>
+        r.result_type === "dimension" &&
+        r.segment_type === segType &&
+        (segKey ? r.segment_key === segKey : true)
+    )
     .map((r) => ({
       code: r.dimension_code!,
       name: (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code!,
@@ -44,7 +62,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ id: 
     }))
     .sort((a, b) => b.avg - a.avg);
 
-  // Engagement result
+  // Engagement and eNPS always global
   const engResult = results.find((r) => r.result_type === "engagement");
   const engScore = engResult ? Number(engResult.avg_score) : 0;
   const profiles = engResult
@@ -60,11 +78,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ id: 
       ).profiles
     : null;
 
-  // eNPS result
   const enpsResult = results.find((r) => r.result_type === "enps");
   const enpsScore = enpsResult ? Number(enpsResult.avg_score) : 0;
 
-  // Global favorability
   const globalFav =
     dimensionResults.length > 0
       ? Math.round(
@@ -80,22 +96,35 @@ export default async function DashboardPage({ params }: { params: Promise<{ id: 
         .map((c) => ({ id: c.id, name: c.name }))
     : [];
 
+  // Build segment filter label
+  const segmentLabel = hasSegmentFilter
+    ? `${SEGMENT_TYPE_LABELS[segment_type] ?? segment_type}: ${segment_key}`
+    : null;
+
   return (
-    <DashboardClient
-      campaignId={id}
-      engScore={engScore}
-      globalFav={globalFav}
-      enpsScore={enpsScore}
-      responseRate={Number(campaign.response_rate ?? 0)}
-      sampleN={campaign.sample_n ?? 0}
-      populationN={campaign.population_n ?? 0}
-      dimensionResults={dimensionResults}
-      profiles={profiles}
-      alerts={alerts.slice(0, 5)}
-      categories={categories}
-      indicators={indicators}
-      previousCampaigns={previousCampaigns}
-      initialNarrative={narrative}
-    />
+    <>
+      {segmentLabel && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          Mostrando dimensiones para <strong>{segmentLabel}</strong>. Engagement, eNPS y perfiles
+          son datos globales.
+        </div>
+      )}
+      <DashboardClient
+        campaignId={id}
+        engScore={engScore}
+        globalFav={globalFav}
+        enpsScore={enpsScore}
+        responseRate={Number(campaign.response_rate ?? 0)}
+        sampleN={campaign.sample_n ?? 0}
+        populationN={campaign.population_n ?? 0}
+        dimensionResults={dimensionResults}
+        profiles={profiles}
+        alerts={alerts.slice(0, 5)}
+        categories={categories}
+        indicators={indicators}
+        previousCampaigns={previousCampaigns}
+        initialNarrative={narrative}
+      />
+    </>
   );
 }

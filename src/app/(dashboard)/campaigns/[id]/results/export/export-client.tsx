@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, FileDown, FileJson, Sparkles, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileDown, FileJson, Sparkles, Loader2, FileText } from "lucide-react";
 import {
   generateAllInsights,
   getDashboardNarrative,
   getCommentAnalysis,
   getDriverInsights,
 } from "@/actions/ai-insights";
+import { generateExcelReport, generatePdfReport } from "@/actions/export";
 import type { DashboardNarrative, CommentAnalysis, DriverInsights } from "@/actions/ai-insights";
 
 type Props = {
@@ -39,9 +40,43 @@ export function ExportClient({
   initialDriverInsights,
 }: Props) {
   const [isPending, startTransition] = useTransition();
-  const [report, setReport] = useState<string | null>(null);
-  function exportPDF() {
-    window.print();
+  const [xlsxPending, startXlsxTransition] = useTransition();
+  const [pdfPending, startPdfTransition] = useTransition();
+
+  function downloadXlsx() {
+    startXlsxTransition(async () => {
+      const result = await generateExcelReport(campaignId);
+      if (!result.success) return;
+
+      const { base64, filename } = result.data;
+      const byteArray = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([byteArray], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  function downloadPdf() {
+    startPdfTransition(async () => {
+      const result = await generatePdfReport(campaignId);
+      if (!result.success) return;
+
+      const { base64, filename } = result.data;
+      const byteArray = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   function exportCSV() {
@@ -88,20 +123,47 @@ export function ExportClient({
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Centro de Exportación</h1>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Printer className="h-5 w-5" /> Exportar PDF
+              <FileText className="h-5 w-5" /> PDF Ejecutivo
             </CardTitle>
             <CardDescription>
-              Genera un PDF con el dashboard completo de resultados usando la función de impresión
-              del navegador.
+              Reporte ejecutivo estructurado con KPIs, dimensiones, alertas, drivers y ficha
+              técnica.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={exportPDF} className="w-full">
-              <Printer className="h-4 w-4 mr-2" /> Imprimir / PDF
+            <Button onClick={downloadPdf} className="w-full" disabled={pdfPending}>
+              {pdfPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Descargar PDF
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" /> Excel (XLSX)
+            </CardTitle>
+            <CardDescription>
+              Libro Excel con 8 hojas: resumen, dimensiones, ítems, segmentos, drivers, alertas,
+              comentarios y ficha técnica.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={downloadXlsx} className="w-full" disabled={xlsxPending}>
+              {xlsxPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+              )}
+              Descargar Excel
             </Button>
           </CardContent>
         </Card>
@@ -215,8 +277,6 @@ export function ExportClient({
 
                   text += `\n\n${"=".repeat(60)}\n`;
                   text += `Generado por ClimaLab con asistencia de IA\n`;
-
-                  setReport(text);
 
                   // Download
                   const blob = new Blob([text], { type: "text/plain;charset=utf-8;" });

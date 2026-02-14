@@ -73,6 +73,12 @@ export const ANALYSIS_LEVELS: Record<
   },
 };
 
+export const SEGMENT_TYPE_LABELS: Record<string, string> = {
+  department: "Departamento",
+  tenure: "Antigüedad",
+  gender: "Género",
+};
+
 export const MEASUREMENT_OBJECTIVES = {
   initial_diagnosis: "Diagnóstico inicial",
   periodic_followup: "Seguimiento periódico",
