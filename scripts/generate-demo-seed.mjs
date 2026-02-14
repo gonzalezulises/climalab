@@ -77,8 +77,8 @@ const attentionChecks = [
 // Module dimensions (only for campaign 2 which has CAM + DIG modules)
 // Module item UUIDs use e5000000 prefix
 const moduleDimensions = [
-  { code: "CAM", items: [1, 2, 3, 4, 5, 6, 7, 8], reverseItems: [8] },  // Gestión del Cambio
-  { code: "DIG", items: [13, 14, 15, 16], reverseItems: [16] },           // Preparación Digital
+  { code: "CAM", items: [1, 2, 3, 4, 5, 6, 7, 8], reverseItems: [8] }, // Gestión del Cambio
+  { code: "DIG", items: [13, 14, 15, 16], reverseItems: [16] }, // Preparación Digital
 ];
 
 const moduleTargetAvg = {
