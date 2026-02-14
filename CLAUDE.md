@@ -36,7 +36,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (invokes ONA at end)
-- `scripts/ona-analysis.py` — Python (NetworkX) perceptual network analysis engine (PEP 723 inline deps, runs via `uv run`)
+- `scripts/ona-analysis.py` — Python (igraph) perceptual network analysis engine with Leiden + stability analysis (PEP 723 inline deps, runs via `uv run` or `python3`)
 - `messages/` — i18n translation files
 - `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
@@ -235,7 +235,7 @@ The technical page (ficha técnica) auto-generates:
    - Pearson correlation matrix → engagement drivers → automatic alerts → category scores
    - Ficha técnica (population, sample, response rate, margin of error with FPC)
    - Reliability data (alpha per dimension) → campaign_analytics
-   - ONA perceptual analysis (Python/NetworkX, non-blocking) → campaign_analytics
+   - ONA perceptual analysis (Python/igraph, Leiden + NMI stability, non-blocking) → campaign_analytics
 6. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
 7. AI Insights (optional, requires Ollama): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
 
