@@ -25,7 +25,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators)
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights)
 - `src/types/` — Database types (generated) and derived types
 - `supabase/migrations/` — SQL migrations (17 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~22K lines)
@@ -51,7 +51,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `responses` — Likert 1-5 scores per item per respondent
 - `open_responses` — Free-text responses (strength, improvement, general)
 - `campaign_results` — Calculated statistics (dimension scores, engagement profiles, eNPS, segments)
-- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability)
+- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability, AI insights)
 - `business_indicators` — Objective business metrics per campaign (turnover, absenteeism, NPS, etc.)
 
 ## Architecture Decisions
@@ -92,6 +92,21 @@ Objective business metrics tracked per campaign in `business_indicators` table. 
 - **Interpersonal**: Dirección y Supervisión dimensions
 - **Organizacional**: Compensación + Cultura dimensions
 - **ENG** shown separately as transversal variable
+
+## AI Insights (Ollama Integration)
+
+AI-powered analysis across 6 result pages, using Ollama (Qwen 2.5 72B) via `OLLAMA_BASE_URL` env var. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
+
+| analysis_type | Page | What it generates |
+|---|---|---|
+| `comment_analysis` | Comments | Theme extraction, sentiment distribution, summary per question type |
+| `dashboard_narrative` | Dashboard | Executive summary, highlights, concerns, recommendation |
+| `driver_insights` | Drivers | Narrative interpretation, paradoxes, quick wins |
+| `alert_context` | Alerts | Root cause hypothesis + recommendation per alert |
+| `segment_profiles` | Segments | Per-segment narrative with strengths/risks |
+| `trends_narrative` | Trends | Trajectory, improving/declining/stable dims, inflection points |
+
+**Architecture**: `src/actions/ai-insights.ts` contains 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel and stores results. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights.
 
 ## Psychometric Reporting
 

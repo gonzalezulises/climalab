@@ -1,12 +1,16 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
+import { getDashboardNarrative, getCommentAnalysis, getDriverInsights } from "@/actions/ai-insights";
 import { ExportClient } from "./export-client";
 
 export default async function ExportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, resultsResult] = await Promise.all([
+  const [campaignResult, resultsResult, narrativeResult, commentResult, driverResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
+    getDashboardNarrative(id),
+    getCommentAnalysis(id),
+    getDriverInsights(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -27,9 +31,13 @@ export default async function ExportPage({ params }: { params: Promise<{ id: str
 
   return (
     <ExportClient
+      campaignId={id}
       campaignName={campaignResult.data.name}
       dimensionData={dimensionData}
       allResults={results}
+      initialNarrative={narrativeResult.success ? narrativeResult.data : null}
+      initialCommentAnalysis={commentResult.success ? commentResult.data : null}
+      initialDriverInsights={driverResult.success ? driverResult.data : null}
     />
   );
 }

@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Loader2 } from "lucide-react";
+import { generateTrendsNarrative } from "@/actions/ai-insights";
+import type { TrendsNarrative } from "@/actions/ai-insights";
 
 const COLORS = [
   "#2563eb", "#dc2626", "#16a34a", "#eab308", "#7c3aed",
@@ -14,13 +19,18 @@ const COLORS = [
 ];
 
 type Props = {
+  campaignId: string;
+  organizationId: string;
   campaigns: Array<{ id: string; name: string; ends_at: string }>;
   series: Record<string, Array<{ campaign_id: string; avg_score: number }>>;
+  initialNarrative: TrendsNarrative | null;
 };
 
-export function TrendsClient({ campaigns, series }: Props) {
+export function TrendsClient({ campaignId, organizationId, campaigns, series, initialNarrative }: Props) {
   const allCodes = Object.keys(series);
   const [selected, setSelected] = useState<string[]>(["ENG"]);
+  const [narrative, setNarrative] = useState<TrendsNarrative | null>(initialNarrative);
+  const [isPending, startTransition] = useTransition();
 
   const toggleDim = (code: string) => {
     setSelected((prev) =>
@@ -129,6 +139,99 @@ export function TrendsClient({ campaigns, series }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Trends Narrative */}
+      {narrative ? (
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                Análisis de tendencias IA
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startTransition(async () => {
+                  const result = await generateTrendsNarrative(organizationId);
+                  if (result.success) setNarrative(result.data);
+                })}
+                disabled={isPending}
+              >
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">{narrative.trajectory}</p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {narrative.improving.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-green-700 mb-1">Mejorando</p>
+                  <ul className="space-y-1">
+                    {narrative.improving.map((item, i) => (
+                      <li key={i} className="text-xs flex items-start gap-1">
+                        <span className="text-green-600">+</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {narrative.declining.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-red-700 mb-1">En declive</p>
+                  <ul className="space-y-1">
+                    {narrative.declining.map((item, i) => (
+                      <li key={i} className="text-xs flex items-start gap-1">
+                        <span className="text-red-600">-</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {narrative.stable.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1">Estable</p>
+                  <ul className="space-y-1">
+                    {narrative.stable.map((item, i) => (
+                      <li key={i} className="text-xs flex items-start gap-1">
+                        <span className="text-gray-500">=</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            {narrative.inflection_points.length > 0 && (
+              <div className="pt-2 border-t">
+                <p className="text-xs font-medium text-amber-700 mb-1">Puntos de inflexión</p>
+                <ul className="space-y-1">
+                  {narrative.inflection_points.map((item, i) => (
+                    <li key={i} className="text-xs">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => startTransition(async () => {
+            const result = await generateTrendsNarrative(organizationId);
+            if (result.success) setNarrative(result.data);
+          })}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Analizar tendencias con IA
+        </Button>
+      )}
     </div>
   );
 }

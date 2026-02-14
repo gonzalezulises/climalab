@@ -1,9 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useTransition } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Loader2 } from "lucide-react";
 import { AgreementBadge } from "@/components/results/agreement-badge";
+import { profileSegments } from "@/actions/ai-insights";
+import type { SegmentProfiles } from "@/actions/ai-insights";
 
 type HeatmapRow = {
   segment_key: string;
@@ -24,14 +29,20 @@ function heatColor(score: number): string {
 }
 
 export function SegmentsClient({
+  campaignId,
   heatmapData,
   dimensionCodes,
   globalEngScore,
+  initialProfiles,
 }: {
+  campaignId: string;
   heatmapData: HeatmapRow[];
   dimensionCodes: string[];
   globalEngScore: number;
+  initialProfiles: SegmentProfiles | null;
 }) {
+  const [profiles, setProfiles] = useState<SegmentProfiles | null>(initialProfiles);
+  const [isPending, startTransition] = useTransition();
   const segmentTypes = ["department", "tenure", "gender"];
   const segLabels: Record<string, string> = {
     department: "Departamento",
@@ -145,6 +156,78 @@ export function SegmentsClient({
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* AI Segment Profiles */}
+      {profiles ? (
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  Perfiles de segmento IA
+                </CardTitle>
+                <CardDescription>{profiles.length} perfiles generados</CardDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startTransition(async () => {
+                  const result = await profileSegments(campaignId);
+                  if (result.success) setProfiles(result.data);
+                })}
+                disabled={isPending}
+              >
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {profiles.map((p, i) => (
+                <div key={i} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{p.segment}</p>
+                    <Badge variant="outline" className="text-xs">{segLabels[p.segment_type] ?? p.segment_type}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{p.narrative}</p>
+                  {p.strengths.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {p.strengths.map((s, j) => (
+                        <Badge key={j} className="bg-green-100 text-green-800 text-xs">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {p.risks.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {p.risks.map((r, j) => (
+                        <Badge key={j} className="bg-red-100 text-red-800 text-xs">{r}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => startTransition(async () => {
+            const result = await profileSegments(campaignId);
+            if (result.success) setProfiles(result.data);
+          })}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Generar perfiles con IA
+        </Button>
+      )}
     </div>
   );
 }

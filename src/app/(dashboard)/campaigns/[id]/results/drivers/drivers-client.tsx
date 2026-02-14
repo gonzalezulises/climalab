@@ -1,9 +1,15 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Loader2, Zap } from "lucide-react";
+import { interpretDrivers } from "@/actions/ai-insights";
+import type { DriverInsights } from "@/actions/ai-insights";
 
 type Driver = { code: string; name: string; r: number; pValue: number; n: number };
 
@@ -17,16 +23,23 @@ function corrColor(r: number): string {
 }
 
 export function DriversClient({
+  campaignId,
   drivers,
   matrix,
   dimensionCodes,
   dimScores,
+  initialInsights,
 }: {
+  campaignId: string;
   drivers: Driver[];
   matrix: Record<string, Record<string, { r: number; pValue: number }>>;
   dimensionCodes: string[];
   dimScores: Record<string, number>;
+  initialInsights: DriverInsights | null;
 }) {
+  const [insights, setInsights] = useState<DriverInsights | null>(initialInsights);
+  const [isPending, startTransition] = useTransition();
+
   // Build insight
   const topDriver = drivers[0];
   const actionable = drivers.find(
@@ -58,6 +71,82 @@ export function DriversClient({
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* AI Insights */}
+      {insights ? (
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                Interpretación IA
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startTransition(async () => {
+                  const result = await interpretDrivers(campaignId);
+                  if (result.success) setInsights(result.data);
+                })}
+                disabled={isPending}
+              >
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm">{insights.narrative}</p>
+
+            {insights.quick_wins.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-green-700 mb-2 flex items-center gap-1">
+                  <Zap className="h-3 w-3" /> Quick wins
+                </p>
+                <div className="space-y-2">
+                  {insights.quick_wins.map((qw, i) => (
+                    <div key={i} className="rounded-md border border-green-200 bg-green-50 p-2">
+                      <p className="text-sm font-medium">{qw.dimension}</p>
+                      <p className="text-xs text-muted-foreground">{qw.action}</p>
+                      <p className="text-xs text-green-700 mt-1">{qw.impact}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {insights.paradoxes.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-amber-700 mb-2">Paradojas detectadas</p>
+                <ul className="space-y-1">
+                  {insights.paradoxes.map((p, i) => (
+                    <li key={i} className="text-sm flex items-start gap-2">
+                      <span className="text-amber-600 mt-0.5">?</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => startTransition(async () => {
+            const result = await interpretDrivers(campaignId);
+            if (result.success) setInsights(result.data);
+          })}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Interpretar con IA
+        </Button>
       )}
 
       {/* Driver bars */}

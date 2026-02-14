@@ -1,6 +1,6 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
@@ -17,6 +17,10 @@
 6. [Flujo de Encuesta](#6-flujo-de-encuesta)
 7. [Flujo de Campaña](#7-flujo-de-campaña)
 8. [Esquema de UUIDs](#8-esquema-de-uuids)
+9. [Métricas Psicométricas (v4.1)](#9-métricas-psicométricas-v41)
+10. [Indicadores de Negocio](#10-indicadores-de-negocio)
+11. [Análisis con IA (v4.1.1)](#11-análisis-con-ia-v411)
+12. [Referencias Adicionales](#12-referencias-adicionales-v41)
 
 ---
 
@@ -497,7 +501,7 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 ### 5.4 Estructura JSONB: `campaign_analytics`
 
-La tabla `campaign_analytics` almacena 4 tipos de análisis:
+La tabla `campaign_analytics` almacena 11 tipos de análisis (5 estadísticos + 6 IA):
 
 #### `analysis_type = "correlation_matrix"`
 
@@ -558,6 +562,69 @@ Ordenado por `|r|` descendente. Excluye ENG (es la variable dependiente).
   { "category": "compensacion", "avg_score": 3.45, "favorability_pct": 55.8, "dimension_count": 5 },
   { "category": "cultura", "avg_score": 3.88, "favorability_pct": 70.5, "dimension_count": 5 }
 ]
+```
+
+#### `analysis_type = "reliability"` (v4.1)
+
+```json
+[
+  { "dimension_code": "ORG", "dimension_name": "Orgullo Institucional", "alpha": 0.82, "item_count": 4, "respondent_count": 120 }
+]
+```
+
+#### `analysis_type = "comment_analysis"` (v4.1.1 — IA)
+
+```json
+{
+  "themes": [{"theme": "Liderazgo", "count": 15, "sentiment": "positive", "examples": ["Mi jefe..."]}],
+  "summary": {"strengths": "...", "improvements": "...", "general": "..."},
+  "sentiment_distribution": {"positive": 45, "negative": 20, "neutral": 15}
+}
+```
+
+#### `analysis_type = "dashboard_narrative"` (v4.1.1 — IA)
+
+```json
+{
+  "executive_summary": "Párrafo con diagnóstico general...",
+  "highlights": ["Engagement alto en 4.2"],
+  "concerns": ["Compensación con baja favorabilidad"],
+  "recommendation": "Recomendación principal..."
+}
+```
+
+#### `analysis_type = "driver_insights"` (v4.1.1 — IA)
+
+```json
+{
+  "narrative": "Interpretación de drivers...",
+  "paradoxes": ["Alta correlación pero alto score en LID"],
+  "quick_wins": [{"dimension": "COM", "action": "Implementar reuniones 1:1", "impact": "Mejora estimada en engagement"}]
+}
+```
+
+#### `analysis_type = "alert_context"` (v4.1.1 — IA)
+
+```json
+[{"alert_index": 0, "root_cause": "Hipótesis de causa raíz...", "recommendation": "Acción concreta..."}]
+```
+
+#### `analysis_type = "segment_profiles"` (v4.1.1 — IA)
+
+```json
+[{"segment": "Ventas", "segment_type": "department", "narrative": "Perfil del segmento...", "strengths": ["LID"], "risks": ["CMP"]}]
+```
+
+#### `analysis_type = "trends_narrative"` (v4.1.1 — IA)
+
+```json
+{
+  "trajectory": "Descripción de trayectoria general...",
+  "improving": ["LID mejoró de 3.8 a 4.1"],
+  "declining": ["CMP bajó de 3.5 a 3.2"],
+  "stable": ["ENG se mantuvo en ~4.0"],
+  "inflection_points": ["Cambio notable entre Q3 y Q1"]
+}
 ```
 
 ### 5.5 Estructura JSONB: `campaign_results.metadata`
@@ -958,7 +1025,61 @@ turnover_rate, absenteeism_rate, customer_nps, customer_satisfaction, productivi
 
 ---
 
-## 11. Referencias Adicionales (v4.1)
+## 11. Análisis con IA (v4.1.1)
+
+### 11.1 Arquitectura
+
+ClimaLab integra un modelo de lenguaje (LLM) vía Ollama para generar análisis cualitativos complementarios a las métricas estadísticas. La integración sigue el patrón:
+
+```
+Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campaign_analytics
+```
+
+**Configuración:**
+- `OLLAMA_BASE_URL`: URL del servidor Ollama
+- `OLLAMA_MODEL`: Modelo a usar (default: `qwen2.5:72b`)
+- Temperature: 0.3 (baja para consistencia)
+- Timeout: 120s por llamada
+
+### 11.2 Funciones de Generación
+
+| Función | Entrada | Salida | Almacenamiento |
+|---------|---------|--------|---------------|
+| `analyzeComments()` | Comentarios abiertos por tipo | Temas, sentimiento, resumen | `comment_analysis` |
+| `generateNarrative()` | KPIs, categorías, dimensiones top/bottom, alertas | Resumen ejecutivo, destacados, preocupaciones | `dashboard_narrative` |
+| `interpretDrivers()` | Drivers de engagement + scores | Narrativa, paradojas, quick wins | `driver_insights` |
+| `contextualizeAlerts()` | Lista de alertas con severity/value | Causa raíz + recomendación por alerta | `alert_context` |
+| `profileSegments()` | Scores por segmento vs global | Perfil narrativo con fortalezas/riesgos | `segment_profiles` |
+| `generateTrendsNarrative()` | Scores por dimensión across campaigns | Trayectoria, mejoras, declives, inflexiones | `trends_narrative` |
+
+### 11.3 Orquestación
+
+`generateAllInsights(campaignId)` ejecuta las 5 funciones de campaña en paralelo (`Promise.all`), luego genera la narrativa de tendencias. Elimina insights previos antes de insertar nuevos. Disponible desde el dashboard con botón "Generar insights IA".
+
+### 11.4 Páginas con IA
+
+| Página | Componente | Funcionalidad IA |
+|--------|-----------|-----------------|
+| Dashboard | `dashboard-client.tsx` | Resumen ejecutivo con highlights/concerns/recommendation |
+| Comments | `comments-client.tsx` | Distribución de sentimiento, temas con ejemplos, resumen |
+| Drivers | `drivers-client.tsx` | Interpretación narrativa, quick wins, paradojas |
+| Alerts | `alerts-client.tsx` | Causa raíz y recomendación inline por alerta |
+| Segments | `segments-client.tsx` | Perfiles narrativos por segmento con badges |
+| Trends | `trends-client.tsx` | Análisis de trayectoria con dims mejorando/declinando |
+| Export | `export-client.tsx` | Reporte ejecutivo descargable (.txt) combinando todos los insights |
+
+### 11.5 Consideraciones
+
+- Los insights IA son **complementarios**, no sustituyen el análisis estadístico
+- Se almacenan en `campaign_analytics` y se cargan en SSR para carga rápida
+- Cada página tiene botón "Regenerar" para actualización on-demand
+- Si Ollama no está configurado (`OLLAMA_BASE_URL` ausente), las funciones retornan error sin afectar la operación normal
+- Los prompts están en español latinoamericano profesional
+- Se solicita JSON estructurado al modelo para parsing confiable
+
+---
+
+## 12. Referencias Adicionales (v4.1)
 
 - James, L. R., Demaree, R. G., & Wolf, G. (1984). Estimating within-group interrater reliability with and without response bias. *Journal of Applied Psychology, 69*(1), 85-98.
 - Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297-334.

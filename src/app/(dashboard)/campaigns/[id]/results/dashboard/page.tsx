@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCampaign, getCampaigns, getCampaignResults } from "@/actions/campaigns";
 import { getAlerts, getCategoryScores } from "@/actions/analytics";
 import { getBusinessIndicators } from "@/actions/business-indicators";
+import { getDashboardNarrative } from "@/actions/ai-insights";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage({
@@ -11,12 +12,13 @@ export default async function DashboardPage({
 }) {
   const { id } = await params;
 
-  const [campaignResult, resultsResult, alertsResult, categoriesResult, indicatorsResult] = await Promise.all([
+  const [campaignResult, resultsResult, alertsResult, categoriesResult, indicatorsResult, narrativeResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getAlerts(id),
     getCategoryScores(id),
     getBusinessIndicators(id),
+    getDashboardNarrative(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -26,6 +28,7 @@ export default async function DashboardPage({
   const alerts = alertsResult.success ? alertsResult.data : [];
   const categories = categoriesResult.success ? categoriesResult.data : [];
   const indicators = indicatorsResult.success ? indicatorsResult.data : [];
+  const narrative = narrativeResult.success ? narrativeResult.data : null;
 
   // Extract dimension results (global)
   const dimensionResults = results
@@ -77,6 +80,7 @@ export default async function DashboardPage({
       categories={categories}
       indicators={indicators}
       previousCampaigns={previousCampaigns}
+      initialNarrative={narrative}
     />
   );
 }

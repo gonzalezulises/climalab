@@ -1,14 +1,24 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.1
+## Estado Actual: v4.1.1
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento
+
 **Mejoras estadísticas v4.1**:
 - rwg(j) para validar acuerdo intergrupal
 - Alfa de Cronbach para confiabilidad interna
 - Tabla de indicadores de negocio para correlación temporal
 - Vista de 3 niveles de análisis (EMCO-aligned)
 - Reporte técnico expandido con limitaciones auto-generadas
+
+**Amplificación con IA v4.1.1**:
+- Análisis de comentarios: temas, sentimiento, resumen por tipo
+- Resumen ejecutivo narrativo en dashboard
+- Interpretación de drivers: narrativa, paradojas, quick wins
+- Contextualización de alertas: causa raíz + recomendación
+- Perfiles narrativos de segmentos con fortalezas/riesgos
+- Narrativa de tendencias: trayectoria, dimensiones mejorando/declinando
+- Reporte ejecutivo IA descargable (.txt)
 
 ---
 

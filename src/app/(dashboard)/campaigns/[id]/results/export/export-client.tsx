@@ -1,10 +1,14 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, FileDown, FileJson } from "lucide-react";
+import { Printer, FileDown, FileJson, Sparkles, Loader2 } from "lucide-react";
+import { generateAllInsights, getDashboardNarrative, getCommentAnalysis, getDriverInsights } from "@/actions/ai-insights";
+import type { DashboardNarrative, CommentAnalysis, DriverInsights } from "@/actions/ai-insights";
 
 type Props = {
+  campaignId: string;
   campaignName: string;
   dimensionData: Array<{
     dimension_code: string | null;
@@ -15,9 +19,14 @@ type Props = {
     respondent_count: number | null;
   }>;
   allResults: Array<Record<string, unknown>>;
+  initialNarrative: DashboardNarrative | null;
+  initialCommentAnalysis: CommentAnalysis | null;
+  initialDriverInsights: DriverInsights | null;
 };
 
-export function ExportClient({ campaignName, dimensionData, allResults }: Props) {
+export function ExportClient({ campaignId, campaignName, dimensionData, allResults, initialNarrative, initialCommentAnalysis, initialDriverInsights }: Props) {
+  const [isPending, startTransition] = useTransition();
+  const [report, setReport] = useState<string | null>(null);
   function exportPDF() {
     window.print();
   }
@@ -52,7 +61,7 @@ export function ExportClient({ campaignName, dimensionData, allResults }: Props)
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Centro de Exportación</h1>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -97,6 +106,107 @@ export function ExportClient({ campaignName, dimensionData, allResults }: Props)
           <CardContent>
             <Button onClick={exportJSON} variant="outline" className="w-full">
               <FileJson className="h-4 w-4 mr-2" /> Descargar JSON
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-5 w-5" /> Reporte Ejecutivo IA
+            </CardTitle>
+            <CardDescription>
+              Genera un informe ejecutivo con resumen, análisis de comentarios, drivers y recomendaciones.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => {
+                startTransition(async () => {
+                  // Try to use existing insights, or generate new ones
+                  let narr = initialNarrative;
+                  let comm = initialCommentAnalysis;
+                  let driv = initialDriverInsights;
+
+                  if (!narr || !comm || !driv) {
+                    await generateAllInsights(campaignId);
+                    const [nRes, cRes, dRes] = await Promise.all([
+                      getDashboardNarrative(campaignId),
+                      getCommentAnalysis(campaignId),
+                      getDriverInsights(campaignId),
+                    ]);
+                    narr = nRes.success ? nRes.data : narr;
+                    comm = cRes.success ? cRes.data : comm;
+                    driv = dRes.success ? dRes.data : driv;
+                  }
+
+                  // Build text report
+                  let text = `REPORTE EJECUTIVO DE CLIMA ORGANIZACIONAL\n`;
+                  text += `Campaña: ${campaignName}\n`;
+                  text += `Fecha de generación: ${new Date().toLocaleDateString("es-MX")}\n`;
+                  text += `${"=".repeat(60)}\n\n`;
+
+                  text += `DATOS POR DIMENSIÓN\n${"-".repeat(40)}\n`;
+                  for (const d of dimensionData) {
+                    text += `${d.dimension_code} — ${d.dimension_name}: ${Number(d.avg_score).toFixed(2)} (Fav: ${d.favorability_pct}%, n=${d.respondent_count})\n`;
+                  }
+
+                  if (narr) {
+                    text += `\n\nRESUMEN EJECUTIVO\n${"-".repeat(40)}\n`;
+                    text += `${narr.executive_summary}\n\n`;
+                    text += `Destacados:\n${narr.highlights.map((h) => `  + ${h}`).join("\n")}\n\n`;
+                    text += `Preocupaciones:\n${narr.concerns.map((c) => `  ! ${c}`).join("\n")}\n\n`;
+                    text += `Recomendación:\n${narr.recommendation}\n`;
+                  }
+
+                  if (driv) {
+                    text += `\n\nANÁLISIS DE DRIVERS\n${"-".repeat(40)}\n`;
+                    text += `${driv.narrative}\n\n`;
+                    if (driv.quick_wins.length > 0) {
+                      text += `Quick wins:\n`;
+                      for (const qw of driv.quick_wins) {
+                        text += `  - ${qw.dimension}: ${qw.action} → ${qw.impact}\n`;
+                      }
+                    }
+                  }
+
+                  if (comm) {
+                    text += `\n\nANÁLISIS DE COMENTARIOS\n${"-".repeat(40)}\n`;
+                    text += `Sentimiento: ${comm.sentiment_distribution.positive} positivos, ${comm.sentiment_distribution.negative} negativos, ${comm.sentiment_distribution.neutral} neutrales\n\n`;
+                    text += `Fortalezas: ${comm.summary.strengths}\n\n`;
+                    text += `Áreas de mejora: ${comm.summary.improvements}\n\n`;
+                    if (comm.themes.length > 0) {
+                      text += `Temas identificados:\n`;
+                      for (const t of comm.themes) {
+                        text += `  - ${t.theme} (${t.count} menciones, ${t.sentiment})\n`;
+                      }
+                    }
+                  }
+
+                  text += `\n\n${"=".repeat(60)}\n`;
+                  text += `Generado por ClimaLab con asistencia de IA\n`;
+
+                  setReport(text);
+
+                  // Download
+                  const blob = new Blob([text], { type: "text/plain;charset=utf-8;" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${campaignName.replace(/\s+/g, "_")}_reporte_ejecutivo.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                });
+              }}
+              variant="outline"
+              className="w-full"
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Generar reporte IA
             </Button>
           </CardContent>
         </Card>

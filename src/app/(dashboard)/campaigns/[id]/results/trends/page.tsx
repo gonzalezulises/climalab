@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCampaign } from "@/actions/campaigns";
 import { getTrendsData } from "@/actions/analytics";
+import { getTrendsNarrative } from "@/actions/ai-insights";
 import { TrendsClient } from "./trends-client";
 
 export default async function TrendsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,5 +21,16 @@ export default async function TrendsPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  return <TrendsClient campaigns={trends.campaigns} series={trends.series} />;
+  const narrativeResult = await getTrendsNarrative(id);
+  const trendsNarrative = narrativeResult.success ? narrativeResult.data : null;
+
+  return (
+    <TrendsClient
+      campaignId={id}
+      organizationId={campaignResult.data.organization_id}
+      campaigns={trends.campaigns}
+      series={trends.series}
+      initialNarrative={trendsNarrative}
+    />
+  );
 }

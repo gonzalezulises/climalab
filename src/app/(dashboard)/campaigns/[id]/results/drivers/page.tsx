@@ -1,15 +1,17 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getEngagementDrivers, getCorrelationMatrix } from "@/actions/analytics";
+import { getDriverInsights } from "@/actions/ai-insights";
 import { DriversClient } from "./drivers-client";
 
 export default async function DriversPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, driversResult, matrixResult, resultsResult] = await Promise.all([
+  const [campaignResult, driversResult, matrixResult, resultsResult, insightsResult] = await Promise.all([
     getCampaign(id),
     getEngagementDrivers(id),
     getCorrelationMatrix(id),
     getCampaignResults(id),
+    getDriverInsights(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -28,12 +30,16 @@ export default async function DriversPage({ params }: { params: Promise<{ id: st
 
   const dimensionCodes = [...dimScores.keys()];
 
+  const insights = insightsResult.success ? insightsResult.data : null;
+
   return (
     <DriversClient
+      campaignId={id}
       drivers={drivers}
       matrix={matrix}
       dimensionCodes={dimensionCodes}
       dimScores={Object.fromEntries(dimScores)}
+      initialInsights={insights}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend,
@@ -8,8 +8,12 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles, Loader2 } from "lucide-react";
 import { compareCampaigns } from "@/actions/campaigns";
+import { generateAllInsights } from "@/actions/ai-insights";
+import type { DashboardNarrative } from "@/actions/ai-insights";
 import { AnalysisLevelCards } from "@/components/results/analysis-level-cards";
 import { INDICATOR_TYPES } from "@/lib/constants";
 import type { BusinessIndicator } from "@/types";
@@ -44,15 +48,18 @@ type Props = {
   categories: Array<{ category: string; avg_score: number; favorability_pct: number }>;
   indicators: BusinessIndicator[];
   previousCampaigns: Array<{ id: string; name: string }>;
+  initialNarrative: DashboardNarrative | null;
 };
 
 export function DashboardClient({
   campaignId, engScore, globalFav, enpsScore, responseRate,
   sampleN, populationN, dimensionResults, profiles, alerts,
-  categories, indicators, previousCampaigns,
+  categories, indicators, previousCampaigns, initialNarrative,
 }: Props) {
   const [selectedPrevId, setSelectedPrevId] = useState("");
   const [compData, setCompData] = useState<{ dimension: string; current: number; previous: number; delta: number }[] | null>(null);
+  const [narrative, setNarrative] = useState<DashboardNarrative | null>(initialNarrative);
+  const [isGenerating, startGeneration] = useTransition();
 
   useEffect(() => {
     if (!selectedPrevId) { setCompData(null); return; }
@@ -126,6 +133,87 @@ export function DashboardClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Narrative */}
+      {narrative ? (
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                Resumen ejecutivo IA
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startGeneration(async () => {
+                  const result = await generateAllInsights(campaignId);
+                  if (result.success) window.location.reload();
+                })}
+                disabled={isGenerating}
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">{narrative.executive_summary}</p>
+            {narrative.highlights.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-green-700 mb-1">Destacados</p>
+                <ul className="text-sm space-y-1">
+                  {narrative.highlights.map((h, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-green-600 mt-0.5">+</span>
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {narrative.concerns.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-red-700 mb-1">Preocupaciones</p>
+                <ul className="text-sm space-y-1">
+                  {narrative.concerns.map((c, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-red-600 mt-0.5">!</span>
+                      <span>{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="pt-2 border-t">
+              <p className="text-xs font-medium text-blue-700 mb-1">Recomendación</p>
+              <p className="text-sm">{narrative.recommendation}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="pt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Genera insights con IA para obtener un resumen ejecutivo, análisis de comentarios y más.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => startGeneration(async () => {
+                const result = await generateAllInsights(campaignId);
+                if (result.success) window.location.reload();
+              })}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generar insights IA
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Categories */}
       {categories.length > 0 && (

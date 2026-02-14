@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getHeatmapData } from "@/actions/analytics";
+import { getSegmentProfiles } from "@/actions/ai-insights";
 import { SegmentsClient } from "./segments-client";
 
 export default async function SegmentsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, resultsResult, heatmapResult] = await Promise.all([
+  const [campaignResult, resultsResult, heatmapResult, profilesResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getHeatmapData(id),
+    getSegmentProfiles(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -26,11 +28,15 @@ export default async function SegmentsPage({ params }: { params: Promise<{ id: s
     .map((r) => r.dimension_code!)
     .filter(Boolean);
 
+  const segmentProfileData = profilesResult.success ? profilesResult.data : null;
+
   return (
     <SegmentsClient
+      campaignId={id}
       heatmapData={heatmapData}
       dimensionCodes={dimensionCodes}
       globalEngScore={globalEngScore}
+      initialProfiles={segmentProfileData}
     />
   );
 }
