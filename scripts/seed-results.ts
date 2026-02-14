@@ -35,10 +35,11 @@ async function processOneCampaign(supabase: ReturnType<typeof createClient>, cam
     return;
   }
 
+  const allInstrumentIds = [campaign.instrument_id, ...(campaign.module_instrument_ids ?? [])];
   const { data: dimensions } = await supabase
     .from("dimensions")
     .select("*, items(*)")
-    .eq("instrument_id", campaign.instrument_id)
+    .in("instrument_id", allInstrumentIds)
     .order("sort_order");
 
   if (!dimensions) {

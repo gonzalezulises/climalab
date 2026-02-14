@@ -66,6 +66,23 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Action
 
   const supabase = await createClient();
 
+  // Validate module instruments exist and are type 'module'
+  const moduleIds = parsed.data.module_instrument_ids;
+  if (moduleIds && moduleIds.length > 0) {
+    const { data: modules, error: modError } = await supabase
+      .from("instruments")
+      .select("id")
+      .in("id", moduleIds)
+      .eq("instrument_type", "module");
+
+    if (modError) {
+      return { success: false, error: modError.message };
+    }
+    if (!modules || modules.length !== moduleIds.length) {
+      return { success: false, error: "Uno o más módulos seleccionados no son válidos" };
+    }
+  }
+
   const { data, error } = await supabase.from("campaigns").insert(parsed.data).select().single();
 
   if (error) {
@@ -287,11 +304,12 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     return { success: false, error: campaignError?.message ?? "Campaña no encontrada" };
   }
 
-  // 2. Fetch instrument with dimensions and items
+  // 2. Fetch instrument with dimensions and items (base + modules)
+  const allInstrumentIds = [campaign.instrument_id, ...(campaign.module_instrument_ids ?? [])];
   const { data: dimensions, error: dimError } = await supabase
     .from("dimensions")
     .select("*, items(*)")
-    .eq("instrument_id", campaign.instrument_id)
+    .in("instrument_id", allInstrumentIds)
     .order("sort_order", { ascending: true });
 
   if (dimError || !dimensions) {

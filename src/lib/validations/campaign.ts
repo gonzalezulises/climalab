@@ -24,6 +24,7 @@ export const createCampaignSchema = z.object({
   context_notes: z.string().max(2000).optional(),
   target_departments: z.array(z.string()).optional(),
   target_population: z.number().int().min(1).optional(),
+  module_instrument_ids: z.array(zUuid("ID de módulo inválido")).max(3).default([]),
 });
 
 export const updateCampaignStatusSchema = z.object({

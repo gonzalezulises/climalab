@@ -74,6 +74,22 @@ const attentionChecks = [
   { itemNum: 81, expected: 2 },
 ];
 
+// Module dimensions (only for campaign 2 which has CAM + DIG modules)
+// Module item UUIDs use e5000000 prefix
+const moduleDimensions = [
+  { code: "CAM", items: [1, 2, 3, 4, 5, 6, 7, 8], reverseItems: [8] },  // Gestión del Cambio
+  { code: "DIG", items: [13, 14, 15, 16], reverseItems: [16] },           // Preparación Digital
+];
+
+const moduleTargetAvg = {
+  CAM: 3.7,
+  DIG: 3.85,
+};
+
+function moduleItemUUID(n) {
+  return `e5000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
+}
+
 function itemUUID(n) {
   return `e3000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
 }
@@ -251,6 +267,22 @@ for (const campaign of campaigns) {
       responseRows.push(
         `('${responseUUID(idx, responseNum)}', '${rUUID}', '${itemUUID(ac.itemNum)}', ${score}, '${date}T09:${minute}:00Z')`
       );
+    }
+
+    // Module items (campaign 2 only — has CAM + DIG)
+    if (idx === 1) {
+      for (const mod of moduleDimensions) {
+        const modAvg = moduleTargetAvg[mod.code];
+        for (const itemNum of mod.items) {
+          responseNum++;
+          const isReverse = mod.reverseItems.includes(itemNum);
+          const targetForItem = isReverse ? 6 - modAvg : modAvg;
+          const score = generateScore(targetForItem, personality);
+          responseRows.push(
+            `('${responseUUID(idx, responseNum)}', '${rUUID}', '${moduleItemUUID(itemNum)}', ${score}, '${date}T09:${minute}:00Z')`
+          );
+        }
+      }
     }
   }
 

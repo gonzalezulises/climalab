@@ -181,6 +181,7 @@ export type Database = {
           instrument_id: string
           margin_of_error: number | null
           measurement_objective: string | null
+          module_instrument_ids: string[]
           name: string
           objective_description: string | null
           organization_id: string
@@ -204,6 +205,7 @@ export type Database = {
           instrument_id: string
           margin_of_error?: number | null
           measurement_objective?: string | null
+          module_instrument_ids?: string[]
           name: string
           objective_description?: string | null
           organization_id: string
@@ -227,6 +229,7 @@ export type Database = {
           instrument_id?: string
           margin_of_error?: number | null
           measurement_objective?: string | null
+          module_instrument_ids?: string[]
           name?: string
           objective_description?: string | null
           organization_id?: string
@@ -305,6 +308,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          instrument_type: Database["public"]["Enums"]["instrument_type"]
           is_active: boolean
           mode: Database["public"]["Enums"]["instrument_mode"]
           name: string
@@ -317,6 +321,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instrument_type?: Database["public"]["Enums"]["instrument_type"]
           is_active?: boolean
           mode?: Database["public"]["Enums"]["instrument_mode"]
           name: string
@@ -329,6 +334,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instrument_type?: Database["public"]["Enums"]["instrument_type"]
           is_active?: boolean
           mode?: Database["public"]["Enums"]["instrument_mode"]
           name?: string
@@ -690,6 +696,7 @@ export type Database = {
     Enums: {
       campaign_status: "draft" | "active" | "closed" | "archived"
       instrument_mode: "full" | "pulse"
+      instrument_type: "base" | "module"
       size_category: "micro" | "small" | "medium" | "large"
       target_size: "all" | "small" | "medium"
       user_role: "super_admin" | "org_admin" | "member"
@@ -825,6 +832,7 @@ export const Constants = {
     Enums: {
       campaign_status: ["draft", "active", "closed", "archived"],
       instrument_mode: ["full", "pulse"],
+      instrument_type: ["base", "module"],
       size_category: ["micro", "small", "medium", "large"],
       target_size: ["all", "small", "medium"],
       user_role: ["super_admin", "org_admin", "member"],

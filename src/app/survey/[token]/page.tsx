@@ -48,11 +48,12 @@ async function getSurveyData(token: string) {
     return { error: "Esta encuesta ha finalizado." };
   }
 
-  // Fetch instrument dimensions and items
+  // Fetch instrument dimensions and items (base + modules)
+  const allInstrumentIds = [campaign.instrument_id, ...(campaign.module_instrument_ids ?? [])];
   const { data: dimensions, error: dimError } = await supabase
     .from("dimensions")
     .select("*, items(*)")
-    .eq("instrument_id", campaign.instrument_id)
+    .in("instrument_id", allInstrumentIds)
     .order("sort_order", { ascending: true });
 
   if (dimError || !dimensions) {

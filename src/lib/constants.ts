@@ -40,6 +40,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   compensacion: "Compensación",
   cultura: "Cultura",
   engagement: "Engagement",
+  modulos: "Módulos Opcionales",
 };
 
 export const INDICATOR_TYPES: Record<string, string> = {

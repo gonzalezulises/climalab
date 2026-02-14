@@ -67,6 +67,16 @@ export default async function CampaignsPage() {
                     <CardDescription>
                       {orgMap.get(campaign.organization_id) ?? "—"} ·{" "}
                       {instrMap.get(campaign.instrument_id) ?? "—"}
+                      {(campaign.module_instrument_ids ?? []).length > 0 && (
+                        <>
+                          {" "}
+                          +{" "}
+                          {(campaign.module_instrument_ids as string[])
+                            .map((mid) => instrMap.get(mid))
+                            .filter(Boolean)
+                            .join(", ")}
+                        </>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

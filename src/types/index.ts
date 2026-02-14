@@ -35,6 +35,7 @@ export type UserRole = Database["public"]["Enums"]["user_role"];
 export type InstrumentMode = Database["public"]["Enums"]["instrument_mode"];
 export type TargetSize = Database["public"]["Enums"]["target_size"];
 export type CampaignStatus = Database["public"]["Enums"]["campaign_status"];
+export type InstrumentType = Database["public"]["Enums"]["instrument_type"];
 
 // Composite types for queries
 export type InstrumentWithDimensions = Instrument & {

@@ -99,7 +99,15 @@ export function DimensionsClient({
 }) {
   const [view, setView] = useState<"category" | "level">("category");
 
-  const categoryKeys = ["bienestar", "direccion", "compensacion", "cultura", "engagement"];
+  const hasModules = dimensionResults.some((d) => d.category === "modulos");
+  const categoryKeys = [
+    "bienestar",
+    "direccion",
+    "compensacion",
+    "cultura",
+    "engagement",
+    ...(hasModules ? ["modulos"] : []),
+  ];
   const levelKeys = ["individual", "interpersonal", "organizacional"];
 
   function renderDimGrid(dims: DimensionResult[]) {

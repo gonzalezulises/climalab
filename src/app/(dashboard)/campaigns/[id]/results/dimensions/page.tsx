@@ -28,6 +28,9 @@ const dimCategory: Record<string, string> = {
   DES: "cultura",
   APR: "cultura",
   ENG: "engagement",
+  CAM: "modulos",
+  CLI: "modulos",
+  DIG: "modulos",
 };
 
 export default async function DimensionsPage({

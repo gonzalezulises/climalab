@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCampaign, getRespondents } from "@/actions/campaigns";
 import { getParticipants } from "@/actions/participants";
 import { getOrganization } from "@/actions/organizations";
+import { getInstruments } from "@/actions/instruments";
 import { getBusinessIndicators } from "@/actions/business-indicators";
 import { env } from "@/lib/env";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +30,19 @@ const STATUS_LABELS: Record<
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, respondentsResult, participantsResult, indicatorsResult] =
-    await Promise.all([
-      getCampaign(id),
-      getRespondents(id),
-      getParticipants(id),
-      getBusinessIndicators(id),
-    ]);
+  const [
+    campaignResult,
+    respondentsResult,
+    participantsResult,
+    indicatorsResult,
+    instrumentsResult,
+  ] = await Promise.all([
+    getCampaign(id),
+    getRespondents(id),
+    getParticipants(id),
+    getBusinessIndicators(id),
+    getInstruments(),
+  ]);
 
   if (!campaignResult.success) {
     notFound();
@@ -45,6 +52,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   const respondents = respondentsResult.success ? respondentsResult.data : [];
   const participants = participantsResult.success ? participantsResult.data : [];
   const indicators = indicatorsResult.success ? indicatorsResult.data : [];
+  const instrumentMap = new Map(
+    (instrumentsResult.success ? instrumentsResult.data : []).map((i) => [i.id, i.name])
+  );
+  const moduleNames = (campaign.module_instrument_ids ?? [])
+    .map((mid: string) => instrumentMap.get(mid))
+    .filter(Boolean) as string[];
 
   const orgResult = await getOrganization(campaign.organization_id);
   const orgName = orgResult.success ? orgResult.data.name : "—";
@@ -111,6 +124,16 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
                   <p className="text-sm font-medium text-muted-foreground">Anónima</p>
                   <p>{campaign.anonymous ? "Sí" : "No"}</p>
                 </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Instrumento</p>
+                  <p>{instrumentMap.get(campaign.instrument_id) ?? "—"}</p>
+                </div>
+                {moduleNames.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Módulos</p>
+                    <p>{moduleNames.join(", ")}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Fecha inicio</p>
                   <p>

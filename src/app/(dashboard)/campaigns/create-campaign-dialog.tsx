@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createCampaign } from "@/actions/campaigns";
@@ -53,10 +53,28 @@ export function CreateCampaignDialog({
   const [objectiveDescription, setObjectiveDescription] = useState("");
   const [contextNotes, setContextNotes] = useState("");
 
+  // Modules
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+
   // Targeting
   const [allOrg, setAllOrg] = useState(true);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [targetPopulationOverride, setTargetPopulationOverride] = useState("");
+
+  const baseInstruments = useMemo(
+    () => instruments.filter((i) => i.instrument_type === "base"),
+    [instruments]
+  );
+  const moduleInstruments = useMemo(
+    () => instruments.filter((i) => i.instrument_type === "module"),
+    [instruments]
+  );
+
+  const toggleModule = useCallback((id: string) => {
+    setSelectedModules((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  }, []);
 
   const selectedOrg = organizations.find((o) => o.id === orgId);
   const orgDepartments: Department[] = useMemo(() => {
@@ -91,6 +109,7 @@ export function CreateCampaignDialog({
     setAllOrg(true);
     setSelectedDepts([]);
     setTargetPopulationOverride("");
+    setSelectedModules([]);
   }
 
   const handleSubmit = async () => {
@@ -114,6 +133,7 @@ export function CreateCampaignDialog({
       context_notes: contextNotes || undefined,
       target_departments: !allOrg && selectedDepts.length > 0 ? selectedDepts : undefined,
       target_population: targetPop,
+      module_instrument_ids: selectedModules.length > 0 ? selectedModules : undefined,
     });
 
     if (result.success) {
@@ -178,13 +198,13 @@ export function CreateCampaignDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>Instrumento *</Label>
+                <Label>Instrumento base *</Label>
                 <Select value={instrumentId} onValueChange={setInstrumentId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona instrumento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {instruments.map((inst) => (
+                    {baseInstruments.map((inst) => (
                       <SelectItem key={inst.id} value={inst.id}>
                         {inst.name} v{inst.version}
                       </SelectItem>
@@ -193,6 +213,25 @@ export function CreateCampaignDialog({
                 </Select>
               </div>
             </div>
+
+            {moduleInstruments.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Módulos opcionales</Label>
+                <div className="space-y-1">
+                  {moduleInstruments.map((mod) => (
+                    <label key={mod.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedModules.includes(mod.id)}
+                        onChange={() => toggleModule(mod.id)}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                      <span className="text-sm">{mod.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />
