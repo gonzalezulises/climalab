@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCampaign, getRespondents } from "@/actions/campaigns";
+import { getParticipants } from "@/actions/participants";
 import { getOrganization } from "@/actions/organizations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,20 +18,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
-import { CopyLinkButton } from "./copy-link-button";
-import { CopyAllLinksButton } from "./copy-all-links-button";
+import { ParticipantsPanel } from "./participants-panel";
 import { MonitoringPanel } from "./monitoring-panel";
+import type { Department } from "@/types";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Borrador", variant: "secondary" },
@@ -39,12 +32,6 @@ const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secon
   archived: { label: "Archivada", variant: "destructive" },
 };
 
-const RESPONDENT_STATUS: Record<string, string> = {
-  pending: "Pendiente",
-  in_progress: "En progreso",
-  completed: "Completado",
-  disqualified: "Descalificado",
-};
 
 export default async function CampaignDetailPage({
   params,
@@ -52,9 +39,10 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [campaignResult, respondentsResult] = await Promise.all([
+  const [campaignResult, respondentsResult, participantsResult] = await Promise.all([
     getCampaign(id),
     getRespondents(id),
+    getParticipants(id),
   ]);
 
   if (!campaignResult.success) {
@@ -63,9 +51,13 @@ export default async function CampaignDetailPage({
 
   const campaign = campaignResult.data;
   const respondents = respondentsResult.success ? respondentsResult.data : [];
+  const participants = participantsResult.success ? participantsResult.data : [];
 
   const orgResult = await getOrganization(campaign.organization_id);
   const orgName = orgResult.success ? orgResult.data.name : "—";
+  const orgDepartments = orgResult.success
+    ? ((orgResult.data.departments as Department[] | null) ?? []).map((d) => d.name)
+    : [];
 
   const statusInfo = STATUS_LABELS[campaign.status] ?? STATUS_LABELS.draft;
 
@@ -96,7 +88,7 @@ export default async function CampaignDetailPage({
               </Button>
             </Link>
           )}
-          <CampaignActions campaign={campaign} respondentCount={respondents.length} />
+          <CampaignActions campaign={campaign} participantCount={participants.length} />
         </div>
       </div>
 
@@ -104,7 +96,7 @@ export default async function CampaignDetailPage({
         <TabsList>
           <TabsTrigger value="config">Configuración</TabsTrigger>
           <TabsTrigger value="participants">
-            Participantes ({respondents.length})
+            Participantes ({participants.length})
           </TabsTrigger>
           <TabsTrigger value="monitoring">Monitoreo</TabsTrigger>
         </TabsList>
@@ -178,73 +170,19 @@ export default async function CampaignDetailPage({
         <TabsContent value="participants" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Enlaces de participación</CardTitle>
-              <div className="flex items-center justify-between">
-                <CardDescription>
-                  Genera y comparte enlaces para que los participantes respondan la encuesta.
-                </CardDescription>
-                {respondents.length > 0 && (
-                  <CopyAllLinksButton
-                    links={respondents.map((r) => `${baseUrl}/survey/${r.token}`)}
-                  />
-                )}
-              </div>
+              <CardTitle>Participantes</CardTitle>
+              <CardDescription>
+                Agrega participantes, envía invitaciones por email y monitorea su progreso.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {respondents.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No se han generado enlaces. Usa el botón de acciones para generar.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>#</TableHead>
-                        <TableHead>Token</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Enlace</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {respondents.slice(0, 50).map((resp, idx) => (
-                        <TableRow key={resp.id}>
-                          <TableCell>{idx + 1}</TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {resp.token.slice(0, 12)}...
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                resp.status === "completed"
-                                  ? "default"
-                                  : resp.status === "in_progress"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {RESPONDENT_STATUS[resp.status] ?? resp.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {baseUrl}/survey/{resp.token}
-                              </code>
-                              <CopyLinkButton url={`${baseUrl}/survey/${resp.token}`} />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {respondents.length > 50 && (
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando 50 de {respondents.length} enlaces
-                    </p>
-                  )}
-                </div>
-              )}
+              <ParticipantsPanel
+                campaignId={campaign.id}
+                campaignStatus={campaign.status}
+                participants={participants}
+                departments={orgDepartments}
+                baseUrl={baseUrl}
+              />
             </CardContent>
           </Card>
         </TabsContent>

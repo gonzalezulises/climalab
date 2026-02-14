@@ -39,6 +39,32 @@ export const generateLinksSchema = z.object({
   count: z.number().int().min(1, "Mínimo 1 enlace").max(1000, "Máximo 1000 enlaces"),
 });
 
+// Participant schemas
+export const participantSchema = z.object({
+  name: z.string().min(1, "Nombre requerido").max(200),
+  email: z.string().email("Email inválido"),
+  department: z.string().max(200).optional(),
+});
+
+export const addParticipantsSchema = z.object({
+  campaign_id: zUuid(),
+  participants: z.array(participantSchema).min(1, "Al menos un participante"),
+});
+
+export const sendInvitationsSchema = z.object({
+  campaign_id: zUuid(),
+  participant_ids: z.array(zUuid()).min(1, "Al menos un participante"),
+});
+
+export const removeParticipantSchema = z.object({
+  participant_id: zUuid(),
+  campaign_id: zUuid(),
+});
+
 export type CreateCampaignInput = z.input<typeof createCampaignSchema>;
 export type UpdateCampaignStatusInput = z.infer<typeof updateCampaignStatusSchema>;
 export type GenerateLinksInput = z.infer<typeof generateLinksSchema>;
+export type ParticipantInput = z.infer<typeof participantSchema>;
+export type AddParticipantsInput = z.infer<typeof addParticipantsSchema>;
+export type SendInvitationsInput = z.infer<typeof sendInvitationsSchema>;
+export type RemoveParticipantInput = z.infer<typeof removeParticipantSchema>;

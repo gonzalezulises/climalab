@@ -432,6 +432,63 @@ export type Database = {
         }
         Relationships: []
       }
+      participants: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          department: string | null
+          email: string
+          id: string
+          invitation_status: string
+          invited_at: string | null
+          name: string
+          reminded_at: string | null
+          reminder_count: number
+          respondent_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          department?: string | null
+          email: string
+          id?: string
+          invitation_status?: string
+          invited_at?: string | null
+          name: string
+          reminded_at?: string | null
+          reminder_count?: number
+          respondent_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          department?: string | null
+          email?: string
+          id?: string
+          invitation_status?: string
+          invited_at?: string | null
+          name?: string
+          reminded_at?: string | null
+          reminder_count?: number
+          respondent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participants_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: true
+            referencedRelation: "respondents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
