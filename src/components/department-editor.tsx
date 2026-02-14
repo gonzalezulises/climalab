@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { parseDepartmentsWithAI } from "@/actions/ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Upload, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Plus, Sparkles, Upload, X } from "lucide-react";
 import type { Department } from "@/types";
 
 const COMMON_DEPARTMENTS = [
@@ -38,7 +40,6 @@ function parseCSV(text: string): Department[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
 
   for (const line of lines) {
-    // Support comma or semicolon separator
     const parts = line.split(/[,;]/).map((p) => p.trim());
     const name = parts[0]?.replace(/^["']|["']$/g, "");
     if (!name) continue;
@@ -53,6 +54,22 @@ function parseCSV(text: string): Department[] {
   return results;
 }
 
+function mergeDepartments(
+  existing: Department[],
+  incoming: Department[]
+): Department[] {
+  const merged = [...existing];
+  for (const imp of incoming) {
+    const found = merged.find((d) => d.name === imp.name);
+    if (found) {
+      if (imp.headcount != null) found.headcount = imp.headcount;
+    } else {
+      merged.push(imp);
+    }
+  }
+  return merged;
+}
+
 export function DepartmentEditor({
   departments,
   onChange,
@@ -64,6 +81,10 @@ export function DepartmentEditor({
 }) {
   const [customName, setCustomName] = useState("");
   const [customHeadcount, setCustomHeadcount] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [aiParsing, setAiParsing] = useState(false);
+  const [showExample, setShowExample] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalHeadcount = departments.reduce(
@@ -121,25 +142,47 @@ export function DepartmentEditor({
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const imported = parseCSV(text);
-      if (imported.length === 0) return;
-
-      // Merge: update existing headcounts, add new ones
-      const merged = [...departments];
-      for (const imp of imported) {
-        const existing = merged.find((d) => d.name === imp.name);
-        if (existing) {
-          if (imp.headcount != null) existing.headcount = imp.headcount;
-        } else {
-          merged.push(imp);
-        }
-      }
-      onChange(merged);
+      // Put file content into textarea for review / AI parsing
+      setImportText(text);
+      setShowImport(true);
     };
     reader.readAsText(file);
-
-    // Reset so the same file can be re-uploaded
     e.target.value = "";
+  }
+
+  function handleManualParse() {
+    const imported = parseCSV(importText);
+    if (imported.length === 0) {
+      toast.error("No se encontraron departamentos en el texto");
+      return;
+    }
+    onChange(mergeDepartments(departments, imported));
+    setImportText("");
+    setShowImport(false);
+    toast.success(`${imported.length} departamentos importados`);
+  }
+
+  async function handleAIParse() {
+    if (!importText.trim()) return;
+    setAiParsing(true);
+
+    const result = await parseDepartmentsWithAI(importText);
+
+    if (result.success) {
+      if (result.data.length === 0) {
+        toast.error("No se encontraron departamentos en el texto");
+      } else {
+        onChange(mergeDepartments(departments, result.data));
+        setImportText("");
+        setShowImport(false);
+        toast.success(
+          `${result.data.length} departamentos importados con IA`
+        );
+      }
+    } else {
+      toast.error(result.error);
+    }
+    setAiParsing(false);
   }
 
   return (
@@ -168,7 +211,7 @@ export function DepartmentEditor({
         </div>
       </div>
 
-      {/* Custom add + CSV import */}
+      {/* Custom add */}
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
@@ -201,30 +244,137 @@ export function DepartmentEditor({
         <Button type="button" variant="outline" size="icon" onClick={addCustom}>
           <Plus className="h-4 w-4" />
         </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.txt"
-          className="hidden"
-          onChange={handleCSVUpload}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => fileInputRef.current?.click()}
-          title="Importar CSV (departamento, personas)"
-        >
-          <Upload className="h-4 w-4" />
-        </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground -mt-2">
-        CSV: una fila por departamento. Columnas: nombre, personas (opcional).
-        Separador: coma o punto y coma.
-      </p>
+      {/* Import section */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImport(!showImport)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Importar datos
+            {showImport ? (
+              <ChevronUp className="ml-1 h-3 w-3" />
+            ) : (
+              <ChevronDown className="ml-1 h-3 w-3" />
+            )}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.txt,.tsv"
+            className="hidden"
+            onChange={handleCSVUpload}
+          />
+        </div>
 
-      {/* Table */}
+        {showImport && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">
+                Pega o sube tus datos de departamentos
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowExample(!showExample)}
+                className="text-xs text-muted-foreground underline"
+              >
+                {showExample ? "Ocultar ejemplo" : "Ver ejemplo"}
+              </button>
+            </div>
+
+            {showExample && (
+              <div className="rounded border bg-muted/50 p-3 text-xs font-mono space-y-1">
+                <p className="text-muted-foreground mb-2 font-sans text-xs">
+                  Formato CSV (coma o punto y coma):
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs h-8">Departamento</TableHead>
+                      <TableHead className="text-xs h-8 text-right">Personas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="py-1">Ingeniería</TableCell>
+                      <TableCell className="py-1 text-right">45</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="py-1">Marketing</TableCell>
+                      <TableCell className="py-1 text-right">20</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="py-1">Recursos Humanos</TableCell>
+                      <TableCell className="py-1 text-right">15</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                <p className="text-muted-foreground mt-2 font-sans">
+                  Texto equivalente:
+                </p>
+                <pre className="mt-1">
+{`Ingeniería, 45
+Marketing, 20
+Recursos Humanos, 15`}
+                </pre>
+                <p className="text-muted-foreground mt-2 font-sans">
+                  Con la IA puedes pegar cualquier formato: tablas de Excel,
+                  listas, texto libre, etc.
+                </p>
+              </div>
+            )}
+
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              rows={5}
+              placeholder={"Ingeniería, 45\nMarketing, 20\nRecursos Humanos, 15\n\nO pega cualquier texto y usa la IA para extraer los datos..."}
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
+            />
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Subir CSV
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleManualParse}
+                disabled={!importText.trim()}
+              >
+                Parsear CSV
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAIParse}
+                disabled={!importText.trim() || aiParsing}
+              >
+                {aiParsing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {aiParsing ? "Procesando..." : "Parsear con IA"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Department table */}
       {departments.length > 0 ? (
         <Table>
           <TableHeader>
