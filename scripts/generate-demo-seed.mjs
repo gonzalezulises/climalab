@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ClimaLab v3.0 — Demo Data Generator
+ * ClimaLab v4.0 — Demo Data Generator
  * Generates respondent + response SQL for 2 campaigns (Q3 2025 + Q1 2026).
  * Usage: node scripts/generate-demo-seed.mjs >> supabase/seed.sql
  */
@@ -39,29 +39,32 @@ const campaigns = [
   { id: 'f0000000-0000-0000-0000-000000000002', idx: 1, respondentCount: 120, date: '2026-01-25' },
 ];
 
-// 18 dimension codes and their item IDs
+// 21 dimension codes and their item IDs (v4.0)
 const dimensions = [
   { code: 'ORG', items: [1,2,3,4], reverseItems: [4] },
-  { code: 'PRO', items: [5,6,7,8], reverseItems: [8] },
-  { code: 'SEG', items: [9,10,11,12], reverseItems: [12] },
+  { code: 'PRO', items: [5,6,7,8,94], reverseItems: [8] },
+  { code: 'SEG', items: [9,10,11,12,85], reverseItems: [12] },
   { code: 'BAL', items: [13,14,15,16], reverseItems: [16] },
-  { code: 'CUI', items: [17,18,19,20], reverseItems: [20] },
-  { code: 'LID', items: [21,22,23,24,25], reverseItems: [25] },
+  { code: 'CUI', items: [17,18,19,20,86], reverseItems: [20] },
+  { code: 'LID', items: [21,22,23,24,25,82,83,84], reverseItems: [25] },
   { code: 'AUT', items: [26,27,28,29], reverseItems: [29] },
-  { code: 'COM', items: [30,31,32,33], reverseItems: [33] },
+  { code: 'COM', items: [30,31,32,33,87], reverseItems: [33] },
   { code: 'CON', items: [34,35,36,37], reverseItems: [37] },
   { code: 'CMP', items: [38,39,40,41], reverseItems: [41] },
   { code: 'REC', items: [42,43,44,45], reverseItems: [45] },
   { code: 'BEN', items: [46,47,48,49], reverseItems: [49] },
-  { code: 'EQA', items: [50,51,52,53,54,55,56,57,58], reverseItems: [53] },
-  { code: 'COH', items: [59,60,61,62], reverseItems: [62] },
-  { code: 'INN', items: [63,64,65,66,67], reverseItems: [67] },
+  { code: 'EQA', items: [50,51,52,53,54,55,56,57,58,88,89,90], reverseItems: [53] },
+  { code: 'COH', items: [59,60,61,62,91,92], reverseItems: [62] },
+  { code: 'INN', items: [63,64,65,66,67,93], reverseItems: [67] },
   { code: 'RES', items: [68,69,70,71], reverseItems: [71] },
   { code: 'DES', items: [72,73,74,75], reverseItems: [75] },
-  { code: 'ENG', items: [76,77,78,79], reverseItems: [79] },
+  { code: 'ENG', items: [76,77,78,79,95], reverseItems: [79] },
+  { code: 'ROL', items: [96,97,98,99], reverseItems: [99] },
+  { code: 'DEM', items: [100,101,102,103], reverseItems: [102,103] },
+  { code: 'APR', items: [104,105,106,107], reverseItems: [107] },
 ];
 
-// Attention checks: item 80 → expected 4, item 81 → expected 2
+// Attention checks: item 80 → expected 4, item 81 → expected 2 (sort order moved to 108-109 in v4.0)
 const attentionChecks = [
   { itemNum: 80, expected: 4 },
   { itemNum: 81, expected: 2 },
@@ -80,12 +83,14 @@ const targetAvg = {
     LID: 4.35, AUT: 4.10, COM: 3.80, CON: 3.75, CMP: 3.50,
     REC: 3.65, BEN: 3.55, EQA: 3.60, COH: 4.15, INN: 3.85,
     RES: 4.05, DES: 3.55, ENG: 3.95,
+    ROL: 4.00, DEM: 3.45, APR: 3.75,
   },
   1: { // Q1 2026
     ORG: 4.40, PRO: 4.35, SEG: 4.05, BAL: 3.85, CUI: 4.15,
     LID: 4.45, AUT: 4.20, COM: 3.95, CON: 3.90, CMP: 3.60,
     REC: 3.80, BEN: 3.65, EQA: 3.70, COH: 4.25, INN: 4.00,
     RES: 4.15, DES: 3.70, ENG: 4.10,
+    ROL: 4.15, DEM: 3.55, APR: 3.90,
   },
 };
 

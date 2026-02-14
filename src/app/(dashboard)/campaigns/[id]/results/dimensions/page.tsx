@@ -19,10 +19,10 @@ const categoryLabels: Record<string, string> = {
 
 // Map dimension codes to categories (matches seed)
 const dimCategory: Record<string, string> = {
-  ORG: "bienestar", PRO: "bienestar", SEG: "bienestar", BAL: "bienestar", CUI: "bienestar",
-  LID: "liderazgo", AUT: "liderazgo", COM: "liderazgo", CON: "liderazgo",
+  ORG: "bienestar", PRO: "bienestar", SEG: "bienestar", BAL: "bienestar", CUI: "bienestar", DEM: "bienestar",
+  LID: "liderazgo", AUT: "liderazgo", COM: "liderazgo", CON: "liderazgo", ROL: "liderazgo",
   CMP: "compensacion", REC: "compensacion", BEN: "compensacion", EQA: "compensacion",
-  COH: "cultura", INN: "cultura", RES: "cultura", DES: "cultura",
+  COH: "cultura", INN: "cultura", RES: "cultura", DES: "cultura", APR: "cultura",
   ENG: "engagement",
 };
 
