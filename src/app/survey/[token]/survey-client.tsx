@@ -77,6 +77,57 @@ const LIKERT_LABELS = [
 ];
 
 // ---------------------------------------------------------------------------
+// localStorage backup — resilience against network/DB failures
+// ---------------------------------------------------------------------------
+const BACKUP_PREFIX = "climalab_survey_";
+
+function getBackupKey(token: string) {
+  return `${BACKUP_PREFIX}${token}`;
+}
+
+function saveBackup(token: string, data: { scores: Record<string, number> }) {
+  try {
+    localStorage.setItem(getBackupKey(token), JSON.stringify(data));
+  } catch {
+    // localStorage full or unavailable — ignore
+  }
+}
+
+function loadBackup(token: string): { scores: Record<string, number> } | null {
+  try {
+    const raw = localStorage.getItem(getBackupKey(token));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function clearBackup(token: string) {
+  try {
+    localStorage.removeItem(getBackupKey(token));
+  } catch {
+    // ignore
+  }
+}
+
+async function retryAsync<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === retries - 1) throw err;
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
+// ---------------------------------------------------------------------------
 // Shuffle helper (Fisher-Yates) with a seed for stability
 // ---------------------------------------------------------------------------
 function shuffleArray<T>(arr: T[], seed: string): T[] {
@@ -129,14 +180,20 @@ export function SurveyClient({
     [dimensions, token]
   );
 
-  // Recover state from existing responses
+  // Recover state from existing responses + localStorage backup
   const initialScores = useMemo(() => {
     const map: Record<string, number> = {};
+    // First load localStorage backup (lower priority)
+    const backup = loadBackup(token);
+    if (backup?.scores) {
+      Object.assign(map, backup.scores);
+    }
+    // Then overlay DB responses (higher priority — already persisted)
     for (const r of existingResponses) {
       map[r.item_id] = r.score;
     }
     return map;
-  }, [existingResponses]);
+  }, [existingResponses, token]);
 
   // State
   const [step, setStep] = useState<Step>(
@@ -158,6 +215,13 @@ export function SurveyClient({
   const [enpsScore, setEnpsScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Persist scores to localStorage on every change
+  useEffect(() => {
+    if (Object.keys(scores).length > 0) {
+      saveBackup(token, { scores });
+    }
+  }, [scores, token]);
+
   // Calculate progress
   const totalItems = shuffledDimensions.reduce(
     (acc, d) => acc + d.items.length,
@@ -165,6 +229,35 @@ export function SurveyClient({
   );
   const answeredItems = Object.keys(scores).length;
   const progressPct = Math.round((answeredItems / totalItems) * 100);
+
+  // On mount: flush any backup scores not yet in DB
+  useEffect(() => {
+    const backup = loadBackup(token);
+    if (!backup?.scores) return;
+
+    const dbItemIds = new Set(existingResponses.map((r) => r.item_id));
+    const unsaved = Object.entries(backup.scores)
+      .filter(([itemId]) => !dbItemIds.has(itemId))
+      .map(([itemId, score]) => ({
+        respondent_id: respondentId,
+        item_id: itemId,
+        score,
+      }));
+
+    if (unsaved.length === 0) return;
+
+    console.log(`Recovering ${unsaved.length} responses from localStorage`);
+    supabase
+      .from("responses")
+      .upsert(unsaved, { onConflict: "respondent_id,item_id" })
+      .then(({ error }) => {
+        if (error) {
+          console.error("Failed to recover backup responses:", error);
+        } else {
+          console.log("Backup responses recovered successfully");
+        }
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Figure out which dimension step we can resume to
   useEffect(() => {
@@ -212,7 +305,7 @@ export function SurveyClient({
       .eq("id", respondentId);
   }, [supabase, respondentId, department, tenure, gender]);
 
-  // Save dimension responses (upsert)
+  // Save dimension responses (upsert with retry)
   const saveDimensionResponses = useCallback(
     async (dimIndex: number) => {
       const dim = shuffledDimensions[dimIndex];
@@ -226,14 +319,15 @@ export function SurveyClient({
 
       if (rows.length === 0) return;
 
-      const { error } = await supabase.from("responses").upsert(rows, {
-        onConflict: "respondent_id,item_id",
+      await retryAsync(async () => {
+        const { error } = await supabase.from("responses").upsert(rows, {
+          onConflict: "respondent_id,item_id",
+        });
+        if (error) {
+          console.error("Error saving responses (will retry):", error);
+          throw new Error("No se pudieron guardar las respuestas");
+        }
       });
-
-      if (error) {
-        console.error("Error saving responses:", error);
-        throw new Error("No se pudieron guardar las respuestas");
-      }
     },
     [supabase, respondentId, shuffledDimensions, scores]
   );
@@ -290,7 +384,10 @@ export function SurveyClient({
         completed_at: new Date().toISOString(),
       })
       .eq("id", respondentId);
-  }, [supabase, respondentId]);
+
+    // Clear localStorage backup — everything is persisted in DB
+    clearBackup(token);
+  }, [supabase, respondentId, token]);
 
   // Navigation handlers
   const handleStart = async () => {
