@@ -3,6 +3,7 @@
  * Ejecutar después de `supabase db reset`:
  *   npm run seed:results
  */
+import { execSync } from "child_process";
 import { createClient } from "@supabase/supabase-js";
 import {
   mean,
@@ -568,6 +569,17 @@ async function main() {
 
   for (const campaign of campaigns) {
     await processOneCampaign(supabase, campaign.id);
+  }
+
+  // Non-blocking: if Python ONA fails, seed-results continues
+  try {
+    console.log("\n--- Running ONA analysis ---");
+    execSync("uv run scripts/ona-analysis.py", {
+      stdio: "inherit",
+      cwd: process.cwd(),
+    });
+  } catch (e) {
+    console.warn("ONA analysis skipped:", (e as Error).message);
   }
 
   console.log("\nAll done!");

@@ -20,7 +20,8 @@
 9. [Métricas Psicométricas (v4.1)](#9-métricas-psicométricas-v41)
 10. [Indicadores de Negocio](#10-indicadores-de-negocio)
 11. [Análisis con IA (v4.1.1)](#11-análisis-con-ia-v411)
-12. [Referencias Adicionales](#12-referencias-adicionales-v41)
+12. [Análisis de Redes Perceptuales (ONA)](#12-análisis-de-redes-perceptuales-ona)
+13. [Referencias Adicionales](#13-referencias-adicionales-v41)
 
 ---
 
@@ -953,6 +954,7 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `src/actions/analytics.ts`                 | 1–221       | 7 server actions para consulta de analytics                           |
 | `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo                          |
 | `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32)            |
+| `scripts/ona-analysis.py`                  | —           | Análisis de redes perceptuales (Python/NetworkX)                      |
 | `supabase/seed.sql`                        | ~24K líneas | Definición completa del instrumento v4.0 + datos demo (incl. módulos) |
 | `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                             |
 | `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta                       |
@@ -982,16 +984,17 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 
 ## Apéndice C: Server Actions de Analytics
 
-| Action                   | Descripción                                             | Fuente                                  |
-| ------------------------ | ------------------------------------------------------- | --------------------------------------- |
-| `getCorrelationMatrix()` | Matriz de correlación Pearson entre dimensiones         | `campaign_analytics.correlation_matrix` |
-| `getEngagementDrivers()` | Dimensiones rankeadas por correlación con ENG           | `campaign_analytics.engagement_drivers` |
-| `getAlerts()`            | Alertas automáticas (crisis, atención, grupo de riesgo) | `campaign_analytics.alerts`             |
-| `getCategoryScores()`    | Puntajes promedio por categoría de dimensión            | `campaign_analytics.categories`         |
-| `getHeatmapData()`       | Puntajes dimensionales segmentados (excluye global)     | `campaign_results` filtrado             |
-| `getWaveComparison()`    | Comparación de todas las campañas cerradas de una org   | `campaign_results` multi-campaña        |
-| `getTrendsData()`        | Series históricas de puntajes dimensionales             | `campaign_results` multi-campaña        |
-| `getReliabilityData()`   | Alfa de Cronbach por dimensión                          | `campaign_analytics.reliability`        |
+| Action                   | Descripción                                              | Fuente                                  |
+| ------------------------ | -------------------------------------------------------- | --------------------------------------- |
+| `getCorrelationMatrix()` | Matriz de correlación Pearson entre dimensiones          | `campaign_analytics.correlation_matrix` |
+| `getEngagementDrivers()` | Dimensiones rankeadas por correlación con ENG            | `campaign_analytics.engagement_drivers` |
+| `getAlerts()`            | Alertas automáticas (crisis, atención, grupo de riesgo)  | `campaign_analytics.alerts`             |
+| `getCategoryScores()`    | Puntajes promedio por categoría de dimensión             | `campaign_analytics.categories`         |
+| `getHeatmapData()`       | Puntajes dimensionales segmentados (excluye global)      | `campaign_results` filtrado             |
+| `getWaveComparison()`    | Comparación de todas las campañas cerradas de una org    | `campaign_results` multi-campaña        |
+| `getTrendsData()`        | Series históricas de puntajes dimensionales              | `campaign_results` multi-campaña        |
+| `getReliabilityData()`   | Alfa de Cronbach por dimensión                           | `campaign_analytics.reliability`        |
+| `getONAResults()`        | Análisis de red perceptual (grafo, comunidades, bridges) | `campaign_analytics.ona_network`        |
 
 ---
 
@@ -1159,9 +1162,77 @@ Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campa
 
 ---
 
-## 12. Referencias Adicionales (v4.1)
+## 12. Análisis de Redes Perceptuales (ONA)
+
+### 12.1 Concepto
+
+El módulo ONA (Organizational Network Analysis) construye un grafo de similitud perceptual: dos respondentes están "conectados" si perciben la organización de forma similar (coseno de sus vectores de 22 dimensiones > umbral). NO es ONA sociométrico (quién habla con quién) — detecta clusters de personas que experimentan la organización de la misma manera.
+
+### 12.2 Método
+
+1. **Vectores dimensionales**: Para cada respondente válido, se calcula el puntaje promedio en cada una de las 21 dimensiones (excluyendo ENG como variable dependiente). Los ítems inversos se ajustan antes del cálculo.
+
+2. **Grafo de similitud**: Se calcula la similitud coseno entre todos los pares de respondentes. Se aplica un umbral adaptativo (inicia en 0.85, ajusta ±0.05) buscando una densidad de aristas entre 10-30%.
+
+3. **Detección de comunidades**: Algoritmo de Louvain (Blondel et al. 2008) con seed=42 para reproducibilidad. Maximiza la modularidad del grafo.
+
+4. **Métricas de centralidad**:
+   - **Eigenvector**: Influencia basada en conexiones con nodos influyentes
+   - **Betweenness**: Control de flujo de información entre comunidades
+   - **Degree**: Número de conexiones directas
+
+### 12.3 Resultados Almacenados
+
+Se almacena en `campaign_analytics` con `analysis_type = 'ona_network'`:
+
+| Campo                | Contenido                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `summary`            | Nodos, aristas, densidad, comunidades, modularidad, clustering                                                              |
+| `communities`        | Perfil por comunidad: tamaño, puntaje promedio, distribución departamental, scores dimensionales, top diferencias vs. media |
+| `discriminants`      | Top 10 dimensiones por spread (max - min entre clusters)                                                                    |
+| `department_density` | Matriz de densidad de conexiones entre departamentos                                                                        |
+| `bridges`            | Nodos puente (alto betweenness + vecinos en múltiples comunidades)                                                          |
+| `global_means`       | Promedios globales por dimensión                                                                                            |
+
+### 12.4 Parámetros
+
+| Parámetro         | Valor   | Justificación                        |
+| ----------------- | ------- | ------------------------------------ |
+| Mín. respondentes | 10      | Mínimo para grafo significativo      |
+| Umbral inicial    | 0.85    | Coseno alto = percepción muy similar |
+| Densidad objetivo | 10-30%  | Balance entre señal y ruido          |
+| Algoritmo         | Louvain | Escalable, determinista con seed     |
+| Seed              | 42      | Reproducibilidad                     |
+
+### 12.5 Interpretación
+
+- **1 comunidad**: Percepción homogénea
+- **2-3 comunidades**: Realidades diferenciadas (valor diagnóstico alto)
+- **4+ comunidades**: Fragmentación organizacional
+- **Modularidad > 0.3**: Estructura comunitaria clara
+- **Nodos puente**: "Traductores culturales" que conectan mundos perceptuales diferentes
+
+### 12.6 Limitaciones
+
+- Los vectores se basan en promedios dimensionales, no en ítems individuales
+- La similitud coseno no captura diferencias de magnitud (solo patrón)
+- Louvain puede producir soluciones ligeramente diferentes con grafos cerca del umbral de resolución
+- Con < 30 respondentes, las comunidades pueden ser artefactos del tamaño muestral
+- NO es análisis sociométrico — no mide interacciones reales entre personas
+
+### 12.7 Stack Técnico
+
+- **Python**: NetworkX (grafos), scipy (coseno), numpy (vectores), pandas (dataframes)
+- **Dependencias**: PEP 723 inline script metadata — `uv run` resuelve e instala automáticamente, sin pasos manuales
+- **Invocación**: `uv run scripts/ona-analysis.py [campaign_id]`
+- **Integración**: Se invoca automáticamente al cerrar campaña (async, non-blocking) y en `seed-results.ts` (sync). Si `uv` no está disponible, falla silenciosamente sin afectar el flujo principal
+
+---
+
+## 13. Referencias Adicionales (v4.1)
 
 - James, L. R., Demaree, R. G., & Wolf, G. (1984). Estimating within-group interrater reliability with and without response bias. _Journal of Applied Psychology, 69_(1), 85-98.
 - Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. _Psychometrika, 16_(3), 297-334.
+- Blondel, V. D., Guillaume, J. L., Lambiotte, R., & Lefebvre, E. (2008). Fast unfolding of communities in large networks. _Journal of Statistical Mechanics, 2008_(10), P10008.
 - Martinolli, G. et al. (2023). Encuesta de Clima Organizacional VI (ECO VI). Universidad de Buenos Aires.
 - Patlán, J. & Flores, R. (2013). Desarrollo y validación de la escala multidimensional de clima organizacional (EMCO). _Acta de Investigación Psicológica, 3_(1), 1067-1084.

@@ -1,6 +1,6 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.2
+## Estado Actual: v4.3
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento
 
@@ -21,6 +21,14 @@
 - Perfiles narrativos de segmentos con fortalezas/riesgos
 - Narrativa de tendencias: trayectoria, dimensiones mejorando/declinando
 - Reporte ejecutivo IA descargable (.txt)
+
+**Red perceptual ONA v4.3**:
+
+- Análisis de redes de similitud perceptual (coseno) entre respondentes
+- Detección de comunidades (Louvain) — "mundos paralelos" dentro de la empresa
+- Dimensiones discriminantes, densidad inter-departamental, nodos puente
+- Python (NetworkX) invocado desde seed-results y calculateResults
+- Resultados en campaign_analytics, visualización en página "Red perceptual"
 
 **Multi-instrumento v4.2**:
 
@@ -80,6 +88,13 @@
 - Construcción de base de datos normativa LATAM
 - Percentiles por industria, tamaño y país
 - Benchmarking externo opcional para clientes
+
+### ONA Sociométrica
+
+- Preguntas sociométricas opcionales ("¿A quién acudes para resolver problemas?")
+- Grafo de interacciones reales (no solo similitud perceptual)
+- Identificación de líderes informales, silos de comunicación, redes de influencia
+- Combinación con ONA perceptual para diagnóstico integral
 
 ### Mejoras Estadísticas
 

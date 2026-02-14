@@ -1001,6 +1001,20 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     await supabase.from("campaign_analytics").insert(batch);
   }
 
+  // Non-blocking ONA analysis (Python-dependent, fails gracefully)
+  try {
+    const { exec } = await import("child_process");
+    exec(
+      `uv run ${process.cwd()}/scripts/ona-analysis.py ${campaignId}`,
+      { env: process.env },
+      (error: Error | null) => {
+        if (error) console.warn("ONA deferred:", error.message);
+      }
+    );
+  } catch {
+    /* Python not available */
+  }
+
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaignId}/results`);
 

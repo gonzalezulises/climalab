@@ -16,7 +16,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 - `src/app/` — App Router pages and layouts
 - `src/app/(dashboard)/` — Protected admin routes (dashboard, organizations, campaigns, instruments)
-- `src/app/(dashboard)/campaigns/[id]/results/` — 9 results sub-pages with sidebar nav
+- `src/app/(dashboard)/campaigns/[id]/results/` — 10 results sub-pages with sidebar nav (incl. ONA network)
 - `src/app/(auth)/` — Auth routes (login with magic link)
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
@@ -25,12 +25,13 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights)
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona)
 - `src/types/` — Database types (generated) and derived types
 - `supabase/migrations/` — SQL migrations (18 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
-- `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns
+- `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (invokes ONA at end)
+- `scripts/ona-analysis.py` — Python (NetworkX) perceptual network analysis engine (PEP 723 inline deps, runs via `uv run`)
 - `messages/` — i18n translation files
 - `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
@@ -84,6 +85,17 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Favorability**: % of responses ≥4 on 5-point Likert
 - **Margin of error**: 1.96 × √(0.25/n) × FPC × 100
 - **Engagement profiles**: ambassadors (≥4.5), committed (4.0-4.49), neutral (3.0-3.99), disengaged (<3.0)
+
+## ONA — Perceptual Network Analysis
+
+Python-based (NetworkX) module that builds a cosine-similarity graph from respondent 22-dimension score vectors (excluding ENG as DV). NOT sociometric ONA — detects clusters of people who perceive the organization similarly.
+
+- **Script**: `scripts/ona-analysis.py` — fetches data from Supabase, builds graph, runs Louvain community detection, computes centrality metrics. PEP 723 inline deps — just `uv run scripts/ona-analysis.py`, zero setup
+- **Server action**: `src/actions/ona.ts` — `getONAResults()` retrieves from `campaign_analytics` where `analysis_type = 'ona_network'`
+- **Results page**: `src/app/(dashboard)/campaigns/[id]/results/network/` — 6 sections: narrative, KPI cards, community profiles (tabs with radar + bar charts), discriminant dimensions, department density heatmap, bridge nodes table
+- **Integration**: `calculateResults()` fires ONA asynchronously (non-blocking). `seed-results.ts` invokes it synchronously at end.
+- **Adaptive threshold**: starts at 0.85 cosine similarity, adjusts ±0.05 targeting 10-30% edge density
+- **Min respondents**: 10
 
 ## Business Indicators
 
