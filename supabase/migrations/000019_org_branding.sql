@@ -45,3 +45,9 @@ CREATE POLICY "Anyone can view org assets"
   ON storage.objects FOR SELECT
   TO public
   USING (bucket_id = 'org-assets');
+
+-- Allow all roles to discover public buckets (RLS is enabled on storage.buckets)
+CREATE POLICY "Allow public access to public buckets"
+  ON storage.buckets FOR SELECT
+  TO public
+  USING (public = true);
