@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const zUuid = (msg?: string) => z.string().regex(uuidRegex, msg ?? "UUID inválido");
+
 export const createCampaignSchema = z.object({
-  organization_id: z.string().uuid("ID de organización inválido"),
-  instrument_id: z.string().uuid("ID de instrumento inválido"),
+  organization_id: zUuid("ID de organización inválido"),
+  instrument_id: zUuid("ID de instrumento inválido"),
   name: z
     .string()
     .min(2, "Mínimo 2 caracteres")
@@ -14,12 +17,12 @@ export const createCampaignSchema = z.object({
 });
 
 export const updateCampaignStatusSchema = z.object({
-  id: z.string().uuid(),
+  id: zUuid(),
   status: z.enum(["draft", "active", "closed", "archived"]),
 });
 
 export const generateLinksSchema = z.object({
-  campaign_id: z.string().uuid(),
+  campaign_id: zUuid(),
   count: z.number().int().min(1, "Mínimo 1 enlace").max(1000, "Máximo 1000 enlaces"),
 });
 

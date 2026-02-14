@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 export const createInstrumentSchema = z.object({
   name: z
     .string()
@@ -17,7 +19,7 @@ export const createInstrumentSchema = z.object({
 });
 
 export const updateItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().regex(uuidRegex, "UUID inválido"),
   text: z
     .string()
     .min(5, "Mínimo 5 caracteres")
