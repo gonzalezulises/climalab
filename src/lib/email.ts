@@ -1,6 +1,10 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY no configurado");
+  return new Resend(key);
+}
 
 type SendInvitationParams = {
   to: string;
@@ -19,7 +23,7 @@ export async function sendSurveyInvitation({
 }: SendInvitationParams) {
   const fromEmail = process.env.RESEND_FROM_EMAIL || "ClimaLab <noreply@climalab.app>";
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: fromEmail,
     to,
     subject: `${organizationName} te invita a participar en la encuesta de clima`,
