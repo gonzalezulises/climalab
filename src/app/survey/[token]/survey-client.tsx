@@ -226,9 +226,14 @@ export function SurveyClient({
 
       if (rows.length === 0) return;
 
-      await supabase.from("responses").upsert(rows, {
+      const { error } = await supabase.from("responses").upsert(rows, {
         onConflict: "respondent_id,item_id",
       });
+
+      if (error) {
+        console.error("Error saving responses:", error);
+        throw new Error("No se pudieron guardar las respuestas");
+      }
     },
     [supabase, respondentId, shuffledDimensions, scores]
   );
@@ -301,9 +306,20 @@ export function SurveyClient({
     setStep("dimension-0");
   };
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleDimensionNext = async (dimIndex: number) => {
     setSaving(true);
-    await saveDimensionResponses(dimIndex);
+    setSaveError(null);
+    try {
+      await saveDimensionResponses(dimIndex);
+    } catch (err) {
+      setSaving(false);
+      setSaveError(
+        err instanceof Error ? err.message : "Error guardando respuestas"
+      );
+      return;
+    }
     setSaving(false);
 
     if (dimIndex < shuffledDimensions.length - 1) {
@@ -521,6 +537,12 @@ export function SurveyClient({
                   </CardContent>
                 </Card>
               ))}
+
+              {saveError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {saveError} — Intenta de nuevo.
+                </div>
+              )}
 
               <div className="flex justify-between gap-4">
                 <Button
