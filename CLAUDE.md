@@ -11,6 +11,10 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Charts**: recharts
 - **Validation**: Zod + react-hook-form
 - **i18n**: next-intl (Spanish only)
+- **Email**: Resend (transactional branded emails)
+- **ONA**: Python (igraph + matplotlib), invoked via `uv run`
+- **AI**: Ollama (Qwen 2.5 72B) for qualitative insights
+- **Export**: @react-pdf/renderer (PDF), exceljs (Excel)
 
 ## Project Structure
 
@@ -21,17 +25,18 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
-- `src/components/results/` — 18 reusable chart components for results module (incl. benchmark-charts, agreement-badge, analysis-level-cards, business-indicators-panel)
+- `src/components/results/` — 21 reusable chart components for results module
 - `src/components/reports/` — PDF report component (@react-pdf/renderer)
 - `src/components/branding/` — LogoUpload and BrandConfigEditor components
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
-- `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
+- `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels, DEFAULT_BRAND_CONFIG
 - `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson)
+- `src/lib/email.ts` — Multi-type branded email sender (Resend)
 - `src/lib/env.ts` — Zod-validated environment variables
 - `src/lib/rate-limit.ts` — Rate limiting utility
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders)
-- `src/types/` — Database types (generated) and derived types
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders, participants)
+- `src/types/` — Database types (generated) and derived types (BrandConfig)
 - `supabase/migrations/` — SQL migrations (19 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
@@ -57,12 +62,16 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 - `campaigns` — Measurement waves per organization (draft → active → closed → archived), with `module_instrument_ids uuid[]` for optional modules
 - `respondents` — Anonymous participants with unique tokens (+ enps_score)
-- `participants` — PII table (name, email) separated from respondents for survey anonymity
+- `participants` — PII table (name, email, reminded_at, reminder_count) separated from respondents for survey anonymity
 - `responses` — Likert 1-5 scores per item per respondent
 - `open_responses` — Free-text responses (strength, improvement, general)
 - `campaign_results` — Calculated statistics (dimension scores, engagement profiles, eNPS, segments)
-- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability, AI insights)
+- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability, AI insights, ONA)
 - `business_indicators` — Objective business metrics per campaign (turnover, absenteeism, NPS, etc.)
+
+### Storage
+
+- `org-assets` — Supabase Storage bucket for organization logos (public read, authenticated upload, 2MiB limit, image mime types)
 
 ## Architecture Decisions
 
@@ -82,12 +91,12 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
 - **Multi-instrument**: campaigns have `instrument_id` (base) + `module_instrument_ids uuid[]` (up to 3 modules). Dimension loading uses `.in("instrument_id", [base, ...modules])` in calculateResults, survey page, and seed-results
 - **Module categories**: Module dimensions have `category = NULL` in DB, mapped to `"modulos"` pseudo-category in UI. Naturally excluded from category score aggregation
-- **ONA**: Python script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB
+- **ONA**: Python igraph script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB (includes base64 PNG graph image)
 - **Statistics extraction**: Pure functions in `src/lib/statistics.ts` shared between campaigns.ts and seed-results.ts
-- **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`
-- **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), PDF report (dynamic `createStyles`), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab.
-- **Email infrastructure**: Multi-type branded emails via `sendBrandedEmail()` in `src/lib/email.ts` (invitation, reminder, campaign_closed, results_ready). Shared layout wrapper with dynamic logo/colors. Legacy `sendSurveyInvitation` preserved as wrapper.
-- **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. UI button in campaign detail page (active campaigns only) with confirmation dialog.
+- **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`. PDF uses dynamic `createStyles(primaryColor)` for per-org branding
+- **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), PDF report (dynamic `createStyles`), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab
+- **Email infrastructure**: Multi-type branded emails via `sendBrandedEmail()` in `src/lib/email.ts` (invitation, reminder, campaign_closed, results_ready). Shared HTML layout wrapper with dynamic logo/colors/footer. Legacy `sendSurveyInvitation` preserved as wrapper
+- **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. Updates `reminded_at` and `reminder_count` on participants. UI button in campaign detail page (active campaigns only) with confirmation dialog
 
 ## Statistical Methods (v4.1)
 
@@ -113,6 +122,25 @@ Python-based (igraph) module that builds a cosine-similarity graph from responde
 - **Results page**: `src/app/(dashboard)/campaigns/[id]/results/network/` — 9 sections: narrative, KPI cards (incl. stability), stability badge, community profiles, graph image, discriminant dimensions, density heatmap, bridge nodes, critical edges
 - **Storage**: campaign_analytics with analysis_type='ona_network' (JSONB includes base64 PNG)
 - **Min respondents**: 10
+
+## Branding System
+
+Per-organization visual identity applied consistently across all touchpoints:
+
+- **Data**: `organizations.brand_config` JSONB column + `organizations.logo_url`
+- **Type**: `BrandConfig` in `src/types/index.ts` (primary_color, secondary_color, accent_color, text_color, background_color, logo_position, show_powered_by, custom_welcome_text, custom_thankyou_text, custom_email_footer)
+- **Defaults**: `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts` (primary=#1e3a5f, secondary=#4a90d9, accent=#22c55e)
+- **Storage**: `org-assets` Supabase Storage bucket for logo uploads (public read, 2MiB limit)
+- **Applied to**: Survey (inline styles on header/buttons/progress), Emails (HTML template with dynamic header/CTA/footer), PDF report (dynamic `createStyles(primaryColor)`), Results sidebar (org logo)
+- **Config UI**: "Identidad visual" tab in organization detail page with `LogoUpload` + `BrandConfigEditor` components (live preview)
+
+## Email Infrastructure
+
+- **Sender**: `sendBrandedEmail()` in `src/lib/email.ts` via Resend API
+- **Types**: invitation, reminder, campaign_closed, results_ready
+- **Layout**: Shared HTML wrapper with org logo/colors in header, accent-colored CTA buttons, conditional "Powered by ClimaLab" footer
+- **Reminders**: `sendReminders(campaignId)` in `src/actions/reminders.ts` — sends to all incomplete participants, tracks `reminded_at`/`reminder_count`
+- **Legacy**: `sendSurveyInvitation()` preserved as wrapper around `sendBrandedEmail`
 
 ## Business Indicators
 
@@ -208,7 +236,7 @@ The technical page (ficha técnica) auto-generates:
 ## Export & Reports
 
 - **Excel export**: Full campaign data via exceljs (dimensions, items, segments, drivers, alerts, comments, ficha técnica)
-- **PDF report**: Executive report via @react-pdf/renderer with KPIs, categories, dimensions, departments, alerts, drivers, comments, business indicators, ONA summary, ficha técnica
+- **PDF report**: Executive report via @react-pdf/renderer with KPIs, categories, dimensions, departments, alerts, drivers, comments, business indicators, ONA summary, ficha técnica. Branded with org colors/logo
 - **AI report**: Text-based executive report with AI-generated narratives (requires Ollama)
 - **CSV/JSON**: Dimension data and full results dump
 - **Server action**: `src/actions/export.ts`
@@ -223,9 +251,10 @@ The technical page (ficha técnica) auto-generates:
 
 1. Admin creates campaign (selects org + base instrument + optional modules, sets objective and target departments)
 2. Admin adds participants or generates anonymous respondent links
-3. Admin activates campaign
-4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks
-5. Admin closes campaign → `calculateResults()` computes all statistics:
+3. Admin activates campaign → invitation emails sent with org branding
+4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks (all styled with org brand colors)
+5. Admin can send reminder emails to incomplete participants via campaign page button
+6. Admin closes campaign → `calculateResults()` computes all statistics:
    - Attention check filtering → reverse item inversion → dimension/item aggregation
    - rwg(j) per dimension × segment for within-group agreement
    - Cronbach's alpha per dimension for internal consistency
@@ -236,8 +265,9 @@ The technical page (ficha técnica) auto-generates:
    - Ficha técnica (population, sample, response rate, margin of error with FPC)
    - Reliability data (alpha per dimension) → campaign_analytics
    - ONA perceptual analysis (Python/igraph, Leiden + NMI stability, non-blocking) → campaign_analytics
-6. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
-7. AI Insights (optional, requires Ollama): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
+7. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
+8. AI Insights (optional, requires Ollama): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
+9. Export: branded PDF, Excel, CSV, AI report
 
 ## Local Development
 
@@ -251,3 +281,17 @@ npm run dev             # Start Next.js dev server
 - Inbucket (email): http://localhost:54324
 - Supabase Studio: http://localhost:54323
 - App: http://localhost:3000
+
+## Environment Variables
+
+Required for production:
+
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key
+- `RESEND_API_KEY` — Resend API key for transactional emails
+- `RESEND_FROM_EMAIL` — Sender email (e.g., "ClimaLab <noreply@climalab.app>")
+
+Optional:
+
+- `OLLAMA_BASE_URL` — Ollama server URL for AI insights

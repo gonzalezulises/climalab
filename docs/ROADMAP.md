@@ -1,27 +1,29 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.3
+## Estado Actual: v4.5
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento desde v4.0
 
-| Feature                                        | Estado                        | Commit            |
-| ---------------------------------------------- | ----------------------------- | ----------------- |
-| Core v4.0 (22 dims, 109 items)                 | Implementado                  | 5ea0548 + f4c2fd1 |
-| rwg, Cronbach alpha, ficha tecnica             | Implementado                  | b59e11e           |
-| Business indicators (tabla + CRUD + seed data) | Implementado                  | b59e11e           |
-| Niveles EMCO (3 niveles)                       | Implementado                  | b59e11e           |
-| AI Insights (Ollama, 7 paginas)                | Implementado                  | fc35ab6           |
-| Export Excel + PDF                             | Implementado                  | 8d423fa           |
-| Benchmarks internos                            | Implementado                  | 8d423fa           |
-| Multi-instrumento (base + modulos)             | Implementado                  | 531ec39           |
-| ONA perceptual (igraph, Leiden, stability NMI) | Implementado                  | a553ea2           |
-| Tests + CI/CD + Error boundaries               | Implementado                  | d817d19           |
-| Pulsos automatizados                           | Pendiente                     | —                 |
-| Reportes PDF con marca blanca                  | Pendiente (PDF basico existe) | —                 |
-| CFA / Invariancia                              | Horizonte 2                   | —                 |
-| ONA sociometrica                               | Horizonte 2                   | —                 |
-| NLP comentarios (local)                        | Horizonte 3                   | —                 |
-| Modulos sectoriales                            | Horizonte 3 (infra lista)     | —                 |
+| Feature                                        | Estado                       | Commit            |
+| ---------------------------------------------- | ---------------------------- | ----------------- |
+| Core v4.0 (22 dims, 109 items)                 | Implementado                 | 5ea0548 + f4c2fd1 |
+| rwg, Cronbach alpha, ficha tecnica             | Implementado                 | b59e11e           |
+| Business indicators (tabla + CRUD + seed data) | Implementado                 | b59e11e           |
+| Niveles EMCO (3 niveles)                       | Implementado                 | b59e11e           |
+| AI Insights (Ollama, 7 paginas)                | Implementado                 | fc35ab6           |
+| Export Excel + PDF                             | Implementado                 | 8d423fa           |
+| Benchmarks internos                            | Implementado                 | 8d423fa           |
+| Multi-instrumento (base + modulos)             | Implementado                 | 531ec39           |
+| ONA perceptual (NetworkX, Louvain)             | Implementado                 | a553ea2           |
+| Tests + CI/CD + Error boundaries               | Implementado                 | d817d19           |
+| Branding per-org + emails + recordatorios      | Implementado                 | 97554e3           |
+| ONA igraph migration (Leiden + NMI stability)  | Implementado                 | 463477e           |
+| Pulsos automatizados                           | Pendiente                    | —                 |
+| Reportes PDF con marca blanca                  | Implementado (branding v4.4) | 97554e3           |
+| CFA / Invariancia                              | Horizonte 2                  | —                 |
+| ONA sociometrica                               | Horizonte 2                  | —                 |
+| NLP comentarios (local)                        | Horizonte 3                  | —                 |
+| Modulos sectoriales                            | Horizonte 3 (infra lista)    | —                 |
 
 ---
 
@@ -44,6 +46,15 @@
 - Emails con marca de la organización: 4 tipos (invitación, recordatorio, cierre, resultados)
 - Recordatorios manuales: botón en campaña activa envía emails de recordatorio a participantes pendientes
 - Logo de organización en sidebar de resultados y portada de PDF
+- PDF con marca blanca (colores dinámicos per-org, logo en portada)
+
+### Completado (v4.5)
+
+- ONA migrado de NetworkX/Louvain a igraph/Leiden
+- Análisis de estabilidad NMI (50 iteraciones pairwise)
+- Imagen de grafo generada server-side (matplotlib + Fruchterman-Reingold)
+- Edge betweenness para aristas críticas inter-comunidad
+- Corrección de colores DEFAULT_BRAND_CONFIG (secondary=#4a90d9, accent=#22c55e)
 
 ### Pendiente
 
