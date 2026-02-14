@@ -1,9 +1,17 @@
+-- Enable pgcrypto for gen_random_bytes() used in respondent tokens
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+-- Ensure extensions schema is in search path for gen_random_bytes()
+SET search_path TO public, extensions;
+
 -- ============================================================
 -- Campaigns: una "ola" de medición por organización
 -- ============================================================
-CREATE TYPE campaign_status AS ENUM ('draft', 'active', 'closed', 'archived');
+DO $$ BEGIN
+  CREATE TYPE campaign_status AS ENUM ('draft', 'active', 'closed', 'archived');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE campaigns (
+CREATE TABLE IF NOT EXISTS campaigns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   instrument_id uuid NOT NULL REFERENCES instruments(id),
@@ -26,7 +34,7 @@ CREATE TABLE campaigns (
 -- ============================================================
 -- Respondents: token anónimo por participante
 -- ============================================================
-CREATE TABLE respondents (
+CREATE TABLE IF NOT EXISTS respondents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   campaign_id uuid NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   token text UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),
@@ -43,7 +51,7 @@ CREATE TABLE respondents (
 -- ============================================================
 -- Responses: una respuesta por ítem por respondente
 -- ============================================================
-CREATE TABLE responses (
+CREATE TABLE IF NOT EXISTS responses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   respondent_id uuid NOT NULL REFERENCES respondents(id) ON DELETE CASCADE,
   item_id uuid NOT NULL REFERENCES items(id),
@@ -55,7 +63,7 @@ CREATE TABLE responses (
 -- ============================================================
 -- Open comments: respuestas abiertas
 -- ============================================================
-CREATE TABLE open_responses (
+CREATE TABLE IF NOT EXISTS open_responses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   respondent_id uuid NOT NULL REFERENCES respondents(id) ON DELETE CASCADE,
   dimension_id uuid REFERENCES dimensions(id),
@@ -67,7 +75,7 @@ CREATE TABLE open_responses (
 -- ============================================================
 -- Campaign results: scores calculados (materialized)
 -- ============================================================
-CREATE TABLE campaign_results (
+CREATE TABLE IF NOT EXISTS campaign_results (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   campaign_id uuid NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   result_type text NOT NULL, -- 'dimension', 'item', 'engagement', 'demographic'
@@ -87,16 +95,17 @@ CREATE TABLE campaign_results (
 -- ============================================================
 -- Indexes
 -- ============================================================
-CREATE INDEX idx_campaigns_org ON campaigns(organization_id);
-CREATE INDEX idx_campaigns_status ON campaigns(status);
-CREATE INDEX idx_respondents_campaign ON respondents(campaign_id);
-CREATE INDEX idx_respondents_token ON respondents(token);
-CREATE INDEX idx_responses_respondent ON responses(respondent_id);
-CREATE INDEX idx_responses_item ON responses(item_id);
-CREATE INDEX idx_campaign_results_campaign ON campaign_results(campaign_id);
-CREATE INDEX idx_campaign_results_type ON campaign_results(campaign_id, result_type);
+CREATE INDEX IF NOT EXISTS idx_campaigns_org ON campaigns(organization_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_respondents_campaign ON respondents(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_respondents_token ON respondents(token);
+CREATE INDEX IF NOT EXISTS idx_responses_respondent ON responses(respondent_id);
+CREATE INDEX IF NOT EXISTS idx_responses_item ON responses(item_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_results_campaign ON campaign_results(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_results_type ON campaign_results(campaign_id, result_type);
 
 -- Triggers
+DROP TRIGGER IF EXISTS trg_campaigns_updated_at ON campaigns;
 CREATE TRIGGER trg_campaigns_updated_at
   BEFORE UPDATE ON campaigns FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -110,29 +119,35 @@ ALTER TABLE open_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_results ENABLE ROW LEVEL SECURITY;
 
 -- Campaigns: org_admin ve las de su org, super_admin todas
+DROP POLICY IF EXISTS "org_admin can view own campaigns" ON campaigns;
 CREATE POLICY "org_admin can view own campaigns"
   ON campaigns FOR SELECT TO authenticated
   USING (organization_id = get_user_org_id() OR get_user_role() = 'super_admin');
 
+DROP POLICY IF EXISTS "super_admin can manage campaigns" ON campaigns;
 CREATE POLICY "super_admin can manage campaigns"
   ON campaigns FOR ALL TO authenticated
   USING (get_user_role() = 'super_admin')
   WITH CHECK (get_user_role() = 'super_admin');
 
+DROP POLICY IF EXISTS "org_admin can manage own campaigns" ON campaigns;
 CREATE POLICY "org_admin can manage own campaigns"
   ON campaigns FOR ALL TO authenticated
   USING (organization_id = get_user_org_id() AND get_user_role() = 'org_admin')
   WITH CHECK (organization_id = get_user_org_id() AND get_user_role() = 'org_admin');
 
 -- Respondents: acceso público para responder (via token), admin para leer
+DROP POLICY IF EXISTS "public can insert respondents" ON respondents;
 CREATE POLICY "public can insert respondents"
   ON respondents FOR INSERT TO anon
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "public can update own respondent" ON respondents;
 CREATE POLICY "public can update own respondent"
   ON respondents FOR UPDATE TO anon
   USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "admin can view respondents" ON respondents;
 CREATE POLICY "admin can view respondents"
   ON respondents FOR SELECT TO authenticated
   USING (
@@ -143,10 +158,12 @@ CREATE POLICY "admin can view respondents"
   );
 
 -- Responses: acceso público para insertar, admin para leer
+DROP POLICY IF EXISTS "public can insert responses" ON responses;
 CREATE POLICY "public can insert responses"
   ON responses FOR INSERT TO anon
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "admin can view responses" ON responses;
 CREATE POLICY "admin can view responses"
   ON responses FOR SELECT TO authenticated
   USING (
@@ -158,10 +175,12 @@ CREATE POLICY "admin can view responses"
   );
 
 -- Open responses: mismo patrón
+DROP POLICY IF EXISTS "public can insert open_responses" ON open_responses;
 CREATE POLICY "public can insert open_responses"
   ON open_responses FOR INSERT TO anon
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "admin can view open_responses" ON open_responses;
 CREATE POLICY "admin can view open_responses"
   ON open_responses FOR SELECT TO authenticated
   USING (
@@ -173,6 +192,7 @@ CREATE POLICY "admin can view open_responses"
   );
 
 -- Campaign results: admin de la org o super_admin
+DROP POLICY IF EXISTS "admin can view results" ON campaign_results;
 CREATE POLICY "admin can view results"
   ON campaign_results FOR SELECT TO authenticated
   USING (
@@ -182,6 +202,7 @@ CREATE POLICY "admin can view results"
     )
   );
 
+DROP POLICY IF EXISTS "system can manage results" ON campaign_results;
 CREATE POLICY "system can manage results"
   ON campaign_results FOR ALL TO authenticated
   USING (get_user_role() = 'super_admin')
