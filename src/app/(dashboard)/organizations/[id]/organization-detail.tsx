@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateOrganization } from "@/actions/organizations";
+import { updateOrganization, updateOrganizationBranding } from "@/actions/organizations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,9 +29,11 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { DepartmentEditor } from "@/components/department-editor";
+import { LogoUpload } from "@/components/branding/logo-upload";
+import { BrandConfigEditor } from "@/components/branding/brand-config-editor";
 import { Pencil } from "lucide-react";
 import { SIZE_CATEGORIES, COUNTRIES } from "@/lib/constants";
-import type { Organization, Campaign, Department } from "@/types";
+import type { Organization, Campaign, Department, BrandConfig } from "@/types";
 
 type OrgWithExtras = Organization & {
   commercial_name?: string | null;
@@ -65,6 +67,11 @@ export function OrganizationDetail({
   const [departments, setDepartments] = useState<Department[]>(
     (org.departments as unknown as Department[]) ?? []
   );
+  const [logoUrl, setLogoUrl] = useState<string | null>(org.logo_url);
+  const [brandConfig, setBrandConfig] = useState<Partial<BrandConfig>>(
+    (org.brand_config as unknown as Partial<BrandConfig>) ?? {}
+  );
+  const [savingBrand, setSavingBrand] = useState(false);
 
   const totalHeadcount = departments.reduce((sum, d) => sum + (d.headcount ?? 0), 0);
 
@@ -141,6 +148,7 @@ export function OrganizationDetail({
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
           <TabsTrigger value="departments">Departamentos</TabsTrigger>
+          <TabsTrigger value="branding">Identidad visual</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
         </TabsList>
 
@@ -344,6 +352,50 @@ export function OrganizationDetail({
                   </TableFooter>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== BRANDING TAB ===== */}
+        <TabsContent value="branding" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Identidad visual</CardTitle>
+              <CardDescription>
+                Personaliza colores, logo y textos que se aplicarán en la encuesta, emails, reportes
+                PDF y panel de resultados.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <LogoUpload orgId={org.id} currentUrl={logoUrl} onLogoChange={setLogoUrl} />
+              <Separator />
+              <BrandConfigEditor
+                config={brandConfig}
+                onChange={setBrandConfig}
+                logoUrl={logoUrl}
+                orgName={org.name}
+              />
+              <Separator />
+              <div className="flex justify-end">
+                <Button
+                  onClick={async () => {
+                    setSavingBrand(true);
+                    const result = await updateOrganizationBranding(org.id, {
+                      logo_url: logoUrl,
+                      brand_config: brandConfig,
+                    });
+                    if (result.success) {
+                      toast.success("Identidad visual actualizada");
+                    } else {
+                      toast.error(result.error);
+                    }
+                    setSavingBrand(false);
+                  }}
+                  disabled={savingBrand}
+                >
+                  {savingBrand ? "Guardando..." : "Guardar identidad visual"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

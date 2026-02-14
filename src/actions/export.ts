@@ -15,7 +15,8 @@ import {
 import { getDashboardNarrative, getCommentAnalysis } from "@/actions/ai-insights";
 import { getBusinessIndicators } from "@/actions/business-indicators";
 import { getONAResults } from "@/actions/ona";
-import type { ActionResult } from "@/types";
+import { getOrganization } from "@/actions/organizations";
+import type { ActionResult, BrandConfig } from "@/types";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { PdfReport } from "@/components/reports/pdf-report";
 
@@ -319,6 +320,14 @@ export async function generatePdfReport(
   const businessIndicators = businessIndicatorsRes.success ? businessIndicatorsRes.data : [];
   const onaData = onaRes.success ? onaRes.data : null;
 
+  // Fetch org branding
+  const orgRes = await getOrganization(campaign.organization_id);
+  const orgLogoUrl = orgRes.success ? orgRes.data.logo_url : null;
+  const orgBrandConfig = orgRes.success
+    ? ((orgRes.data.brand_config ?? {}) as Partial<BrandConfig>)
+    : {};
+  const orgName = orgRes.success ? orgRes.data.name : campaign.organization_id;
+
   // Extract dimension results (global)
   const dimResults = results.filter(
     (r) => r.result_type === "dimension" && r.segment_type === "global"
@@ -346,7 +355,9 @@ export async function generatePdfReport(
 
   const pdfElement = React.createElement(PdfReport, {
     campaignName: campaign.name,
-    organizationName: campaign.organization_id,
+    organizationName: orgName,
+    logoUrl: orgLogoUrl,
+    brandConfig: orgBrandConfig,
     engagement: engResult ? Number(engResult.avg_score) : 0,
     favorability: globalFav,
     enps: enpsResult ? Number(enpsResult.avg_score) : 0,

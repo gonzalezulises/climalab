@@ -28,7 +28,7 @@ async function getSurveyData(token: string) {
   // Fetch campaign
   const { data: campaign, error: campaignError } = await supabase
     .from("campaigns")
-    .select("*, organizations(name, logo_url, departments)")
+    .select("*, organizations(name, logo_url, departments, brand_config)")
     .eq("id", respondent.campaign_id)
     .single();
 
@@ -74,6 +74,7 @@ async function getSurveyData(token: string) {
     name: string;
     logo_url: string | null;
     departments: Array<{ name: string; headcount: number | null }>;
+    brand_config: Record<string, unknown> | null;
   } | null;
 
   // Extract department names, filtering by target_departments if set
@@ -91,6 +92,7 @@ async function getSurveyData(token: string) {
     existingResponses,
     organization: org,
     filteredDeptNames,
+    brandConfig: (org?.brand_config ?? {}) as Record<string, unknown>,
   };
 }
 
@@ -130,6 +132,7 @@ export default async function SurveyPage({ params }: { params: Promise<{ token: 
       campaignId={data.campaign.id}
       organizationName={data.organization?.name ?? ""}
       logoUrl={data.organization?.logo_url ?? null}
+      brandConfig={data.brandConfig}
       departments={data.filteredDeptNames}
       allowComments={data.campaign.allow_comments}
       dimensions={data.dimensions.map((d) => ({

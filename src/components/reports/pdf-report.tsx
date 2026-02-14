@@ -1,62 +1,78 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { CATEGORY_LABELS } from "@/lib/constants";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
+import { CATEGORY_LABELS, DEFAULT_BRAND_CONFIG } from "@/lib/constants";
+import type { BrandConfig } from "@/types";
 
-const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Helvetica", fontSize: 10 },
-  cover: { flex: 1, justifyContent: "center", alignItems: "center" },
-  coverTitle: { fontSize: 20, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 16 },
-  coverSubtitle: { fontSize: 14, color: "#555", textAlign: "center", marginBottom: 8 },
-  coverDate: { fontSize: 11, color: "#888", textAlign: "center", marginTop: 24 },
-  sectionTitle: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    marginBottom: 8,
-    marginTop: 20,
-    color: "#1e3a5f",
-  },
-  subsectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", marginBottom: 4, marginTop: 12 },
-  text: { fontSize: 10, lineHeight: 1.5, marginBottom: 4 },
-  // KPIs
-  kpiRow: { flexDirection: "row", marginBottom: 12, gap: 12 },
-  kpiBox: { flex: 1, border: "1 solid #ddd", borderRadius: 4, padding: 10, alignItems: "center" },
-  kpiValue: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#1e3a5f" },
-  kpiLabel: { fontSize: 8, color: "#888", marginTop: 2 },
-  // Tables
-  table: { marginBottom: 12 },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#e2e8f0",
-    borderBottom: "1 solid #cbd5e1",
-    paddingVertical: 4,
-  },
-  tableRow: { flexDirection: "row", borderBottom: "0.5 solid #e2e8f0", paddingVertical: 3 },
-  cell: { fontSize: 9, paddingHorizontal: 4 },
-  cellBold: { fontSize: 9, fontFamily: "Helvetica-Bold", paddingHorizontal: 4 },
-  // Alert
-  alertRow: { flexDirection: "row", borderBottom: "0.5 solid #e2e8f0", paddingVertical: 3 },
-  sevBadge: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
-    color: "white",
-    paddingVertical: 1,
-    paddingHorizontal: 4,
-    borderRadius: 2,
-  },
-  // Footer
-  footer: {
-    position: "absolute",
-    bottom: 20,
-    left: 40,
-    right: 40,
-    fontSize: 7,
-    color: "#aaa",
-    textAlign: "center",
-  },
-});
+function createStyles(primaryColor: string) {
+  return StyleSheet.create({
+    page: { padding: 40, fontFamily: "Helvetica", fontSize: 10 },
+    cover: { flex: 1, justifyContent: "center", alignItems: "center" },
+    coverTitle: {
+      fontSize: 20,
+      fontFamily: "Helvetica-Bold",
+      textAlign: "center",
+      marginBottom: 16,
+    },
+    coverSubtitle: { fontSize: 14, color: "#555", textAlign: "center", marginBottom: 8 },
+    coverDate: { fontSize: 11, color: "#888", textAlign: "center", marginTop: 24 },
+    sectionTitle: {
+      fontSize: 14,
+      fontFamily: "Helvetica-Bold",
+      marginBottom: 8,
+      marginTop: 20,
+      color: primaryColor,
+    },
+    subsectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", marginBottom: 4, marginTop: 12 },
+    text: { fontSize: 10, lineHeight: 1.5, marginBottom: 4 },
+    // KPIs
+    kpiRow: { flexDirection: "row", marginBottom: 12, gap: 12 },
+    kpiBox: { flex: 1, border: "1 solid #ddd", borderRadius: 4, padding: 10, alignItems: "center" },
+    kpiValue: { fontSize: 18, fontFamily: "Helvetica-Bold", color: primaryColor },
+    kpiLabel: { fontSize: 8, color: "#888", marginTop: 2 },
+    // Tables
+    table: { marginBottom: 12 },
+    tableHeader: {
+      flexDirection: "row",
+      backgroundColor: "#e2e8f0",
+      borderBottom: "1 solid #cbd5e1",
+      paddingVertical: 4,
+    },
+    tableRow: { flexDirection: "row", borderBottom: "0.5 solid #e2e8f0", paddingVertical: 3 },
+    cell: { fontSize: 9, paddingHorizontal: 4 },
+    cellBold: { fontSize: 9, fontFamily: "Helvetica-Bold", paddingHorizontal: 4 },
+    // Alert
+    alertRow: { flexDirection: "row", borderBottom: "0.5 solid #e2e8f0", paddingVertical: 3 },
+    sevBadge: {
+      fontSize: 8,
+      fontFamily: "Helvetica-Bold",
+      color: "white",
+      paddingVertical: 1,
+      paddingHorizontal: 4,
+      borderRadius: 2,
+    },
+    // Footer
+    footer: {
+      position: "absolute",
+      bottom: 20,
+      left: 40,
+      right: 40,
+      fontSize: 7,
+      color: "#aaa",
+      textAlign: "center",
+    },
+    coverLogo: {
+      maxHeight: 60,
+      maxWidth: 200,
+      marginBottom: 16,
+    },
+  });
+}
 
 type PdfReportProps = {
   campaignName: string;
   organizationName: string;
+  // Branding
+  logoUrl?: string | null;
+  brandConfig?: Partial<BrandConfig>;
   // KPIs
   engagement: number;
   favorability: number;
@@ -104,6 +120,8 @@ type PdfReportProps = {
 export function PdfReport({
   campaignName,
   organizationName,
+  logoUrl,
+  brandConfig,
   engagement,
   favorability,
   enps,
@@ -122,23 +140,31 @@ export function PdfReport({
   narrative,
   commentSummary,
 }: PdfReportProps) {
+  const brand = { ...DEFAULT_BRAND_CONFIG, ...brandConfig };
+  const styles = createStyles(brand.primary_color);
+
   const date = new Date().toLocaleDateString("es-MX", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
+  const footerText = brand.show_powered_by
+    ? "Generado por ClimaLab"
+    : `Generado para ${organizationName}`;
+
   return (
     <Document>
       {/* Cover */}
       <Page size="LETTER" style={styles.page}>
         <View style={styles.cover}>
+          {logoUrl && <Image src={logoUrl} style={styles.coverLogo} />}
           <Text style={styles.coverTitle}>REPORTE EJECUTIVO{"\n"}DE CLIMA ORGANIZACIONAL</Text>
           <Text style={styles.coverSubtitle}>{campaignName}</Text>
           <Text style={styles.coverSubtitle}>{organizationName}</Text>
           <Text style={styles.coverDate}>{date}</Text>
         </View>
-        <Text style={styles.footer}>Generado por ClimaLab</Text>
+        <Text style={styles.footer}>{footerText}</Text>
       </Page>
 
       {/* Content pages */}
@@ -213,7 +239,7 @@ export function PdfReport({
           ))}
         </View>
 
-        <Text style={styles.footer}>Generado por ClimaLab</Text>
+        <Text style={styles.footer}>{footerText}</Text>
       </Page>
 
       {/* Dimension ranking + departments */}
@@ -263,7 +289,7 @@ export function PdfReport({
           </>
         )}
 
-        <Text style={styles.footer}>Generado por ClimaLab</Text>
+        <Text style={styles.footer}>{footerText}</Text>
       </Page>
 
       {/* Alerts + Drivers + Comments + Technical */}
@@ -375,7 +401,7 @@ export function PdfReport({
           </>
         )}
 
-        <Text style={styles.footer}>Generado por ClimaLab</Text>
+        <Text style={styles.footer}>{footerText}</Text>
       </Page>
 
       {/* Technical sheet */}
@@ -426,7 +452,7 @@ export function PdfReport({
           </>
         )}
 
-        <Text style={styles.footer}>Generado por ClimaLab</Text>
+        <Text style={styles.footer}>{footerText}</Text>
       </Page>
     </Document>
   );

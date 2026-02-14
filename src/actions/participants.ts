@@ -202,7 +202,7 @@ export async function sendInvitations(
   // Fetch campaign + org info
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("id, name, status, organization_id, organizations(name)")
+    .select("id, name, status, organization_id, organizations(name, logo_url, brand_config)")
     .eq("id", campaign_id)
     .single();
 
@@ -217,7 +217,12 @@ export async function sendInvitations(
     };
   }
 
-  const orgName = (campaign.organizations as unknown as { name: string })?.name ?? "";
+  const org = campaign.organizations as unknown as {
+    name: string;
+    logo_url: string | null;
+    brand_config: Record<string, unknown> | null;
+  } | null;
+  const orgName = org?.name ?? "";
 
   // Fetch participants with their respondent tokens
   const { data: participants } = await supabase
@@ -249,6 +254,8 @@ export async function sendInvitations(
       organizationName: orgName,
       campaignName: campaign.name,
       surveyUrl,
+      logoUrl: org?.logo_url,
+      brandConfig: (org?.brand_config ?? undefined) as Record<string, unknown> | undefined,
     });
 
     if (result.success) {
@@ -296,7 +303,7 @@ export async function resendInvitation(
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("id, name, organization_id, organizations(name)")
+    .select("id, name, organization_id, organizations(name, logo_url, brand_config)")
     .eq("id", campaignId)
     .single();
 
@@ -304,7 +311,12 @@ export async function resendInvitation(
     return { success: false, error: "Campaña no encontrada" };
   }
 
-  const orgName = (campaign.organizations as unknown as { name: string })?.name ?? "";
+  const resendOrg = campaign.organizations as unknown as {
+    name: string;
+    logo_url: string | null;
+    brand_config: Record<string, unknown> | null;
+  } | null;
+  const orgName = resendOrg?.name ?? "";
   const resp = participant.respondents as unknown as { token: string } | null;
 
   if (!resp?.token) {
@@ -320,6 +332,8 @@ export async function resendInvitation(
     organizationName: orgName,
     campaignName: campaign.name,
     surveyUrl,
+    logoUrl: resendOrg?.logo_url,
+    brandConfig: (resendOrg?.brand_config ?? undefined) as Record<string, unknown> | undefined,
   });
 
   if (!result.success) {

@@ -28,6 +28,18 @@ VALUES (
   'Directora de Recursos Humanos'
 );
 
+-- Add brand_config demo data
+UPDATE organizations SET brand_config = '{
+  "primary_color": "#1e3a5f",
+  "secondary_color": "#18181b",
+  "accent_color": "#2563eb",
+  "show_powered_by": true,
+  "custom_welcome_text": null,
+  "custom_thankyou_text": null,
+  "custom_email_footer": null
+}'::jsonb
+WHERE id = 'a0000000-0000-0000-0000-000000000001';
+
 -- ============================================================
 -- 2. ClimaLab Core v4.0 Instrument
 -- ============================================================

@@ -38,11 +38,17 @@
 - CI/CD con GitHub Actions
 - Tests unitarios con vitest
 
+### Completado (v4.4)
+
+- Sistema de branding per-org: colores, logo, textos personalizados aplicados en survey, emails, PDF y resultados
+- Emails con marca de la organización: 4 tipos (invitación, recordatorio, cierre, resultados)
+- Recordatorios manuales: botón en campaña activa envía emails de recordatorio a participantes pendientes
+- Logo de organización en sidebar de resultados y portada de PDF
+
 ### Pendiente
 
 - Pulsos automatizados (programacion periodica de 22 items ancla)
-- PDF con marca blanca configurable por organizacion
-- Notificaciones por email de hitos de campana
+- Recordatorios automáticos por cron (programación periódica)
 - Onboarding wizard multi-paso para nuevas organizaciones
 
 ---

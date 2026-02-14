@@ -23,15 +23,16 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
 - `src/components/results/` — 18 reusable chart components for results module (incl. benchmark-charts, agreement-badge, analysis-level-cards, business-indicators-panel)
 - `src/components/reports/` — PDF report component (@react-pdf/renderer)
+- `src/components/branding/` — LogoUpload and BrandConfigEditor components
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
 - `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson)
 - `src/lib/env.ts` — Zod-validated environment variables
 - `src/lib/rate-limit.ts` — Rate limiting utility
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export)
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders)
 - `src/types/` — Database types (generated) and derived types
-- `supabase/migrations/` — SQL migrations (18 files)
+- `supabase/migrations/` — SQL migrations (19 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (invokes ONA at end)
@@ -46,7 +47,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 ### Core Tables
 
-- `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category
+- `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category, logo_url, brand_config (JSONB)
 - `profiles` — User profiles (extends auth.users)
 - `instruments` — Survey templates (full/pulse modes, version tracking, instrument_type: base/module)
 - `dimensions` — Instrument dimensions (22 in Core v4.0) with category and theoretical_basis
@@ -84,6 +85,9 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **ONA**: Python script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB
 - **Statistics extraction**: Pure functions in `src/lib/statistics.ts` shared between campaigns.ts and seed-results.ts
 - **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`
+- **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), PDF report (dynamic `createStyles`), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab.
+- **Email infrastructure**: Multi-type branded emails via `sendBrandedEmail()` in `src/lib/email.ts` (invitation, reminder, campaign_closed, results_ready). Shared layout wrapper with dynamic logo/colors. Legacy `sendSurveyInvitation` preserved as wrapper.
+- **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. UI button in campaign detail page (active campaigns only) with confirmation dialog.
 
 ## Statistical Methods (v4.1)
 

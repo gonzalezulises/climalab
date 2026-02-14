@@ -1302,6 +1302,54 @@ En tres puntos criticos, las dimensiones se cargan usando `.in("instrument_id", 
 
 ---
 
+## 16. Sistema de Branding (v4.4)
+
+### Modelo de Datos
+
+La tabla `organizations` incluye:
+
+- `logo_url text` — URL del logo (Supabase Storage bucket `org-assets`)
+- `brand_config jsonb` — Configuración visual personalizada
+
+**Campos de BrandConfig:**
+
+| Campo                  | Tipo | Default   | Descripción                                    |
+| ---------------------- | ---- | --------- | ---------------------------------------------- |
+| `primary_color`        | hex  | `#1e3a5f` | Color principal (headers, KPIs, secciones PDF) |
+| `secondary_color`      | hex  | `#18181b` | Color secundario                               |
+| `accent_color`         | hex  | `#18181b` | Color de botones CTA                           |
+| `text_color`           | hex  | `#18181b` | Color de texto principal                       |
+| `background_color`     | hex  | `#f4f4f5` | Color de fondo                                 |
+| `logo_position`        | enum | `center`  | Posición del logo (left/center)                |
+| `show_powered_by`      | bool | `true`    | Mostrar "Powered by ClimaLab"                  |
+| `custom_welcome_text`  | text | null      | Texto de bienvenida en survey                  |
+| `custom_thankyou_text` | text | null      | Texto de agradecimiento en survey              |
+| `custom_email_footer`  | text | null      | Pie de email personalizado                     |
+
+### Aplicación del Branding
+
+1. **Encuesta**: Colores de barra de progreso, botones Likert, CTA, textos personalizados
+2. **Emails**: Header con color principal + logo, CTA con color de acento, footer personalizado
+3. **PDF**: Títulos de sección y KPIs con color principal, logo en portada, footer condicional
+4. **Resultados**: Logo de org en sidebar de resultados
+
+### Infraestructura de Emails
+
+4 tipos de email: `invitation`, `reminder`, `campaign_closed`, `results_ready`.
+Implementados en `src/lib/email.ts` via `sendBrandedEmail()`.
+Wrapper de layout compartido con logo dinámico y colores de la organización.
+
+### Recordatorios
+
+`sendReminders(campaignId)` en `src/actions/reminders.ts`:
+
+- Envía emails de tipo `reminder` a participantes que no han completado la encuesta
+- Actualiza `reminded_at` y `reminder_count` en tabla `participants`
+- Rate-limited a 5 invocaciones por minuto por usuario
+- UI: botón "Enviar recordatorios" en página de campaña (solo campañas activas)
+
+---
+
 ## 13. Referencias Adicionales (v4.1)
 
 - James, L. R., Demaree, R. G., & Wolf, G. (1984). Estimating within-group interrater reliability with and without response bias. _Journal of Applied Psychology, 69_(1), 85-98.

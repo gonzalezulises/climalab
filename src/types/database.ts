@@ -433,6 +433,7 @@ export type Database = {
       }
       organizations: {
         Row: {
+          brand_config: Json
           commercial_name: string | null
           contact_email: string | null
           contact_name: string | null
@@ -450,6 +451,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_config?: Json
           commercial_name?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -467,6 +469,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_config?: Json
           commercial_name?: string | null
           contact_email?: string | null
           contact_name?: string | null

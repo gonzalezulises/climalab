@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getCampaign } from "@/actions/campaigns";
+import { getOrganization } from "@/actions/organizations";
 import { getAvailableSegments } from "@/actions/analytics";
 import { notFound } from "next/navigation";
 import { ResultsSidebar } from "./results-nav";
@@ -16,6 +17,10 @@ export default async function ResultsLayout({
   const [result, segmentsResult] = await Promise.all([getCampaign(id), getAvailableSegments(id)]);
   if (!result.success) notFound();
 
+  const orgResult = await getOrganization(result.data.organization_id);
+  const orgLogoUrl = orgResult.success ? orgResult.data.logo_url : null;
+  const orgName = orgResult.success ? orgResult.data.name : null;
+
   const availableSegments = segmentsResult.success
     ? segmentsResult.data
     : { department: [], tenure: [], gender: [] };
@@ -27,7 +32,12 @@ export default async function ResultsLayout({
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      <ResultsSidebar campaignId={id} campaignName={result.data.name} />
+      <ResultsSidebar
+        campaignId={id}
+        campaignName={result.data.name}
+        orgLogoUrl={orgLogoUrl}
+        orgName={orgName}
+      />
       <div className="flex-1 flex flex-col overflow-auto">
         {hasSegments && (
           <div className="px-6 pt-4">

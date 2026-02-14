@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { DEFAULT_BRAND_CONFIG } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,6 +37,7 @@ type Props = {
   campaignId: string;
   organizationName: string;
   logoUrl: string | null;
+  brandConfig: Record<string, unknown>;
   departments: string[];
   allowComments: boolean;
   dimensions: SurveyDimension[];
@@ -147,6 +149,7 @@ export function SurveyClient({
   campaignId,
   organizationName,
   logoUrl,
+  brandConfig: rawBrandConfig,
   departments,
   allowComments,
   dimensions,
@@ -155,6 +158,7 @@ export function SurveyClient({
   respondentDemographics,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const brand = useMemo(() => ({ ...DEFAULT_BRAND_CONFIG, ...rawBrandConfig }), [rawBrandConfig]);
 
   // Shuffle items within each dimension (stable by respondent token)
   const shuffledDimensions = useMemo(
@@ -434,8 +438,8 @@ export function SurveyClient({
         <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <div className="h-1 bg-gray-200">
             <div
-              className="h-full bg-blue-600 transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
+              className="h-full transition-all duration-300"
+              style={{ width: `${progressPct}%`, backgroundColor: brand.primary_color as string }}
             />
           </div>
           <div className="text-xs text-gray-500 text-center py-1">{progressPct}% completado</div>
@@ -454,12 +458,17 @@ export function SurveyClient({
               {organizationName && <p className="text-lg text-gray-600">{organizationName}</p>}
             </div>
             <p className="text-gray-600 max-w-md">
-              Tu opinión es importante para construir un mejor lugar de trabajo. Esta encuesta es
-              completamente anónima y tomará aproximadamente 8-10 minutos.
+              {(brand.custom_welcome_text as string) ||
+                "Tu opinión es importante para construir un mejor lugar de trabajo. Esta encuesta es completamente anónima y tomará aproximadamente 8-10 minutos."}
             </p>
-            <Button size="lg" onClick={handleStart}>
+            <Button
+              size="lg"
+              onClick={handleStart}
+              style={{ backgroundColor: brand.accent_color as string }}
+            >
               Comenzar
             </Button>
+            {brand.show_powered_by && <p className="text-xs text-gray-400">Powered by ClimaLab</p>}
           </div>
         )}
 
@@ -561,27 +570,39 @@ export function SurveyClient({
                         {itemIdx + 1}. {item.text}
                       </p>
                       <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                        {LIKERT_LABELS.map((likert) => (
-                          <button
-                            key={likert.value}
-                            onClick={() =>
-                              setScores((prev) => ({
-                                ...prev,
-                                [item.id]: likert.value,
-                              }))
-                            }
-                            className={`flex flex-col items-center justify-center rounded-lg border-2 p-2 sm:p-3 transition-colors text-xs sm:text-sm ${
-                              scores[item.id] === likert.value
-                                ? "border-blue-600 bg-blue-50 text-blue-700 font-medium"
-                                : "border-gray-200 hover:border-gray-300 text-gray-600"
-                            }`}
-                          >
-                            <span className="text-lg font-bold mb-1">{likert.value}</span>
-                            <span className="text-[10px] sm:text-xs leading-tight text-center">
-                              {likert.label}
-                            </span>
-                          </button>
-                        ))}
+                        {LIKERT_LABELS.map((likert) => {
+                          const isSelected = scores[item.id] === likert.value;
+                          return (
+                            <button
+                              key={likert.value}
+                              onClick={() =>
+                                setScores((prev) => ({
+                                  ...prev,
+                                  [item.id]: likert.value,
+                                }))
+                              }
+                              className={`flex flex-col items-center justify-center rounded-lg border-2 p-2 sm:p-3 transition-colors text-xs sm:text-sm ${
+                                isSelected
+                                  ? "font-medium"
+                                  : "border-gray-200 hover:border-gray-300 text-gray-600"
+                              }`}
+                              style={
+                                isSelected
+                                  ? {
+                                      borderColor: brand.primary_color as string,
+                                      backgroundColor: `${brand.primary_color}10`,
+                                      color: brand.primary_color as string,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              <span className="text-lg font-bold mb-1">{likert.value}</span>
+                              <span className="text-[10px] sm:text-xs leading-tight text-center">
+                                {likert.label}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -633,9 +654,18 @@ export function SurveyClient({
                       onClick={() => setEnpsScore(val)}
                       className={`w-10 h-10 rounded-lg border-2 text-sm font-medium transition-colors ${
                         enpsScore === val
-                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          ? "font-medium"
                           : "border-gray-200 hover:border-gray-300 text-gray-600"
                       }`}
+                      style={
+                        enpsScore === val
+                          ? {
+                              borderColor: brand.primary_color as string,
+                              backgroundColor: `${brand.primary_color}10`,
+                              color: brand.primary_color as string,
+                            }
+                          : undefined
+                      }
                     >
                       {val}
                     </button>
@@ -726,9 +756,10 @@ export function SurveyClient({
             </div>
             <h1 className="text-3xl font-bold text-gray-900">¡Gracias por tu participación!</h1>
             <p className="text-gray-600 max-w-md">
-              Tus respuestas han sido registradas de forma anónima. Tu opinión contribuye a mejorar
-              el ambiente de trabajo.
+              {(brand.custom_thankyou_text as string) ||
+                "Tus respuestas han sido registradas de forma anónima. Tu opinión contribuye a mejorar el ambiente de trabajo."}
             </p>
+            {brand.show_powered_by && <p className="text-xs text-gray-400">Powered by ClimaLab</p>}
           </div>
         )}
       </div>

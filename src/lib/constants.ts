@@ -80,6 +80,19 @@ export const SEGMENT_TYPE_LABELS: Record<string, string> = {
   gender: "Género",
 };
 
+export const DEFAULT_BRAND_CONFIG = {
+  primary_color: "#1e3a5f",
+  secondary_color: "#18181b",
+  accent_color: "#18181b",
+  text_color: "#18181b",
+  background_color: "#f4f4f5",
+  logo_position: "center" as const,
+  show_powered_by: true,
+  custom_welcome_text: null as string | null,
+  custom_thankyou_text: null as string | null,
+  custom_email_footer: null as string | null,
+};
+
 export const MEASUREMENT_OBJECTIVES = {
   initial_diagnosis: "Diagnóstico inicial",
   periodic_followup: "Seguimiento periódico",

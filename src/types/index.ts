@@ -45,5 +45,19 @@ export type InstrumentWithDimensions = Instrument & {
 // Department type (for jsonb departments column)
 export type Department = { name: string; headcount: number | null };
 
+// Brand configuration for per-org visual identity
+export type BrandConfig = {
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  text_color: string;
+  background_color: string;
+  logo_position: "left" | "center";
+  show_powered_by: boolean;
+  custom_welcome_text: string | null;
+  custom_thankyou_text: string | null;
+  custom_email_footer: string | null;
+};
+
 // Action result type
 export type ActionResult<T = void> = { success: true; data: T } | { success: false; error: string };

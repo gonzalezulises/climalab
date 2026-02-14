@@ -33,9 +33,13 @@ const navItems = [
 export function ResultsSidebar({
   campaignId,
   campaignName,
+  orgLogoUrl,
+  orgName,
 }: {
   campaignId: string;
   campaignName: string;
+  orgLogoUrl?: string | null;
+  orgName?: string | null;
 }) {
   const pathname = usePathname();
   const basePath = `/campaigns/${campaignId}/results`;
@@ -43,6 +47,13 @@ export function ResultsSidebar({
   return (
     <aside className="w-56 border-r bg-muted/30 p-4 print:hidden">
       <div className="mb-4">
+        {orgLogoUrl && (
+          <img
+            src={orgLogoUrl}
+            alt={orgName ?? ""}
+            className="h-8 w-auto max-w-[140px] object-contain mb-2"
+          />
+        )}
         <p className="text-xs text-muted-foreground">Resultados</p>
         <p className="text-sm font-semibold truncate">{campaignName}</p>
       </div>
