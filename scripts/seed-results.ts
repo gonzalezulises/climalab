@@ -574,12 +574,22 @@ async function main() {
   // Non-blocking: if Python ONA fails, seed-results continues
   try {
     console.log("\n--- Running ONA analysis ---");
-    execSync("uv run scripts/ona-analysis.py", {
-      stdio: "inherit",
-      cwd: process.cwd(),
-    });
+    // Try uv first (handles dependencies automatically), fallback to python3
+    try {
+      execSync("uv run scripts/ona-analysis.py", {
+        stdio: "inherit",
+        cwd: process.cwd(),
+        env: process.env,
+      });
+    } catch {
+      execSync("python3 scripts/ona-analysis.py", {
+        stdio: "inherit",
+        cwd: process.cwd(),
+        env: process.env,
+      });
+    }
   } catch (e) {
-    console.warn("ONA analysis skipped:", (e as Error).message);
+    console.warn("ONA analysis skipped (non-blocking):", (e as Error).message);
   }
 
   console.log("\nAll done!");

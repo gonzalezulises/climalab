@@ -18,6 +18,8 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  LineChart,
+  Line,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +75,12 @@ type Props = {
   alerts: Array<{ severity: string; message: string; value: number }>;
   categories: Array<{ category: string; avg_score: number; favorability_pct: number }>;
   indicators: BusinessIndicator[];
+  indicatorTrend: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    ends_at: string;
+    indicators: BusinessIndicator[];
+  }>;
   previousCampaigns: Array<{ id: string; name: string }>;
   initialNarrative: DashboardNarrative | null;
 };
@@ -90,6 +98,7 @@ export function DashboardClient({
   alerts,
   categories,
   indicators,
+  indicatorTrend,
   previousCampaigns,
   initialNarrative,
 }: Props) {
@@ -466,6 +475,73 @@ export function DashboardClient({
           </CardContent>
         </Card>
       )}
+
+      {/* Co-evolution: business indicators across campaigns */}
+      {(() => {
+        // Find indicator types present in 2+ campaigns
+        const typeCounts = new Map<string, number>();
+        for (const wave of indicatorTrend) {
+          for (const ind of wave.indicators) {
+            typeCounts.set(ind.indicator_type, (typeCounts.get(ind.indicator_type) ?? 0) + 1);
+          }
+        }
+        const trendTypes = [...typeCounts.entries()]
+          .filter(([, count]) => count >= 2)
+          .map(([type]) => type);
+
+        if (trendTypes.length === 0 || indicatorTrend.length < 2) return null;
+
+        const TREND_COLORS = ["#f59e0b", "#ef4444", "#22c55e", "#8b5cf6"];
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Co-evolución clima e indicadores</CardTitle>
+              <CardDescription>
+                Evolución temporal de indicadores de negocio entre mediciones
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {trendTypes.map((type, idx) => {
+                const chartData = indicatorTrend.map((wave) => {
+                  const ind = wave.indicators.find((i) => i.indicator_type === type);
+                  return {
+                    name: wave.campaign_name,
+                    valor: ind ? Number(ind.indicator_value) : null,
+                  };
+                });
+                const unit =
+                  indicatorTrend.flatMap((w) => w.indicators).find((i) => i.indicator_type === type)
+                    ?.indicator_unit ?? "";
+
+                return (
+                  <div key={type} className="mb-4 last:mb-0">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      {INDICATOR_TYPES[type] ?? type} ({unit})
+                    </p>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Line
+                          type="monotone"
+                          dataKey="valor"
+                          stroke={TREND_COLORS[idx % TREND_COLORS.length]}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Wave comparison */}
       {previousCampaigns.length > 0 && (

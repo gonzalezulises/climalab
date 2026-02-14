@@ -121,7 +121,10 @@ function densityColor(value: number | null): string {
 // Main component
 // ---------------------------------------------------------------------------
 export function NetworkClient({ data }: { data: ONAResults | null }) {
-  const narrative = useMemo(() => (data ? generateNarrative(data) : ""), [data]);
+  const narrative = useMemo(
+    () => (data ? (data.narrative ?? generateNarrative(data)) : ""),
+    [data]
+  );
 
   const dimCodes = useMemo(() => (data ? Object.keys(data.global_means).sort() : []), [data]);
 

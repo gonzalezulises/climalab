@@ -406,7 +406,7 @@ def compute_ona_metrics(
             )
     bridges.sort(key=lambda x: x["betweenness"], reverse=True)
 
-    return {
+    result = {
         "summary": {
             "nodes": G.number_of_nodes(),
             "edges": G.number_of_edges(),
@@ -422,6 +422,68 @@ def compute_ona_metrics(
         "global_means": {c: round(v, 3) for c, v in global_means.items()},
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+    result["narrative"] = _generate_narrative(result)
+    return result
+
+
+def _generate_narrative(data: dict) -> str:
+    """Template-based narrative (no LLM). Mirrors network-client.tsx logic."""
+    summary = data["summary"]
+    communities = data["communities"]
+    discriminants = data["discriminants"]
+    bridges = data["bridges"]
+    parts: list[str] = []
+
+    nc = summary["communities"]
+    if nc == 1:
+        parts.append(
+            "La organización presenta una percepción homogénea: todos los "
+            "colaboradores viven una realidad organizacional similar."
+        )
+    elif nc <= 3:
+        parts.append(
+            f"Se identificaron {nc} grupos perceptuales diferenciados dentro "
+            "de la organización, lo que sugiere que coexisten realidades "
+            "organizacionales distintas."
+        )
+    else:
+        parts.append(
+            f"La organización está fragmentada en {nc} comunidades "
+            "perceptuales, indicando múltiples realidades organizacionales "
+            "paralelas."
+        )
+
+    if discriminants:
+        top_dims = ", ".join(d["code"] for d in discriminants[:3])
+        parts.append(
+            f"Las dimensiones que más diferencian a los grupos son: {top_dims}."
+        )
+
+    if len(communities) >= 2:
+        by_score = sorted(communities, key=lambda c: c["avg_score"], reverse=True)
+        best, worst = by_score[0], by_score[-1]
+        parts.append(
+            f"El grupo {best['id'] + 1} ({best['size']} personas, "
+            f"mayoritariamente {best['dominant_department']}) tiene la "
+            f"percepción más favorable ({best['avg_score']:.2f}), mientras "
+            f"que el grupo {worst['id'] + 1} ({worst['size']} personas, "
+            f"mayoritariamente {worst['dominant_department']}) presenta la "
+            f"percepción más crítica ({worst['avg_score']:.2f})."
+        )
+
+    if bridges:
+        parts.append(
+            f"Se identificaron {len(bridges)} nodos puente — personas que "
+            "conectan múltiples comunidades y pueden actuar como traductores "
+            "culturales."
+        )
+    else:
+        parts.append(
+            "No se identificaron nodos puente significativos entre las "
+            "comunidades."
+        )
+
+    return " ".join(parts)
 
 
 # ---------------------------------------------------------------------------

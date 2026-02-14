@@ -24305,3 +24305,16 @@ INSERT INTO open_responses (id, respondent_id, question_type, text) VALUES
 ('cb000000-0000-0000-0000-000000000013', 'ab000000-0000-0000-0000-000000000018', 'general', 'Me gustaría que se implementaran más iniciativas de bienestar.'),
 ('cb000000-0000-0000-0000-000000000014', 'ab000000-0000-0000-0000-000000000061', 'general', 'La empresa ha mejorado mucho en el último año.'),
 ('cb000000-0000-0000-0000-000000000015', 'ab000000-0000-0000-0000-000000000116', 'general', 'Espero que los resultados de esta encuesta se traduzcan en acciones concretas.');
+
+-- ============================================================
+-- Business indicators (demo data for temporal correlation)
+-- ============================================================
+INSERT INTO business_indicators (campaign_id, indicator_name, indicator_value, indicator_unit, indicator_type, period_start, period_end, notes) VALUES
+-- Clima Q3 2025
+('f0000000-0000-0000-0000-000000000001', 'Tasa de rotación', 14.2, '%', 'turnover_rate', '2025-07-01', '2025-09-30', 'Pre-intervención comunicación'),
+('f0000000-0000-0000-0000-000000000001', 'Ausentismo promedio', 3.8, 'días/mes', 'absenteeism_rate', '2025-07-01', '2025-09-30', NULL),
+('f0000000-0000-0000-0000-000000000001', 'NPS Clientes', 38, 'puntos', 'customer_nps', '2025-07-01', '2025-09-30', NULL),
+-- Clima Q1 2026
+('f0000000-0000-0000-0000-000000000002', 'Tasa de rotación', 11.5, '%', 'turnover_rate', '2026-01-01', '2026-03-31', 'Post-intervención comunicación'),
+('f0000000-0000-0000-0000-000000000002', 'Ausentismo promedio', 3.1, 'días/mes', 'absenteeism_rate', '2026-01-01', '2026-03-31', NULL),
+('f0000000-0000-0000-0000-000000000002', 'NPS Clientes', 45, 'puntos', 'customer_nps', '2026-01-01', '2026-03-31', 'Mejora post-intervención');

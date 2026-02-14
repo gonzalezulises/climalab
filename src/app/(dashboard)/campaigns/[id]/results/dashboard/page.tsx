@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaigns, getCampaignResults } from "@/actions/campaigns";
 import { getAlerts, getCategoryScores } from "@/actions/analytics";
-import { getBusinessIndicators } from "@/actions/business-indicators";
+import { getBusinessIndicators, getBusinessIndicatorsTrend } from "@/actions/business-indicators";
 import { getDashboardNarrative } from "@/actions/ai-insights";
 import { DashboardClient } from "./dashboard-client";
 import { SEGMENT_TYPE_LABELS } from "@/lib/constants";
@@ -40,6 +40,10 @@ export default async function DashboardPage({
   const categories = categoriesResult.success ? categoriesResult.data : [];
   const indicators = indicatorsResult.success ? indicatorsResult.data : [];
   const narrative = narrativeResult.success ? narrativeResult.data : null;
+
+  // Fetch trend data for co-evolution chart (non-blocking)
+  const trendResult = await getBusinessIndicatorsTrend(campaign.organization_id);
+  const indicatorTrend = trendResult.success ? trendResult.data : [];
 
   // Determine which segment to use for dimension results
   const hasSegmentFilter = segment_type && segment_key;
@@ -122,6 +126,7 @@ export default async function DashboardPage({
         alerts={alerts.slice(0, 5)}
         categories={categories}
         indicators={indicators}
+        indicatorTrend={indicatorTrend}
         previousCampaigns={previousCampaigns}
         initialNarrative={narrative}
       />

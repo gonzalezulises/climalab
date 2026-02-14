@@ -16,16 +16,20 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 - `src/app/` — App Router pages and layouts
 - `src/app/(dashboard)/` — Protected admin routes (dashboard, organizations, campaigns, instruments)
-- `src/app/(dashboard)/campaigns/[id]/results/` — 10 results sub-pages with sidebar nav (incl. ONA network)
+- `src/app/(dashboard)/campaigns/[id]/results/` — 11 results sub-pages with sidebar nav (dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
 - `src/app/(auth)/` — Auth routes (login with magic link)
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
-- `src/components/results/` — 18 reusable chart components for results module
+- `src/components/results/` — 18 reusable chart components for results module (incl. benchmark-charts, agreement-badge, analysis-level-cards, business-indicators-panel)
+- `src/components/reports/` — PDF report component (@react-pdf/renderer)
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona)
+- `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson)
+- `src/lib/env.ts` — Zod-validated environment variables
+- `src/lib/rate-limit.ts` — Rate limiting utility
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export)
 - `src/types/` — Database types (generated) and derived types
 - `supabase/migrations/` — SQL migrations (18 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
@@ -35,6 +39,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `messages/` — i18n translation files
 - `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
+- `.github/workflows/ci.yml` — CI/CD pipeline
+- `vitest.config.ts` — Test configuration
 
 ## Database Schema
 
@@ -75,6 +81,9 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
 - **Multi-instrument**: campaigns have `instrument_id` (base) + `module_instrument_ids uuid[]` (up to 3 modules). Dimension loading uses `.in("instrument_id", [base, ...modules])` in calculateResults, survey page, and seed-results
 - **Module categories**: Module dimensions have `category = NULL` in DB, mapped to `"modulos"` pseudo-category in UI. Naturally excluded from category score aggregation
+- **ONA**: Python script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB
+- **Statistics extraction**: Pure functions in `src/lib/statistics.ts` shared between campaigns.ts and seed-results.ts
+- **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`
 
 ## Statistical Methods (v4.1)
 
@@ -181,6 +190,21 @@ The technical page (ficha técnica) auto-generates:
 - **CLI** — Orientación al Cliente (4 items, Narver & Slater 1990)
 - **DIG** — Preparación Digital (4 items, Davis 1989)
 
+### Multi-instrument Support (v4.2)
+
+- Campaigns can include a base instrument (Core/Pulse) + up to 3 optional modules
+- Modules are instruments with `instrument_type = 'module'`
+- Available modules: CAM (Gestión del Cambio, 8 items), CLI (Orientación al Cliente, 4 items), DIG (Preparación Digital, 4 items)
+- Module dimensions appear in a separate "Módulos Opcionales" tab in results
+
+## Export & Reports
+
+- **Excel export**: Full campaign data via exceljs (dimensions, items, segments, drivers, alerts, comments, ficha técnica)
+- **PDF report**: Executive report via @react-pdf/renderer with KPIs, categories, dimensions, departments, alerts, drivers, comments, business indicators, ONA summary, ficha técnica
+- **AI report**: Text-based executive report with AI-generated narratives (requires Ollama)
+- **CSV/JSON**: Dimension data and full results dump
+- **Server action**: `src/actions/export.ts`
+
 ## User Roles
 
 - `super_admin` — Full platform access, manages all organizations
@@ -195,14 +219,17 @@ The technical page (ficha técnica) auto-generates:
 4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks
 5. Admin closes campaign → `calculateResults()` computes all statistics:
    - Attention check filtering → reverse item inversion → dimension/item aggregation
-   - rwg(j) per dimension (global + segments) → stored in metadata
+   - rwg(j) per dimension × segment for within-group agreement
+   - Cronbach's alpha per dimension for internal consistency
    - Engagement profiles (ambassadors/committed/neutral/disengaged)
    - eNPS calculation
-   - Segment analysis (department, tenure, gender) with anonymity threshold
+   - Segment analysis (department, tenure, gender) with anonymity threshold (n<5)
    - Pearson correlation matrix → engagement drivers → automatic alerts → category scores
-   - Cronbach's alpha per dimension → stored as "reliability" analytics
    - Ficha técnica (population, sample, response rate, margin of error with FPC)
-6. Admin views results dashboard (9 sub-pages: overview, dimensions, heatmap, items, engagement, eNPS, correlations, comments, ficha técnica)
+   - Reliability data (alpha per dimension) → campaign_analytics
+   - ONA perceptual analysis (Python/NetworkX, non-blocking) → campaign_analytics
+6. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
+7. AI Insights (optional, requires Ollama): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
 
 ## Local Development
 

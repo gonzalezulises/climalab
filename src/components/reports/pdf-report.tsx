@@ -78,6 +78,19 @@ type PdfReportProps = {
     item_count: number;
     respondent_count: number;
   }>;
+  // Business indicators
+  businessIndicators?: Array<{
+    indicator_name: string;
+    indicator_value: number;
+    indicator_unit: string | null;
+  }>;
+  // ONA summary
+  onaSummary?: {
+    communities: number;
+    modularity: number;
+    topDiscriminants: string[];
+    narrative: string;
+  } | null;
   // AI
   narrative: {
     executive_summary: string;
@@ -104,6 +117,8 @@ export function PdfReport({
   alerts,
   drivers,
   reliability,
+  businessIndicators,
+  onaSummary,
   narrative,
   commentSummary,
 }: PdfReportProps) {
@@ -316,12 +331,56 @@ export function PdfReport({
           </>
         )}
 
+        {/* Business indicators */}
+        {businessIndicators && businessIndicators.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>9. Indicadores de Negocio</Text>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.cellBold, { width: "50%" }]}>Indicador</Text>
+                <Text style={[styles.cellBold, { width: "25%" }]}>Valor</Text>
+                <Text style={[styles.cellBold, { width: "25%" }]}>Unidad</Text>
+              </View>
+              {businessIndicators.map((bi, i) => (
+                <View key={i} style={styles.tableRow}>
+                  <Text style={[styles.cell, { width: "50%" }]}>{bi.indicator_name}</Text>
+                  <Text style={[styles.cell, { width: "25%" }]}>{bi.indicator_value}</Text>
+                  <Text style={[styles.cell, { width: "25%" }]}>{bi.indicator_unit ?? "-"}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* ONA summary */}
+        {onaSummary && (
+          <>
+            <Text style={styles.sectionTitle}>10. Red Perceptual (ONA)</Text>
+            <View style={styles.kpiRow}>
+              <View style={styles.kpiBox}>
+                <Text style={styles.kpiValue}>{onaSummary.communities}</Text>
+                <Text style={styles.kpiLabel}>Comunidades</Text>
+              </View>
+              <View style={styles.kpiBox}>
+                <Text style={styles.kpiValue}>{onaSummary.modularity.toFixed(3)}</Text>
+                <Text style={styles.kpiLabel}>Modularidad</Text>
+              </View>
+            </View>
+            {onaSummary.topDiscriminants.length > 0 && (
+              <Text style={styles.text}>
+                Dimensiones discriminantes: {onaSummary.topDiscriminants.join(", ")}
+              </Text>
+            )}
+            <Text style={styles.text}>{onaSummary.narrative}</Text>
+          </>
+        )}
+
         <Text style={styles.footer}>Generado por ClimaLab</Text>
       </Page>
 
       {/* Technical sheet */}
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.sectionTitle}>9. Ficha Tecnica</Text>
+        <Text style={styles.sectionTitle}>11. Ficha Tecnica</Text>
         <View style={styles.kpiRow}>
           <View style={styles.kpiBox}>
             <Text style={styles.kpiValue}>{populationN}</Text>

@@ -1004,13 +1004,12 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
   // Non-blocking ONA analysis (Python-dependent, fails gracefully)
   try {
     const { exec } = await import("child_process");
-    exec(
-      `uv run ${process.cwd()}/scripts/ona-analysis.py ${campaignId}`,
-      { env: process.env },
-      (error: Error | null) => {
-        if (error) console.warn("ONA deferred:", error.message);
-      }
-    );
+    const script = `${process.cwd()}/scripts/ona-analysis.py`;
+    // Try uv first (auto-resolves deps), fallback to python3
+    const cmd = `uv run ${script} ${campaignId} 2>/dev/null || python3 ${script} ${campaignId}`;
+    exec(cmd, { env: process.env }, (error: Error | null) => {
+      if (error) console.warn("ONA deferred:", error.message);
+    });
   } catch {
     /* Python not available */
   }

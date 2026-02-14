@@ -60,6 +60,13 @@ describe("rwg", () => {
     expect(result).toBeGreaterThanOrEqual(0);
   });
 
+  it("returns low rwg for uniformly spread scores", () => {
+    // Full range 1-5 repeated → high variance → low agreement
+    const result = rwg([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+    expect(result).not.toBeNull();
+    expect(result!).toBeLessThan(0.3);
+  });
+
   it("rounds to 3 decimal places", () => {
     const result = rwg([3, 3, 4, 3, 4, 3, 4]);
     expect(result).not.toBeNull();
@@ -98,6 +105,17 @@ describe("cronbachAlpha", () => {
     expect(alpha!).toBeGreaterThan(0.6);
   });
 
+  it("returns low or negative alpha for incoherent matrix", () => {
+    // Items that don't correlate — alternating pattern breaks consistency
+    const matrix: number[][] = [];
+    for (let i = 0; i < 20; i++) {
+      matrix.push([1 + (i % 5), 5 - (i % 5), 1 + ((i * 3) % 5)]);
+    }
+    const alpha = cronbachAlpha(matrix);
+    expect(alpha).not.toBeNull();
+    expect(alpha!).toBeLessThan(0.3);
+  });
+
   it("rounds to 3 decimal places", () => {
     const matrix: number[][] = [];
     for (let i = 0; i < 20; i++) {
@@ -133,6 +151,14 @@ describe("pearson", () => {
     const y = Array.from({ length: 20 }, (_, i) => 20 - i);
     const result = pearson(x, y);
     expect(result.r).toBe(-1);
+  });
+
+  it("returns r near 0 for uncorrelated data", () => {
+    // Sine vs linear — no linear correlation
+    const x = Array.from({ length: 20 }, (_, i) => i + 1);
+    const y = Array.from({ length: 20 }, (_, i) => Math.sin(i * 1.5) * 10);
+    const result = pearson(x, y);
+    expect(Math.abs(result.r)).toBeLessThan(0.5);
   });
 
   it("returns r=0 and pValue=1 for zero denominator", () => {

@@ -1,6 +1,6 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2 | **ONA perceptual**: v4.3
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
@@ -22,6 +22,8 @@
 11. [Análisis con IA (v4.1.1)](#11-análisis-con-ia-v411)
 12. [Análisis de Redes Perceptuales (ONA)](#12-análisis-de-redes-perceptuales-ona)
 13. [Referencias Adicionales](#13-referencias-adicionales-v41)
+14. [Multi-instrumento](#14-multi-instrumento-v42)
+15. [Export y Reportes](#15-export-y-reportes)
 
 ---
 
@@ -1224,8 +1226,79 @@ Se almacena en `campaign_analytics` con `analysis_type = 'ona_network'`:
 
 - **Python**: NetworkX (grafos), scipy (coseno), numpy (vectores), pandas (dataframes)
 - **Dependencias**: PEP 723 inline script metadata — `uv run` resuelve e instala automáticamente, sin pasos manuales
-- **Invocación**: `uv run scripts/ona-analysis.py [campaign_id]`
-- **Integración**: Se invoca automáticamente al cerrar campaña (async, non-blocking) y en `seed-results.ts` (sync). Si `uv` no está disponible, falla silenciosamente sin afectar el flujo principal
+- **Invocación**: `uv run scripts/ona-analysis.py [campaign_id]` (prefiere uv, fallback a `python3`)
+- **Integración**: Se invoca automáticamente al cerrar campaña (async, non-blocking) y en `seed-results.ts` (sync). Ambos usan cadena de fallback: intenta `uv run` primero, luego `python3`. Si ninguno está disponible, falla silenciosamente sin afectar el flujo principal
+- **Narrativa server-side**: El script genera una narrativa template-based que se almacena en el campo `narrative` del JSON. El cliente usa esta narrativa si existe, con fallback a generación client-side
+
+---
+
+## 14. Multi-instrumento (v4.2)
+
+### 14.1 Modelo de Datos
+
+La version 4.2 introduce soporte para instrumentos modulares:
+
+- **Enum `instrument_type`**: `base` (Core, Pulso) o `module` (modulos opcionales)
+- **Columna `module_instrument_ids uuid[]`** en `campaigns`: lista de instrumentos modulo seleccionados para la campana
+- Cada campana tiene exactamente 1 instrumento base + 0 a 3 modulos opcionales
+
+### 14.2 Modulos Disponibles
+
+| Modulo                 | Codigo | Items | Base Teorica         |
+| ---------------------- | ------ | ----- | -------------------- |
+| Gestion del Cambio     | CAM    | 8     | Armenakis 1993       |
+| Orientacion al Cliente | CLI    | 4     | Narver & Slater 1990 |
+| Preparacion Digital    | DIG    | 4     | Davis 1989           |
+
+### 14.3 Carga de Dimensiones
+
+En tres puntos criticos, las dimensiones se cargan usando `.in("instrument_id", [base, ...modules])`:
+
+1. **Survey client** (`src/app/survey/[token]/survey-client.tsx`): Presenta items de base + modulos seleccionados
+2. **calculateResults** (`src/actions/campaigns.ts`): Procesa respuestas de todos los instrumentos
+3. **seed-results** (`scripts/seed-results.ts`): Replica el calculo para datos demo
+
+### 14.4 Presentacion en Resultados
+
+- Las dimensiones de modulos tienen `category = NULL` en la tabla `dimensions`
+- En la UI, se mapean a la pseudo-categoria `"modulos"` y se presentan en una pestana separada "Modulos Opcionales"
+- Los scores de modulos NO se incluyen en el calculo de scores por categoria (bienestar, direccion, etc.)
+
+---
+
+## 15. Export y Reportes
+
+### 15.1 Formatos de Exportacion
+
+| Formato      | Descripcion                                                                                                                                   | Generacion                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Excel (XLSX) | 8 hojas: resumen, dimensiones, items, segmentos, drivers, alertas, comentarios, ficha tecnica                                                 | Server-side via exceljs             |
+| PDF          | Reporte ejecutivo con KPIs, categorias, dimensiones, departamentos, alertas, drivers, comentarios, indicadores de negocio, ONA, ficha tecnica | Server-side via @react-pdf/renderer |
+| CSV          | Scores por dimension                                                                                                                          | Client-side                         |
+| JSON         | Dump completo de datos analiticos                                                                                                             | Client-side                         |
+| TXT (IA)     | Reporte ejecutivo con narrativas AI (requiere Ollama)                                                                                         | Client-side con server actions      |
+
+### 15.2 Arquitectura
+
+- **Server action**: `src/actions/export.ts` — `generateExcelReport()` y `generatePdfReport()`
+- **PDF component**: `src/components/reports/pdf-report.tsx` — componente React-PDF con 11 secciones
+- **Client**: `src/app/(dashboard)/campaigns/[id]/results/export/export-client.tsx` — interfaz de descarga
+- Los reportes se generan on-demand (no pre-calculados) y se envian como base64 al cliente para descarga
+
+### 15.3 Contenido del PDF
+
+1. Portada (campana, organizacion, fecha)
+2. Resumen ejecutivo (AI, si disponible)
+3. Indicadores clave (engagement, favorabilidad, eNPS, tasa de respuesta)
+4. Scores por categoria
+5. Ranking de dimensiones (codigo, nombre, score, fav%, rwg)
+6. Resumen por departamento
+7. Alertas principales
+8. Top drivers de engagement
+9. Resumen de comentarios (AI, si disponible)
+10. Indicadores de negocio (si existen)
+11. Red perceptual ONA (si existe)
+12. Ficha tecnica (poblacion, muestra, tasa, margen de error, Cronbach alpha)
 
 ---
 

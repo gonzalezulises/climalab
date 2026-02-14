@@ -56,6 +56,7 @@ export interface ONAResults {
   department_density: ONADeptDensity;
   bridges: ONABridge[];
   global_means: Record<string, number>;
+  narrative?: string;
   generated_at: string;
 }
 

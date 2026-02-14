@@ -2,70 +2,48 @@
 
 ## Estado Actual: v4.3
 
-**Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento
+**Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento desde v4.0
 
-**Mejoras estadísticas v4.1**:
-
-- rwg(j) para validar acuerdo intergrupal
-- Alfa de Cronbach para confiabilidad interna
-- Tabla de indicadores de negocio para correlación temporal
-- Vista de 3 niveles de análisis (EMCO-aligned)
-- Reporte técnico expandido con limitaciones auto-generadas
-
-**Amplificación con IA v4.1.1**:
-
-- Análisis de comentarios: temas, sentimiento, resumen por tipo
-- Resumen ejecutivo narrativo en dashboard
-- Interpretación de drivers: narrativa, paradojas, quick wins
-- Contextualización de alertas: causa raíz + recomendación
-- Perfiles narrativos de segmentos con fortalezas/riesgos
-- Narrativa de tendencias: trayectoria, dimensiones mejorando/declinando
-- Reporte ejecutivo IA descargable (.txt)
-
-**Red perceptual ONA v4.3**:
-
-- Análisis de redes de similitud perceptual (coseno) entre respondentes
-- Detección de comunidades (Louvain) — "mundos paralelos" dentro de la empresa
-- Dimensiones discriminantes, densidad inter-departamental, nodos puente
-- Python (NetworkX) invocado desde seed-results y calculateResults
-- Resultados en campaign_analytics, visualización en página "Red perceptual"
-
-**Multi-instrumento v4.2**:
-
-- Campañas con instrumento base (Core/Pulso) + hasta 3 módulos opcionales
-- Enum `instrument_type` (base/module) para clasificar instrumentos
-- Columna `module_instrument_ids uuid[]` en campaigns
-- UI: Select de base + checkboxes de módulos al crear campaña
-- Dimensiones de módulos en pestaña "Módulos Opcionales" en resultados
-- Datos demo: campaña Q1 2026 incluye módulos CAM + DIG con respuestas generadas
+| Feature                                        | Estado                        | Commit            |
+| ---------------------------------------------- | ----------------------------- | ----------------- |
+| Core v4.0 (22 dims, 109 items)                 | Implementado                  | 5ea0548 + f4c2fd1 |
+| rwg, Cronbach alpha, ficha tecnica             | Implementado                  | b59e11e           |
+| Business indicators (tabla + CRUD + seed data) | Implementado                  | b59e11e           |
+| Niveles EMCO (3 niveles)                       | Implementado                  | b59e11e           |
+| AI Insights (Ollama, 7 paginas)                | Implementado                  | fc35ab6           |
+| Export Excel + PDF                             | Implementado                  | 8d423fa           |
+| Benchmarks internos                            | Implementado                  | 8d423fa           |
+| Multi-instrumento (base + modulos)             | Implementado                  | 531ec39           |
+| ONA perceptual (NetworkX, Louvain)             | Implementado                  | a553ea2           |
+| Tests + CI/CD + Error boundaries               | Implementado                  | d817d19           |
+| Pulsos automatizados                           | Pendiente                     | —                 |
+| Reportes PDF con marca blanca                  | Pendiente (PDF basico existe) | —                 |
+| CFA / Invariancia                              | Horizonte 2                   | —                 |
+| ONA sociometrica                               | Horizonte 2                   | —                 |
+| NLP comentarios (local)                        | Horizonte 3                   | —                 |
+| Modulos sectoriales                            | Horizonte 3 (infra lista)     | —                 |
 
 ---
 
 ## Horizonte 1: Operativo (0–6 meses)
 
-### Reportes PDF
+### Completado
 
-- Generación automática de informe ejecutivo en PDF
-- Incluye KPIs, radar, ranking, alertas, ficha técnica
-- Marca blanca configurable por organización
+- Export Excel con datos completos (dimensiones, items, segmentos, drivers, alertas, comentarios, ficha tecnica)
+- PDF ejecutivo con KPIs, categorias, dimensiones, departamentos, alertas, drivers, comentarios, indicadores de negocio, ONA, ficha tecnica
+- Benchmarks internos (comparacion entre departamentos, gap analysis)
+- Filtros de segmentacion en resultados
+- Loading states en todas las paginas de resultados
+- Error boundaries globales y por seccion
+- CI/CD con GitHub Actions
+- Tests unitarios con vitest
 
-### Benchmarks Internos
+### Pendiente
 
-- Comparación automática entre departamentos de la misma organización
-- Visualización de brechas entre segmentos
-- Identificación de mejores prácticas internas
-
-### Pulsos Automatizados
-
-- Programación de pulsos periódicos (22 items ancla)
-- Tracking automático de evolución por dimensión
-- Alertas de deterioro entre mediciones
-
-### Mejoras de UX
-
-- Exportación de datos a CSV/Excel
-- Filtros avanzados en resultados
-- Notificaciones por email de hitos de campaña
+- Pulsos automatizados (programacion periodica de 22 items ancla)
+- PDF con marca blanca configurable por organizacion
+- Notificaciones por email de hitos de campana
+- Onboarding wizard multi-paso para nuevas organizaciones
 
 ---
 

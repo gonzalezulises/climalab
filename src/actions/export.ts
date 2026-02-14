@@ -13,6 +13,8 @@ import {
   getBenchmarkData,
 } from "@/actions/analytics";
 import { getDashboardNarrative, getCommentAnalysis } from "@/actions/ai-insights";
+import { getBusinessIndicators } from "@/actions/business-indicators";
+import { getONAResults } from "@/actions/ona";
 import type { ActionResult } from "@/types";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { PdfReport } from "@/components/reports/pdf-report";
@@ -285,6 +287,8 @@ export async function generatePdfReport(
     benchmarkRes,
     narrativeRes,
     commentRes,
+    businessIndicatorsRes,
+    onaRes,
   ] = await Promise.all([
     getCampaign(campaignId),
     getCampaignResults(campaignId),
@@ -295,6 +299,8 @@ export async function generatePdfReport(
     getBenchmarkData(campaignId),
     getDashboardNarrative(campaignId),
     getCommentAnalysis(campaignId),
+    getBusinessIndicators(campaignId),
+    getONAResults(campaignId),
   ]);
 
   if (!campaignRes.success) {
@@ -310,6 +316,8 @@ export async function generatePdfReport(
   const benchmark = benchmarkRes.success ? benchmarkRes.data : null;
   const narrative = narrativeRes.success ? narrativeRes.data : null;
   const commentAnalysis = commentRes.success ? commentRes.data : null;
+  const businessIndicators = businessIndicatorsRes.success ? businessIndicatorsRes.data : [];
+  const onaData = onaRes.success ? onaRes.data : null;
 
   // Extract dimension results (global)
   const dimResults = results.filter(
@@ -352,6 +360,19 @@ export async function generatePdfReport(
     alerts: alerts.slice(0, 15),
     drivers: drivers.slice(0, 10),
     reliability,
+    businessIndicators: businessIndicators.map((bi) => ({
+      indicator_name: bi.indicator_name,
+      indicator_value: Number(bi.indicator_value),
+      indicator_unit: bi.indicator_unit,
+    })),
+    onaSummary: onaData
+      ? {
+          communities: onaData.summary.communities,
+          modularity: onaData.summary.modularity,
+          topDiscriminants: onaData.discriminants.slice(0, 5).map((d) => d.code),
+          narrative: onaData.narrative ?? "",
+        }
+      : null,
     narrative,
     commentSummary: commentAnalysis?.summary ?? null,
   });
