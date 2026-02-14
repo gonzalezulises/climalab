@@ -28,11 +28,11 @@ El instrumento ClimaLab Core v4.0 se construyó sobre principios de psicometría
 
 ### 1.2 Estructura del Instrumento
 
-- **21 dimensiones** organizadas en **4 categorías** + 1 variable transversal (ENG)
-- **105 ítems regulares** + **2 verificaciones de atención** = **107 ítems** (Core v4.0)
-- **21 ítems ancla** (Pulso v4.0) — 1 por dimensión para seguimiento frecuente
+- **22 dimensiones** organizadas en **4 categorías** + 1 variable transversal (ENG)
+- **107 ítems regulares** + **2 verificaciones de atención** = **109 ítems** (Core v4.0)
+- **22 ítems ancla** (Pulso v4.0) — 1 por dimensión para seguimiento frecuente
 - **3 módulos opcionales**: Gestión del Cambio (8 ítems), Orientación al Cliente (4), Preparación Digital (4)
-- Cada dimensión incluye **1 ítem inverso** (excepto DEM que tiene 2) para detectar aquiescencia
+- Cada dimensión incluye **1 ítem inverso** para detectar aquiescencia
 - Cada dimensión incluye **1 ítem ancla** compartido con el instrumento Pulso
 
 ### 1.3 Tabla Completa de Dimensiones
@@ -41,47 +41,48 @@ El instrumento ClimaLab Core v4.0 se construyó sobre principios de psicometría
 
 | # | Código | Nombre | Base Teórica | Ítems |
 |---|--------|--------|--------------|-------|
-| 1 | ORG | Orgullo Institucional | Mael & Ashforth 1992, Psychological Ownership (Pierce 2001) | 5 |
+| 1 | ORG | Orgullo Institucional | Mael & Ashforth 1992, Psychological Ownership (Pierce 2001) | 4 |
 | 2 | PRO | Propósito del Trabajo | Meaning of Work (Steger 2012), UWES-9 dedicación | 5 |
 | 3 | SEG | Seguridad Física y Psicológica | JD-R Model (Bakker & Demerouti 2007), COPSOQ | 5 |
-| 4 | BAL | Balance Vida-Trabajo | Work-Life Balance (Greenhaus 2003), JD-R recursos | 5 |
+| 4 | BAL | Balance Vida-Trabajo | Work-Life Balance (Greenhaus 2003), JD-R recursos | 4 |
 | 5 | CUI | Cuidado Mutuo | Perceived Organizational Support (Eisenberger 1986) | 5 |
 | 6 | DEM | Demandas Laborales | JD-R Model (Bakker & Demerouti 2007), Job Demands | 4 |
 
-#### Categoría: Liderazgo (5 dimensiones)
+#### Categoría: Dirección y Supervisión (5 dimensiones)
 
 | # | Código | Nombre | Base Teórica | Ítems |
 |---|--------|--------|--------------|-------|
-| 7 | LID | Liderazgo Efectivo | LMX-7 (Graen & Uhl-Bien 1995), Servant Leadership (Liden 2008) | 8 |
+| 7 | LID | Liderazgo Efectivo | LMX-7 (Graen & Uhl-Bien 1995), Servant Leadership (Liden 2008) | 6 |
 | 8 | AUT | Autonomía | Self-Determination Theory (Deci & Ryan 2000), JD-R | 5 |
-| 9 | COM | Comunicación Interna | Roberts & O'Reilly 1974, Voice Behavior (LePine & Van Dyne 1998) | 6 |
+| 9 | COM | Comunicación Interna | Roberts & O'Reilly 1974, Voice Behavior (LePine & Van Dyne 1998) | 5 |
 | 10 | CON | Confianza Institucional | Organizational Trust (Mayer 1995) | 5 |
-| 11 | ROL | Claridad de Rol | Role Clarity (Rizzo 1970), Role Ambiguity & Conflict | 4 |
+| 11 | ROL | Claridad de Rol | Role Clarity (Rizzo 1970), Role Ambiguity & Conflict | 5 |
 
-#### Categoría: Compensación (4 dimensiones)
+#### Categoría: Compensación (5 dimensiones)
 
 | # | Código | Nombre | Base Teórica | Ítems |
 |---|--------|--------|--------------|-------|
-| 12 | CMP | Compensación | Equity Theory (Adams 1963), Organizational Justice (Colquitt 2001) | 5 |
-| 13 | REC | Reconocimiento | Perceived Organizational Support, Recognition practices | 5 |
+| 12 | CMP | Compensación | Equity Theory (Adams 1963), Organizational Justice (Colquitt 2001) | 4 |
+| 13 | REC | Reconocimiento | Perceived Organizational Support, Recognition practices | 4 |
 | 14 | BEN | Beneficios | Total Rewards (WorldatWork), Perceived investment in employee development | 4 |
-| 15 | EQA | Equidad en Ascensos | Procedural Justice (Colquitt 2001), Promotional Justice | 7 |
+| 15 | EQA | Equidad en Ascensos | Procedural Justice (Colquitt 2001), Promotional Justice | 6 |
+| 16 | NDI | No Discriminación e Inclusión | Procedural Justice (Colquitt 2001), DEI frameworks | 6 |
 
 #### Categoría: Cultura (5 dimensiones)
 
 | # | Código | Nombre | Base Teórica | Ítems |
 |---|--------|--------|--------------|-------|
-| 16 | COH | Cohesión de Equipo | Team Cohesion (Carron 1985), Social Capital | 6 |
-| 17 | INN | Innovación y Cambio | Psychological Safety (Edmondson 1999), Change Readiness (Armenakis 1993) | 6 |
-| 18 | RES | Resultados y Logros | Goal Setting Theory (Locke & Latham 1990), Achievement motivation | 4 |
-| 19 | DES | Desarrollo Profesional | Career Growth Opportunity (Kraimer 2011), Role Clarity (Rizzo 1970) | 5 |
-| 20 | APR | Aprendizaje Organizacional | Organizational Learning (Senge 1990), Learning Organization (Garvin 1993) | 4 |
+| 17 | COH | Cohesión de Equipo | Team Cohesion (Carron 1985), Social Capital | 6 |
+| 18 | INN | Innovación y Cambio | Psychological Safety (Edmondson 1999), Change Readiness (Armenakis 1993) | 6 |
+| 19 | RES | Resultados y Logros | Goal Setting Theory (Locke & Latham 1990), Achievement motivation | 5 |
+| 20 | DES | Desarrollo Profesional | Career Growth Opportunity (Kraimer 2011), Role Clarity (Rizzo 1970) | 4 |
+| 21 | APR | Aprendizaje Organizacional | Organizational Learning (Senge 1990), Learning Organization (Garvin 1993) | 4 |
 
 #### Variable Transversal (Dependiente)
 
 | # | Código | Nombre | Base Teórica | Ítems |
 |---|--------|--------|--------------|-------|
-| 21 | ENG | Engagement y Compromiso | UWES-9 (Schaufeli 2006), Organizational Commitment (Allen & Meyer 1990) | 6 |
+| 22 | ENG | Engagement y Compromiso | UWES-9 (Schaufeli 2006), Organizational Commitment (Allen & Meyer 1990) | 5 |
 
 ### 1.4 Ítems Inversos
 
@@ -103,7 +104,7 @@ Ejemplos de ítems inversos:
 
 ### 1.5 Ítems Ancla (Pulso v4.0)
 
-El instrumento Pulso contiene 21 ítems ancla — uno por dimensión — idénticos en texto a ítems del Core. Esto permite comparaciones directas entre mediciones completas y pulsos de seguimiento frecuente.
+El instrumento Pulso contiene 22 ítems ancla — uno por dimensión — idénticos en texto a ítems del Core. Esto permite comparaciones directas entre mediciones completas y pulsos de seguimiento frecuente.
 
 ### 1.6 Verificaciones de Atención
 
@@ -553,8 +554,8 @@ Ordenado por `|r|` descendente. Excluye ENG (es la variable dependiente).
 ```json
 [
   { "category": "bienestar", "avg_score": 3.95, "favorability_pct": 72.3, "dimension_count": 6 },
-  { "category": "liderazgo", "avg_score": 3.82, "favorability_pct": 68.1, "dimension_count": 5 },
-  { "category": "compensacion", "avg_score": 3.45, "favorability_pct": 55.8, "dimension_count": 4 },
+  { "category": "direccion", "avg_score": 3.82, "favorability_pct": 68.1, "dimension_count": 5 },
+  { "category": "compensacion", "avg_score": 3.45, "favorability_pct": 55.8, "dimension_count": 5 },
   { "category": "cultura", "avg_score": 3.88, "favorability_pct": 70.5, "dimension_count": 5 }
 ]
 ```
@@ -789,10 +790,10 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | Módulo: Gestión del Cambio | `b0000000-0000-0000-0000-000000000` | `003` |
 | Módulo: Orientación al Cliente | `b0000000-0000-0000-0000-000000000` | `004` |
 | Módulo: Preparación Digital | `b0000000-0000-0000-0000-000000000` | `005` |
-| Dimensiones Core | `d3000000-0000-0000-0000-000000000` | `001`–`021` |
-| Ítems Core | `e3000000-0000-0000-0000-000000000` | `001`–`107` |
-| Dimensiones Pulso | `d4000000-0000-0000-0000-000000000` | `001`–`021` |
-| Ítems Pulso | `e4000000-0000-0000-0000-000000000` | `001`–`021` |
+| Dimensiones Core | `d3000000-0000-0000-0000-000000000` | `001`–`022` |
+| Ítems Core | `e3000000-0000-0000-0000-000000000` | `001`–`112` (con huecos: 082 eliminado, 108–109 no usados) |
+| Dimensiones Pulso | `d4000000-0000-0000-0000-000000000` | `001`–`022` |
+| Ítems Pulso | `e4000000-0000-0000-0000-000000000` | `001`–`022` |
 | Dimensiones Módulos | `d5000000-0000-0000-0000-000000000` | `001`–`003` |
 | Ítems Módulos | `e5000000-0000-0000-0000-000000000` | `001`–`016` |
 | Campañas demo | `f0000000-0000-0000-0000-000000000` | `001`–`002` |
@@ -837,6 +838,7 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `000013_participants.sql` | Tabla participants (PII separada) + RLS para respondents autenticados |
 | `000014_fix_anon_responses_upsert.sql` | Política UPDATE para anon en responses (fix de upsert silencioso) |
 | `000015_core_v4_instrument.sql` | Rediseño Core v4.0: 3 nuevas dimensiones, 26 nuevos ítems, Pulso v4.0, módulos opcionales |
+| `000016_instrument_v4_corrections.sql` | Correcciones psicométricas: desagregación EQA/NDI, reducción LID a 6 ítems, fix DEM reverse, fix SEG anchor, renombrar liderazgo→direccion, ítem de orientación al cliente en RES |
 
 ## Apéndice C: Server Actions de Analytics
 

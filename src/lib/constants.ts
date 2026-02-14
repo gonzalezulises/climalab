@@ -34,6 +34,14 @@ export const INSTRUMENT_MODES = {
   pulse: "Pulso",
 } as const;
 
+export const CATEGORY_LABELS: Record<string, string> = {
+  bienestar: "Bienestar",
+  direccion: "Dirección y Supervisión",
+  compensacion: "Compensación",
+  cultura: "Cultura",
+  engagement: "Engagement",
+};
+
 export const MEASUREMENT_OBJECTIVES = {
   initial_diagnosis: "Diagnóstico inicial",
   periodic_followup: "Seguimiento periódico",

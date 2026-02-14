@@ -86,7 +86,7 @@ export function DashboardClient({
   };
 
   const catLabels: Record<string, string> = {
-    bienestar: "Bienestar", liderazgo: "Liderazgo",
+    bienestar: "Bienestar", direccion: "Dirección y Supervisión",
     compensacion: "Compensación", cultura: "Cultura", engagement: "Engagement",
   };
 

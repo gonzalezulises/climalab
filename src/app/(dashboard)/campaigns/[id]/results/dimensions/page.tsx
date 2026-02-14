@@ -3,6 +3,7 @@ import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CATEGORY_LABELS } from "@/lib/constants";
 
 function classifyFav(fav: number) {
   if (fav >= 90) return { label: "Excepcional", bg: "bg-green-100 text-green-800" };
@@ -12,16 +13,11 @@ function classifyFav(fav: number) {
   return { label: "Crisis", bg: "bg-red-100 text-red-800" };
 }
 
-const categoryLabels: Record<string, string> = {
-  bienestar: "Bienestar", liderazgo: "Liderazgo",
-  compensacion: "Compensación", cultura: "Cultura", engagement: "Engagement",
-};
-
 // Map dimension codes to categories (matches seed)
 const dimCategory: Record<string, string> = {
   ORG: "bienestar", PRO: "bienestar", SEG: "bienestar", BAL: "bienestar", CUI: "bienestar", DEM: "bienestar",
-  LID: "liderazgo", AUT: "liderazgo", COM: "liderazgo", CON: "liderazgo", ROL: "liderazgo",
-  CMP: "compensacion", REC: "compensacion", BEN: "compensacion", EQA: "compensacion",
+  LID: "direccion", AUT: "direccion", COM: "direccion", CON: "direccion", ROL: "direccion",
+  CMP: "compensacion", REC: "compensacion", BEN: "compensacion", EQA: "compensacion", NDI: "compensacion",
   COH: "cultura", INN: "cultura", RES: "cultura", DES: "cultura", APR: "cultura",
   ENG: "engagement",
 };
@@ -58,7 +54,7 @@ export default async function DimensionsPage({ params }: { params: Promise<{ id:
       fav: Number(r.favorability_pct),
     }));
 
-  const categories = ["bienestar", "liderazgo", "compensacion", "cultura", "engagement"];
+  const categories = ["bienestar", "direccion", "compensacion", "cultura", "engagement"];
 
   return (
     <div className="space-y-6">
@@ -68,7 +64,7 @@ export default async function DimensionsPage({ params }: { params: Promise<{ id:
         <TabsList>
           <TabsTrigger value="todas">Todas</TabsTrigger>
           {categories.map((cat) => (
-            <TabsTrigger key={cat} value={cat}>{categoryLabels[cat]}</TabsTrigger>
+            <TabsTrigger key={cat} value={cat}>{CATEGORY_LABELS[cat]}</TabsTrigger>
           ))}
         </TabsList>
 

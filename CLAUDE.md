@@ -27,7 +27,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes
 - `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics)
 - `src/types/` — Database types (generated) and derived types
-- `supabase/migrations/` — SQL migrations (15 files)
+- `supabase/migrations/` — SQL migrations (16 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~22K lines)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns
@@ -40,7 +40,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category
 - `profiles` — User profiles (extends auth.users)
 - `instruments` — Survey templates (full/pulse modes, version tracking)
-- `dimensions` — Instrument dimensions (21 in Core v4.0) with category and theoretical_basis
+- `dimensions` — Instrument dimensions (22 in Core v4.0) with category and theoretical_basis
 - `items` — Survey items with is_reverse, is_anchor, is_attention_check flags
 
 ### Measurement Pipeline
@@ -71,38 +71,39 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 ## Instrument: ClimaLab Core v4.0
 
-21 dimensions in 4 categories + ENG (transversal DV) = 105 items + 2 attention checks:
+22 dimensions in 4 categories + ENG (transversal DV) = 107 items + 2 attention checks:
 
 ### Bienestar (6)
-1. **ORG** — Orgullo Institucional (5 items, Mael & Ashforth 1992)
+1. **ORG** — Orgullo Institucional (4 items, Mael & Ashforth 1992)
 2. **PRO** — Propósito del Trabajo (5 items, Steger 2012)
 3. **SEG** — Seguridad Física y Psicológica (5 items, JD-R Model)
-4. **BAL** — Balance Vida-Trabajo (5 items, Greenhaus 2003)
+4. **BAL** — Balance Vida-Trabajo (4 items, Greenhaus 2003)
 5. **CUI** — Cuidado Mutuo (5 items, Eisenberger 1986)
 6. **DEM** — Demandas Laborales (4 items, JD-R Model)
 
-### Liderazgo (5)
-7. **LID** — Liderazgo Efectivo (8 items, LMX-7)
+### Dirección y Supervisión (5)
+7. **LID** — Liderazgo Efectivo (6 items, LMX-7 / Servant Leadership)
 8. **AUT** — Autonomía (5 items, SDT Deci & Ryan 2000)
-9. **COM** — Comunicación Interna (6 items, Roberts & O'Reilly 1974)
+9. **COM** — Comunicación Interna (5 items, Roberts & O'Reilly 1974)
 10. **CON** — Confianza Institucional (5 items, Mayer 1995)
-11. **ROL** — Claridad de Rol (4 items, Rizzo 1970)
+11. **ROL** — Claridad de Rol (5 items, Rizzo 1970)
 
-### Compensación (4)
-12. **CMP** — Compensación (5 items, Adams 1963)
-13. **REC** — Reconocimiento (5 items, POS)
+### Compensación (5)
+12. **CMP** — Compensación (4 items, Adams 1963)
+13. **REC** — Reconocimiento (4 items, POS)
 14. **BEN** — Beneficios (4 items, Total Rewards)
-15. **EQA** — Equidad en Ascensos (7 items, Colquitt 2001)
+15. **EQA** — Equidad en Ascensos (6 items, Colquitt 2001)
+16. **NDI** — No Discriminación e Inclusión (6 items, Colquitt 2001 / DEI)
 
 ### Cultura (5)
-16. **COH** — Cohesión de Equipo (6 items, Carron 1985)
-17. **INN** — Innovación y Cambio (6 items, Edmondson 1999)
-18. **RES** — Resultados y Logros (4 items, Locke & Latham 1990)
-19. **DES** — Desarrollo Profesional (5 items, Kraimer 2011)
-20. **APR** — Aprendizaje Organizacional (4 items, Senge 1990)
+17. **COH** — Cohesión de Equipo (6 items, Carron 1985)
+18. **INN** — Innovación y Cambio (6 items, Edmondson 1999)
+19. **RES** — Resultados y Logros (5 items, Locke & Latham 1990)
+20. **DES** — Desarrollo Profesional (4 items, Kraimer 2011)
+21. **APR** — Aprendizaje Organizacional (4 items, Senge 1990)
 
 ### Engagement (transversal)
-21. **ENG** — Engagement y Compromiso (6 items, UWES-9) — serves as DV
+22. **ENG** — Engagement y Compromiso (5 items, UWES-9) — serves as DV
 
 ### Optional Modules
 - **CAM** — Gestión del Cambio (8 items, Armenakis 1993)
