@@ -26,6 +26,9 @@ export type CampaignAnalytics = Database["public"]["Tables"]["campaign_analytics
 export type Participant = Database["public"]["Tables"]["participants"]["Row"];
 export type ParticipantInsert = Database["public"]["Tables"]["participants"]["Insert"];
 
+export type BusinessIndicator = Database["public"]["Tables"]["business_indicators"]["Row"];
+export type BusinessIndicatorInsert = Database["public"]["Tables"]["business_indicators"]["Insert"];
+
 // Enum types
 export type SizeCategory = Database["public"]["Enums"]["size_category"];
 export type UserRole = Database["public"]["Enums"]["user_role"];

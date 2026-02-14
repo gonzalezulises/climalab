@@ -1,6 +1,6 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
@@ -851,3 +851,116 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `getHeatmapData()` | Puntajes dimensionales segmentados (excluye global) | `campaign_results` filtrado |
 | `getWaveComparison()` | Comparación de todas las campañas cerradas de una org | `campaign_results` multi-campaña |
 | `getTrendsData()` | Series históricas de puntajes dimensionales | `campaign_results` multi-campaña |
+| `getReliabilityData()` | Alfa de Cronbach por dimensión | `campaign_analytics.reliability` |
+
+---
+
+## 9. Métricas Psicométricas (v4.1)
+
+### 9.1 Índice de Acuerdo Intergrupal — rwg(j)
+
+El índice rwg(j) (James, Demaree & Wolf, 1984) mide el grado de acuerdo entre respondentes dentro de un grupo. Justifica la agregación de percepciones individuales a nivel grupal.
+
+**Fórmula:**
+```
+rwg(j) = 1 - (S²_obs / S²_esperada)
+```
+
+Donde:
+- `S²_obs` = varianza poblacional observada (÷ N, no N-1) de las medias por respondente para la dimensión
+- `S²_esperada` = varianza esperada bajo distribución uniforme = (A² - 1) / 12 = (25 - 1) / 12 = **2.0** para escala Likert de 5 puntos
+- Mínimo 3 scores. Resultado clamped a [0, 1]
+
+**Umbrales interpretativos:**
+| rwg | Interpretación |
+|-----|---------------|
+| ≥ 0.70 | Acuerdo suficiente — el promedio grupal representa una percepción compartida |
+| 0.50 – 0.69 | Acuerdo moderado — percepciones heterogéneas |
+| < 0.50 | Acuerdo bajo — el promedio no representa una percepción compartida |
+
+**Implementación:**
+- Se calcula para cada dimensión a nivel global y por segmento demográfico
+- Se almacena en el campo `metadata.rwg` de `campaign_results`
+- En la UI: el valor numérico NO se muestra al usuario; se muestra un badge cualitativo (amarillo/rojo) solo cuando rwg < 0.70
+
+### 9.2 Alfa de Cronbach — Confiabilidad Interna
+
+El coeficiente alfa de Cronbach (1951) mide la consistencia interna de los ítems dentro de cada dimensión.
+
+**Fórmula:**
+```
+α = (k / (k-1)) × (1 - Σσ²_item / σ²_total)
+```
+
+Donde:
+- `k` = número de ítems en la dimensión
+- `σ²_item` = varianza de cada ítem (entre respondentes)
+- `σ²_total` = varianza del puntaje total (suma de ítems por respondente)
+- Mínimo k=2 ítems, mínimo n=10 respondentes
+- Se utilizan puntajes ajustados (post-inversión de ítems reversos)
+
+**Umbrales interpretativos:**
+| α | Interpretación |
+|---|---------------|
+| ≥ 0.70 | Aceptable para investigación organizacional |
+| 0.60 – 0.69 | Marginal — interpretar con cautela |
+| < 0.60 | Bajo — la dimensión puede no medir un constructo unitario |
+
+**Nota de sensibilidad:** El alfa es sensible al número de ítems. Dimensiones con 4 ítems tendrán alfas naturalmente más bajos que dimensiones con 6 ítems, sin que esto implique menor calidad de medición.
+
+**Implementación:**
+- Se calcula después de los puntajes por categoría, antes de insertar analytics
+- Se almacena como `analysis_type: "reliability"` en `campaign_analytics`
+
+### 9.3 Limitaciones Metodológicas Auto-detectadas
+
+El sistema genera automáticamente una sección de limitaciones en la Ficha Técnica basándose en:
+
+| Condición | Mensaje |
+|-----------|---------|
+| α < 0.60 en alguna dimensión | Lista dimensiones con baja consistencia interna |
+| rwg < 0.50 en alguna dimensión | Lista dimensiones con bajo acuerdo intergrupal |
+| Tasa de respuesta < 60% | Advertencia de posible sesgo de no respuesta |
+| n < 30 | Advertencia de muestra insuficiente para estimaciones estables |
+| Siempre | Nota sobre percepciones vs. condiciones objetivas |
+| Siempre | Nota sobre invariancia factorial no establecida |
+
+---
+
+## 10. Indicadores de Negocio
+
+### 10.1 Tabla `business_indicators`
+
+Permite registrar métricas objetivas de negocio por campaña para correlación temporal con resultados de clima.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `campaign_id` | uuid FK | Campaña asociada |
+| `indicator_name` | text | Nombre del indicador (2-100 chars) |
+| `indicator_value` | numeric | Valor numérico |
+| `indicator_unit` | text | Unidad (max 20 chars, opcional) |
+| `indicator_type` | text | Tipo predefinido o 'custom' |
+| `period_start` / `period_end` | date | Periodo de medición (opcional) |
+| `notes` | text | Notas adicionales (max 500 chars) |
+
+**Tipos predefinidos:**
+turnover_rate, absenteeism_rate, customer_nps, customer_satisfaction, productivity_index, incident_count, custom
+
+**Nota importante:** La co-evolución temporal de indicadores de negocio y resultados de clima NO implica causalidad. Las correlaciones observadas entre mejoras de clima y mejoras de indicadores requieren diseños cuasi-experimentales o longitudinales con controles para establecer relaciones causales.
+
+### 10.2 Flujo de Administración
+
+1. El admin navega a la página de detalle de campaña
+2. En la sección "Indicadores de negocio", hace clic en "+ Agregar indicador"
+3. Selecciona tipo predefinido (auto-completa nombre y unidad) o "Otro indicador" para entrada libre
+4. Ingresa valor, periodo opcional y notas
+5. Los indicadores se muestran en el dashboard de resultados cuando existen
+
+---
+
+## 11. Referencias Adicionales (v4.1)
+
+- James, L. R., Demaree, R. G., & Wolf, G. (1984). Estimating within-group interrater reliability with and without response bias. *Journal of Applied Psychology, 69*(1), 85-98.
+- Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. *Psychometrika, 16*(3), 297-334.
+- Martinolli, G. et al. (2023). Encuesta de Clima Organizacional VI (ECO VI). Universidad de Buenos Aires.
+- Patlán, J. & Flores, R. (2013). Desarrollo y validación de la escala multidimensional de clima organizacional (EMCO). *Acta de Investigación Psicológica, 3*(1), 1067-1084.

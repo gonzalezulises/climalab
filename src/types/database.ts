@@ -34,6 +34,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_indicators: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          indicator_name: string
+          indicator_type: string
+          indicator_unit: string | null
+          indicator_value: number
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          indicator_name: string
+          indicator_type?: string
+          indicator_unit?: string | null
+          indicator_value: number
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          indicator_name?: string
+          indicator_type?: string
+          indicator_unit?: string | null
+          indicator_value?: number
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_indicators_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_analytics: {
         Row: {
           analysis_type: string

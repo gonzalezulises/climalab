@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCampaign, getRespondents } from "@/actions/campaigns";
 import { getParticipants } from "@/actions/participants";
 import { getOrganization } from "@/actions/organizations";
+import { getBusinessIndicators } from "@/actions/business-indicators";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
 import { ParticipantsPanel } from "./participants-panel";
 import { MonitoringPanel } from "./monitoring-panel";
+import { BusinessIndicatorsPanel } from "@/components/results/business-indicators-panel";
 import type { Department } from "@/types";
 
 const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -39,10 +41,11 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [campaignResult, respondentsResult, participantsResult] = await Promise.all([
+  const [campaignResult, respondentsResult, participantsResult, indicatorsResult] = await Promise.all([
     getCampaign(id),
     getRespondents(id),
     getParticipants(id),
+    getBusinessIndicators(id),
   ]);
 
   if (!campaignResult.success) {
@@ -52,6 +55,7 @@ export default async function CampaignDetailPage({
   const campaign = campaignResult.data;
   const respondents = respondentsResult.success ? respondentsResult.data : [];
   const participants = participantsResult.success ? participantsResult.data : [];
+  const indicators = indicatorsResult.success ? indicatorsResult.data : [];
 
   const orgResult = await getOrganization(campaign.organization_id);
   const orgName = orgResult.success ? orgResult.data.name : "—";
@@ -206,6 +210,9 @@ export default async function CampaignDetailPage({
           />
         </TabsContent>
       </Tabs>
+
+      {/* Business indicators */}
+      <BusinessIndicatorsPanel campaignId={id} indicators={indicators} />
     </div>
   );
 }

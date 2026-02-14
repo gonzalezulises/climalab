@@ -21,18 +21,19 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
-- `src/components/results/` — 15 reusable chart components for results module
+- `src/components/results/` — 18 reusable chart components for results module
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
-- `src/lib/validations/` — Zod schemas (organization, instrument, campaign)
-- `src/lib/constants.ts` — Roles, size categories, countries, instrument modes
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics)
+- `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
+- `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators)
 - `src/types/` — Database types (generated) and derived types
-- `supabase/migrations/` — SQL migrations (16 files)
+- `supabase/migrations/` — SQL migrations (17 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~22K lines)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns
 - `messages/` — i18n translation files
 - `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
+- `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
 
 ## Database Schema
 
@@ -50,7 +51,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `responses` — Likert 1-5 scores per item per respondent
 - `open_responses` — Free-text responses (strength, improvement, general)
 - `campaign_results` — Calculated statistics (dimension scores, engagement profiles, eNPS, segments)
-- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories)
+- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability)
+- `business_indicators` — Objective business metrics per campaign (turnover, absenteeism, NPS, etc.)
 
 ## Architecture Decisions
 
@@ -68,6 +70,36 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **eNPS**: 0-10 scale, promoters ≥9, passives 7-8, detractors ≤6
 - **localStorage backup**: survey responses backed up client-side with automatic recovery
 - **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
+
+## Statistical Methods (v4.1)
+
+- **rwg(j)**: Within-group agreement index (James et al. 1984). Expected variance = 2.0 for 5-point Likert. Computed per dimension for global and segment results. Thresholds: ≥0.70 sufficient, 0.50-0.69 moderate, <0.50 low.
+- **Cronbach's alpha**: Internal consistency reliability per dimension. Min k=2 items, min n=10. Stored in campaign_analytics as analysis_type "reliability". Thresholds: ≥0.70 acceptable, 0.60-0.69 marginal, <0.60 low.
+- **Pearson correlation**: Between all dimension pairs (min n=10) for engagement drivers
+- **eNPS**: 0-10 scale, promoters ≥9, passives 7-8, detractors ≤6
+- **Favorability**: % of responses ≥4 on 5-point Likert
+- **Margin of error**: 1.96 × √(0.25/n) × FPC × 100
+- **Engagement profiles**: ambassadors (≥4.5), committed (4.0-4.49), neutral (3.0-3.99), disengaged (<3.0)
+
+## Business Indicators
+
+Objective business metrics tracked per campaign in `business_indicators` table. Predefined types: turnover_rate, absenteeism_rate, customer_nps, customer_satisfaction, productivity_index, incident_count, custom. Admin can add/delete via campaign detail page. Displayed in results dashboard when present.
+
+## Analysis Levels (EMCO-aligned)
+
+3-level presentation framework for dimension results (presentation layer only, no instrument changes):
+- **Individual**: Bienestar dimensions
+- **Interpersonal**: Dirección y Supervisión dimensions
+- **Organizacional**: Compensación + Cultura dimensions
+- **ENG** shown separately as transversal variable
+
+## Psychometric Reporting
+
+The technical page (ficha técnica) auto-generates:
+- Cronbach's alpha table per dimension with acceptability thresholds
+- rwg global table per dimension with agreement thresholds
+- Limitations section: auto-detects low alpha, low rwg, low response rate, small sample
+- Segment heatmap shows AgreementBadge for cells with rwg < 0.70
 
 ## Instrument: ClimaLab Core v4.0
 
@@ -124,10 +156,12 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks
 5. Admin closes campaign → `calculateResults()` computes all statistics:
    - Attention check filtering → reverse item inversion → dimension/item aggregation
+   - rwg(j) per dimension (global + segments) → stored in metadata
    - Engagement profiles (ambassadors/committed/neutral/disengaged)
    - eNPS calculation
    - Segment analysis (department, tenure, gender) with anonymity threshold
    - Pearson correlation matrix → engagement drivers → automatic alerts → category scores
+   - Cronbach's alpha per dimension → stored as "reliability" analytics
    - Ficha técnica (population, sample, response rate, margin of error with FPC)
 6. Admin views results dashboard (9 sub-pages: overview, dimensions, heatmap, items, engagement, eNPS, correlations, comments, ficha técnica)
 

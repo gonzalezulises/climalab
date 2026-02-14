@@ -22846,3 +22846,16 @@ INSERT INTO open_responses (id, respondent_id, question_type, text) VALUES
 ('cb000000-0000-0000-0000-000000000013', 'ab000000-0000-0000-0000-000000000075', 'general', 'Me gustaría que se implementaran más iniciativas de bienestar.'),
 ('cb000000-0000-0000-0000-000000000014', 'ab000000-0000-0000-0000-000000000009', 'general', 'La empresa ha mejorado mucho en el último año.'),
 ('cb000000-0000-0000-0000-000000000015', 'ab000000-0000-0000-0000-000000000006', 'general', 'Espero que los resultados de esta encuesta se traduzcan en acciones concretas.');
+
+-- ============================================================
+-- Business indicators: demo data for both campaigns
+-- ============================================================
+INSERT INTO business_indicators (id, campaign_id, indicator_name, indicator_value, indicator_unit, indicator_type, period_start, period_end, notes) VALUES
+-- Q3 2025 campaign
+('b1000000-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001', 'Tasa de rotación (%)', 14.2, '%', 'turnover_rate', '2025-04-01', '2025-06-30', 'Rotación trimestral anualizada'),
+('b1000000-0000-0000-0000-000000000002', 'f0000000-0000-0000-0000-000000000001', 'Tasa de ausentismo (%)', 3.8, '%', 'absenteeism_rate', '2025-04-01', '2025-06-30', 'Días perdidos / días hábiles'),
+('b1000000-0000-0000-0000-000000000003', 'f0000000-0000-0000-0000-000000000001', 'NPS de clientes', 38, 'pts', 'customer_nps', '2025-04-01', '2025-06-30', NULL),
+-- Q1 2026 campaign (improvement between waves)
+('b1000000-0000-0000-0000-000000000004', 'f0000000-0000-0000-0000-000000000002', 'Tasa de rotación (%)', 11.5, '%', 'turnover_rate', '2025-10-01', '2025-12-31', 'Rotación trimestral anualizada'),
+('b1000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000002', 'Tasa de ausentismo (%)', 3.1, '%', 'absenteeism_rate', '2025-10-01', '2025-12-31', 'Días perdidos / días hábiles'),
+('b1000000-0000-0000-0000-000000000006', 'f0000000-0000-0000-0000-000000000002', 'NPS de clientes', 45, 'pts', 'customer_nps', '2025-10-01', '2025-12-31', NULL);

@@ -42,6 +42,40 @@ export const CATEGORY_LABELS: Record<string, string> = {
   engagement: "Engagement",
 };
 
+export const INDICATOR_TYPES: Record<string, string> = {
+  turnover_rate: "Tasa de rotación (%)",
+  absenteeism_rate: "Tasa de ausentismo (%)",
+  customer_nps: "NPS de clientes",
+  customer_satisfaction: "Satisfacción de clientes",
+  productivity_index: "Índice de productividad",
+  incident_count: "Conteo de incidentes",
+  custom: "Otro indicador",
+};
+
+export const ANALYSIS_LEVELS: Record<
+  string,
+  { label: string; description: string; categories: string[] }
+> = {
+  individual: {
+    label: "Sistema Individual",
+    description:
+      "Cómo percibe el colaborador su experiencia personal de trabajo",
+    categories: ["bienestar"],
+  },
+  interpersonal: {
+    label: "Sistema Interpersonal",
+    description:
+      "Cómo percibe la relación con supervisores, pares y la dirección",
+    categories: ["direccion"],
+  },
+  organizacional: {
+    label: "Sistema Organizacional",
+    description:
+      "Cómo percibe las prácticas, políticas y cultura de la organización",
+    categories: ["compensacion", "cultura"],
+  },
+};
+
 export const MEASUREMENT_OBJECTIVES = {
   initial_diagnosis: "Diagnóstico inicial",
   periodic_followup: "Seguimiento periódico",

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaigns, getCampaignResults } from "@/actions/campaigns";
 import { getAlerts, getCategoryScores } from "@/actions/analytics";
+import { getBusinessIndicators } from "@/actions/business-indicators";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage({
@@ -10,11 +11,12 @@ export default async function DashboardPage({
 }) {
   const { id } = await params;
 
-  const [campaignResult, resultsResult, alertsResult, categoriesResult] = await Promise.all([
+  const [campaignResult, resultsResult, alertsResult, categoriesResult, indicatorsResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getAlerts(id),
     getCategoryScores(id),
+    getBusinessIndicators(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -23,6 +25,7 @@ export default async function DashboardPage({
   const results = resultsResult.success ? resultsResult.data : [];
   const alerts = alertsResult.success ? alertsResult.data : [];
   const categories = categoriesResult.success ? categoriesResult.data : [];
+  const indicators = indicatorsResult.success ? indicatorsResult.data : [];
 
   // Extract dimension results (global)
   const dimensionResults = results
@@ -72,6 +75,7 @@ export default async function DashboardPage({
       profiles={profiles}
       alerts={alerts.slice(0, 5)}
       categories={categories}
+      indicators={indicators}
       previousCampaigns={previousCampaigns}
     />
   );

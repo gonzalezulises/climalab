@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { AgreementBadge } from "@/components/results/agreement-badge";
 
 type HeatmapRow = {
   segment_key: string;
@@ -11,6 +12,7 @@ type HeatmapRow = {
   avg_score: number;
   favorability_pct: number;
   respondent_count: number;
+  rwg: number | null;
 };
 
 function heatColor(score: number): string {
@@ -48,8 +50,10 @@ export function SegmentsClient({
 
     // Build lookup
     const lookup = new Map<string, number>();
+    const rwgLookup = new Map<string, number | null>();
     for (const d of filtered) {
       lookup.set(`${d.segment_key}|${d.dimension_code}`, d.avg_score);
+      rwgLookup.set(`${d.segment_key}|${d.dimension_code}`, d.rwg);
     }
 
     // ENG scores per segment for risk groups
@@ -76,11 +80,17 @@ export function SegmentsClient({
                   <td className="py-1 pr-4 font-medium text-xs sticky left-0 bg-background">{seg}</td>
                   {dims.map((dim) => {
                     const score = lookup.get(`${seg}|${dim}`);
+                    const cellRwg = rwgLookup.get(`${seg}|${dim}`);
                     return (
                       <td key={dim} className="px-0.5 py-0.5">
                         {score != null ? (
-                          <div className={`text-center rounded px-1 py-0.5 text-xs font-medium ${heatColor(score)}`}>
-                            {score.toFixed(2)}
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className={`text-center rounded px-1 py-0.5 text-xs font-medium w-full ${heatColor(score)}`}>
+                              {score.toFixed(2)}
+                            </div>
+                            {cellRwg !== null && cellRwg !== undefined && cellRwg < 0.7 && (
+                              <AgreementBadge rwg={cellRwg} />
+                            )}
                           </div>
                         ) : (
                           <div className="text-center text-xs text-gray-300">—</div>

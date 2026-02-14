@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { compareCampaigns } from "@/actions/campaigns";
+import { AnalysisLevelCards } from "@/components/results/analysis-level-cards";
+import { INDICATOR_TYPES } from "@/lib/constants";
+import type { BusinessIndicator } from "@/types";
 
 function classifyScore(fav: number) {
   if (fav >= 90) return { label: "Excepcional", color: "#1dc47c", bg: "bg-green-100 text-green-800" };
@@ -39,13 +42,14 @@ type Props = {
   profiles: { ambassadors: { count: number; pct: number }; committed: { count: number; pct: number }; neutral: { count: number; pct: number }; disengaged: { count: number; pct: number } } | null;
   alerts: Array<{ severity: string; message: string; value: number }>;
   categories: Array<{ category: string; avg_score: number; favorability_pct: number }>;
+  indicators: BusinessIndicator[];
   previousCampaigns: Array<{ id: string; name: string }>;
 };
 
 export function DashboardClient({
   campaignId, engScore, globalFav, enpsScore, responseRate,
   sampleN, populationN, dimensionResults, profiles, alerts,
-  categories, previousCampaigns,
+  categories, indicators, previousCampaigns,
 }: Props) {
   const [selectedPrevId, setSelectedPrevId] = useState("");
   const [compData, setCompData] = useState<{ dimension: string; current: number; previous: number; delta: number }[] | null>(null);
@@ -141,6 +145,9 @@ export function DashboardClient({
         </div>
       )}
 
+      {/* Analysis levels */}
+      {categories.length > 0 && <AnalysisLevelCards categories={categories} />}
+
       {/* Radar + Lollipop */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -219,6 +226,36 @@ export function DashboardClient({
           </Card>
         )}
       </div>
+
+      {/* Business indicators */}
+      {indicators.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Indicadores de negocio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {indicators.map((ind) => (
+                <div key={ind.id} className="flex items-center gap-3 rounded-md border p-3">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      {INDICATOR_TYPES[ind.indicator_type] ?? ind.indicator_type}
+                    </p>
+                    <p className="text-lg font-bold">
+                      {Number(ind.indicator_value)}
+                      {ind.indicator_unit && (
+                        <span className="text-sm text-muted-foreground ml-0.5">
+                          {ind.indicator_unit}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Wave comparison */}
       {previousCampaigns.length > 0 && (

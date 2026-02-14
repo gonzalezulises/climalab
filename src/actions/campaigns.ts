@@ -463,6 +463,43 @@ export async function calculateResults(
     return (arr.filter((v) => v >= 4).length / arr.length) * 100;
   }
 
+  // rwg(j) — within-group agreement index (James et al. 1984)
+  // Uses population variance (÷ N) and expected variance for 5-point Likert = 2.0
+  function rwg(scores: number[]): number | null {
+    if (scores.length < 3) return null;
+    const m = mean(scores);
+    const popVariance = scores.reduce((s, v) => s + (v - m) ** 2, 0) / scores.length;
+    const expectedVariance = 2.0; // (A² - 1) / 12 = (25 - 1) / 12
+    const value = 1 - popVariance / expectedVariance;
+    return Math.round(Math.max(0, Math.min(1, value)) * 1000) / 1000;
+  }
+
+  // Cronbach's alpha — internal consistency reliability
+  function cronbachAlpha(itemMatrix: number[][]): number | null {
+    // itemMatrix: rows = respondents, cols = items
+    const n = itemMatrix.length;
+    const k = itemMatrix[0]?.length ?? 0;
+    if (k < 2 || n < 10) return null;
+
+    // Variance of each item (column)
+    let sumItemVar = 0;
+    for (let j = 0; j < k; j++) {
+      const col = itemMatrix.map((row) => row[j]);
+      const m = mean(col);
+      const v = col.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1);
+      sumItemVar += v;
+    }
+
+    // Variance of total scores (row sums)
+    const totals = itemMatrix.map((row) => row.reduce((s, v) => s + v, 0));
+    const totalMean = mean(totals);
+    const totalVar = totals.reduce((s, v) => s + (v - totalMean) ** 2, 0) / (n - 1);
+
+    if (totalVar === 0) return null;
+    const alpha = (k / (k - 1)) * (1 - sumItemVar / totalVar);
+    return Math.round(alpha * 1000) / 1000;
+  }
+
   // 8. Calculate dimension results (global + segments)
   const results: Array<{
     campaign_id: string;
@@ -485,17 +522,21 @@ export async function calculateResults(
   // Global dimension results
   for (const code of dimensionCodes) {
     const allDimScores: number[] = [];
+    const perRespondentMeans: number[] = [];
     let respondentCount = 0;
 
     for (const [, rd] of respondentData) {
       const scores = rd.dimensionScores.get(code);
       if (scores && scores.length > 0) {
         allDimScores.push(...scores);
+        perRespondentMeans.push(mean(scores));
         respondentCount++;
       }
     }
 
     if (allDimScores.length === 0) continue;
+
+    const rwgValue = rwg(perRespondentMeans);
 
     results.push({
       campaign_id: campaignId,
@@ -508,7 +549,7 @@ export async function calculateResults(
       favorability_pct: Math.round(favorability(allDimScores) * 10) / 10,
       response_count: allDimScores.length,
       respondent_count: respondentCount,
-      metadata: { dimension_name: dimensionNameMap.get(code) ?? code } as Json,
+      metadata: { dimension_name: dimensionNameMap.get(code) ?? code, rwg: rwgValue } as Json,
     });
   }
 
@@ -518,6 +559,7 @@ export async function calculateResults(
   for (const segType of segmentTypes) {
     const segmentGroups = new Map<string, Map<string, number[]>>();
     const segmentRespondentCounts = new Map<string, Map<string, number>>();
+    const segmentPerRespondentMeans = new Map<string, Map<string, number[]>>();
 
     for (const [, rd] of respondentData) {
       const segValue = rd[segType];
@@ -530,12 +572,14 @@ export async function calculateResults(
         if (!segmentGroups.has(segValue)) {
           segmentGroups.set(segValue, new Map());
           segmentRespondentCounts.set(segValue, new Map());
+          segmentPerRespondentMeans.set(segValue, new Map());
         }
 
         const group = segmentGroups.get(segValue)!;
         if (!group.has(code)) {
           group.set(code, []);
           segmentRespondentCounts.get(segValue)!.set(code, 0);
+          segmentPerRespondentMeans.get(segValue)!.set(code, []);
         }
 
         group.get(code)!.push(...scores);
@@ -543,6 +587,7 @@ export async function calculateResults(
           code,
           (segmentRespondentCounts.get(segValue)!.get(code) ?? 0) + 1
         );
+        segmentPerRespondentMeans.get(segValue)!.get(code)!.push(mean(scores));
       }
     }
 
@@ -551,6 +596,9 @@ export async function calculateResults(
         const respondentCount = segmentRespondentCounts.get(segValue)?.get(code) ?? 0;
         // Skip segments with < 5 respondents for anonymity
         if (respondentCount < 5) continue;
+
+        const segMeans = segmentPerRespondentMeans.get(segValue)?.get(code) ?? [];
+        const rwgValue = rwg(segMeans);
 
         results.push({
           campaign_id: campaignId,
@@ -563,7 +611,7 @@ export async function calculateResults(
           favorability_pct: Math.round(favorability(scores) * 10) / 10,
           response_count: scores.length,
           respondent_count: respondentCount,
-          metadata: { dimension_name: dimensionNameMap.get(code) ?? code } as Json,
+          metadata: { dimension_name: dimensionNameMap.get(code) ?? code, rwg: rwgValue } as Json,
         });
       }
     }
@@ -935,6 +983,52 @@ export async function calculateResults(
     campaign_id: campaignId,
     analysis_type: "categories",
     data: categoryScores as unknown as Json,
+  });
+
+  // --- 14d. Reliability (Cronbach's alpha) per dimension ---
+  const reliabilityData: Array<{
+    dimension_code: string;
+    dimension_name: string;
+    alpha: number | null;
+    item_count: number;
+    respondent_count: number;
+  }> = [];
+
+  for (const dim of dimensions) {
+    const dimItems = dim.items.filter((i) => !i.is_attention_check);
+    if (dimItems.length < 2) continue;
+
+    // Build respondent × item matrix using adjusted scores
+    const matrix: number[][] = [];
+    for (const [rid] of respondentData) {
+      const responses = respondentResponseMap.get(rid);
+      if (!responses) continue;
+
+      const row: number[] = [];
+      let complete = true;
+      for (const item of dimItems) {
+        const rawScore = responses.get(item.id);
+        if (rawScore === undefined) { complete = false; break; }
+        const info = itemMap.get(item.id);
+        row.push(info?.is_reverse ? 6 - rawScore : rawScore);
+      }
+      if (complete) matrix.push(row);
+    }
+
+    const alpha = cronbachAlpha(matrix);
+    reliabilityData.push({
+      dimension_code: dim.code,
+      dimension_name: dim.name,
+      alpha,
+      item_count: dimItems.length,
+      respondent_count: matrix.length,
+    });
+  }
+
+  analytics.push({
+    campaign_id: campaignId,
+    analysis_type: "reliability",
+    data: reliabilityData as unknown as Json,
   });
 
   // Insert analytics in batches

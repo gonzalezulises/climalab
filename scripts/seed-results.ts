@@ -14,6 +14,32 @@ const fav = (a: number[]) => (a.filter((v) => v >= 4).length / a.length) * 100;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
+function rwg(scores: number[]): number | null {
+  if (scores.length < 3) return null;
+  const m = mean(scores);
+  const popVar = scores.reduce((s, v) => s + (v - m) ** 2, 0) / scores.length;
+  const val = 1 - popVar / 2.0;
+  return r2(Math.max(0, Math.min(1, val)) * 10) / 10;
+}
+
+function cronbachAlpha(itemMatrix: number[][]): number | null {
+  const n = itemMatrix.length;
+  const k = itemMatrix[0]?.length ?? 0;
+  if (k < 2 || n < 10) return null;
+  let sumItemVar = 0;
+  for (let j = 0; j < k; j++) {
+    const col = itemMatrix.map((row) => row[j]);
+    const m = mean(col);
+    const v = col.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1);
+    sumItemVar += v;
+  }
+  const totals = itemMatrix.map((row) => row.reduce((s, v) => s + v, 0));
+  const tm = mean(totals);
+  const tv = totals.reduce((s, v) => s + (v - tm) ** 2, 0) / (n - 1);
+  if (tv === 0) return null;
+  return r2((k / (k - 1)) * (1 - sumItemVar / tv) * 10) / 10;
+}
+
 function pearson(xArr: number[], yArr: number[]) {
   const n = xArr.length;
   if (n < 10) return { r: 0, pValue: 1, n };
@@ -145,32 +171,32 @@ async function processOneCampaign(supabase: ReturnType<typeof createClient>, cam
 
   // Global dimension results
   for (const code of dimCodes) {
-    const scores: number[] = []; let rc = 0;
+    const scores: number[] = []; const perRespMeans: number[] = []; let rc = 0;
     for (const [, rd] of respondentData) {
       const s = rd.dimScores.get(code);
-      if (s?.length) { scores.push(...s); rc++; }
+      if (s?.length) { scores.push(...s); perRespMeans.push(mean(s)); rc++; }
     }
     if (!scores.length) continue;
-    results.push({ campaign_id: campaignId, result_type: "dimension", dimension_code: code, segment_key: "global", segment_type: "global", avg_score: r2(mean(scores)), std_score: r2(std(scores)), favorability_pct: r1(fav(scores)), response_count: scores.length, respondent_count: rc, metadata: { dimension_name: dimensionNameMap.get(code) } });
+    results.push({ campaign_id: campaignId, result_type: "dimension", dimension_code: code, segment_key: "global", segment_type: "global", avg_score: r2(mean(scores)), std_score: r2(std(scores)), favorability_pct: r1(fav(scores)), response_count: scores.length, respondent_count: rc, metadata: { dimension_name: dimensionNameMap.get(code), rwg: rwg(perRespMeans) } });
   }
 
   // Segment results
   for (const segType of ["department", "tenure", "gender"] as const) {
-    const groups = new Map<string, Map<string, { scores: number[]; rc: number }>>();
+    const groups = new Map<string, Map<string, { scores: number[]; rc: number; means: number[] }>>();
     for (const [, rd] of respondentData) {
       const seg = rd[segType]; if (!seg) continue;
       for (const code of dimCodes) {
         const s = rd.dimScores.get(code); if (!s?.length) continue;
         if (!groups.has(seg)) groups.set(seg, new Map());
         const g = groups.get(seg)!;
-        if (!g.has(code)) g.set(code, { scores: [], rc: 0 });
-        const e = g.get(code)!; e.scores.push(...s); e.rc++;
+        if (!g.has(code)) g.set(code, { scores: [], rc: 0, means: [] });
+        const e = g.get(code)!; e.scores.push(...s); e.rc++; e.means.push(mean(s));
       }
     }
     for (const [seg, dimMap] of groups) {
-      for (const [code, { scores, rc }] of dimMap) {
+      for (const [code, { scores, rc, means }] of dimMap) {
         if (rc < 5) continue;
-        results.push({ campaign_id: campaignId, result_type: "dimension", dimension_code: code, segment_key: seg, segment_type: segType, avg_score: r2(mean(scores)), std_score: r2(std(scores)), favorability_pct: r1(fav(scores)), response_count: scores.length, respondent_count: rc, metadata: { dimension_name: dimensionNameMap.get(code) } });
+        results.push({ campaign_id: campaignId, result_type: "dimension", dimension_code: code, segment_key: seg, segment_type: segType, avg_score: r2(mean(scores)), std_score: r2(std(scores)), favorability_pct: r1(fav(scores)), response_count: scores.length, respondent_count: rc, metadata: { dimension_name: dimensionNameMap.get(code), rwg: rwg(means) } });
       }
     }
   }
@@ -321,6 +347,35 @@ async function processOneCampaign(supabase: ReturnType<typeof createClient>, cam
     return { category: cat, avg_score: r2(mean(allScores)), favorability_pct: r1(fav(allScores)), dimension_count: codes.length };
   });
   analytics.push({ campaign_id: campaignId, analysis_type: "categories", data: categoryScores });
+
+  // Reliability (Cronbach's alpha) per dimension
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reliabilityData: any[] = [];
+  for (const dim of dimensions) {
+    const dimItems = dim.items.filter((i: { is_attention_check: boolean }) => !i.is_attention_check);
+    if (dimItems.length < 2) continue;
+    const matrix: number[][] = [];
+    for (const [rid] of respondentData) {
+      const responses = respMap.get(rid)!;
+      const row: number[] = [];
+      let complete = true;
+      for (const item of dimItems) {
+        const raw = responses.get(item.id);
+        if (raw === undefined) { complete = false; break; }
+        const info = itemMap.get(item.id);
+        row.push(info?.is_reverse ? 6 - raw : raw);
+      }
+      if (complete) matrix.push(row);
+    }
+    reliabilityData.push({
+      dimension_code: dim.code,
+      dimension_name: dim.name,
+      alpha: cronbachAlpha(matrix),
+      item_count: dimItems.length,
+      respondent_count: matrix.length,
+    });
+  }
+  analytics.push({ campaign_id: campaignId, analysis_type: "reliability", data: reliabilityData });
 
   // Insert analytics
   for (const a of analytics) {

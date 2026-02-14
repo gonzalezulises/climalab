@@ -86,7 +86,40 @@ export async function getCategoryScores(
 }
 
 // ---------------------------------------------------------------------------
-// getHeatmapData — dimension scores segmented by department
+// getReliabilityData — Cronbach's alpha per dimension
+// ---------------------------------------------------------------------------
+export async function getReliabilityData(
+  campaignId: string
+): Promise<ActionResult<Array<{
+  dimension_code: string;
+  dimension_name: string;
+  alpha: number | null;
+  item_count: number;
+  respondent_count: number;
+}>>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("campaign_analytics")
+    .select("data")
+    .eq("campaign_id", campaignId)
+    .eq("analysis_type", "reliability")
+    .single();
+
+  if (error) return { success: false, error: error.message };
+  return {
+    success: true,
+    data: data.data as Array<{
+      dimension_code: string;
+      dimension_name: string;
+      alpha: number | null;
+      item_count: number;
+      respondent_count: number;
+    }>,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// getHeatmapData — dimension scores segmented by department (with rwg)
 // ---------------------------------------------------------------------------
 export async function getHeatmapData(
   campaignId: string
@@ -97,11 +130,12 @@ export async function getHeatmapData(
   avg_score: number;
   favorability_pct: number;
   respondent_count: number;
+  rwg: number | null;
 }>>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_results")
-    .select("segment_key, segment_type, dimension_code, avg_score, favorability_pct, respondent_count")
+    .select("segment_key, segment_type, dimension_code, avg_score, favorability_pct, respondent_count, metadata")
     .eq("campaign_id", campaignId)
     .eq("result_type", "dimension")
     .neq("segment_type", "global");
@@ -116,6 +150,7 @@ export async function getHeatmapData(
       avg_score: Number(r.avg_score),
       favorability_pct: Number(r.favorability_pct),
       respondent_count: r.respondent_count!,
+      rwg: (r.metadata as { rwg?: number | null })?.rwg ?? null,
     })),
   };
 }
