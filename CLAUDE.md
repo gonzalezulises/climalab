@@ -16,60 +16,98 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 - `src/app/` — App Router pages and layouts
 - `src/app/(dashboard)/` — Protected admin routes (dashboard, organizations, campaigns, instruments)
+- `src/app/(dashboard)/campaigns/[id]/results/` — 9 results sub-pages with sidebar nav
 - `src/app/(auth)/` — Auth routes (login with magic link)
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
+- `src/components/results/` — 15 reusable chart components for results module
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns)
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics)
 - `src/types/` — Database types (generated) and derived types
-- `supabase/migrations/` — SQL migrations (7 files)
-- `supabase/seed.sql` — Demo data + ClimaLab Core v2.0 instrument
+- `supabase/migrations/` — SQL migrations (15 files)
+- `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~22K lines)
+- `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
+- `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns
 - `messages/` — i18n translation files
+- `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
 
 ## Database Schema
 
 ### Core Tables
-- `organizations` — Multi-tenant orgs with departments, employee_count, size_category
+- `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category
 - `profiles` — User profiles (extends auth.users)
-- `instruments` — Survey templates (full/pulse modes)
-- `dimensions` — Instrument dimensions (8 in Core v2.0)
+- `instruments` — Survey templates (full/pulse modes, version tracking)
+- `dimensions` — Instrument dimensions (21 in Core v4.0) with category and theoretical_basis
 - `items` — Survey items with is_reverse, is_anchor, is_attention_check flags
 
 ### Measurement Pipeline
 - `campaigns` — Measurement waves per organization (draft → active → closed → archived)
-- `respondents` — Anonymous participants with unique tokens
+- `respondents` — Anonymous participants with unique tokens (+ enps_score)
+- `participants` — PII table (name, email) separated from respondents for survey anonymity
 - `responses` — Likert 1-5 scores per item per respondent
 - `open_responses` — Free-text responses (strength, improvement, general)
-- `campaign_results` — Calculated statistics (dimension scores, engagement profiles, segments)
+- `campaign_results` — Calculated statistics (dimension scores, engagement profiles, eNPS, segments)
+- `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories)
 
 ## Architecture Decisions
 
 - **Server Actions** over API routes for all mutations
 - **RLS helper functions** (`get_user_role()`, `get_user_org_id()`) with `SECURITY DEFINER`
 - **Magic link auth** — local dev uses Supabase Inbucket at localhost:54324
-- **size_category** auto-computed from employee_count via trigger
+- **size_category** auto-computed from employee_count via trigger (micro/small/medium/large)
 - **Build order**: SQL migrations → TS types → Server Actions → UI
 - **Public survey** uses Supabase anon client (no auth required)
 - **Statistical calculations** run server-side in `calculateResults()` server action
 - **Attention checks**: 2 per instrument, respondents failing any are disqualified
 - **Reverse items**: inverted (6 - score) before all calculations
 - **Anonymity**: demographic segments with < 5 respondents are not reported
+- **Pearson correlations**: computed between all dimension pairs (min n=10) for engagement drivers
+- **eNPS**: 0-10 scale, promoters ≥9, passives 7-8, detractors ≤6
+- **localStorage backup**: survey responses backed up client-side with automatic recovery
+- **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
 
-## Instrument: ClimaLab Core v2.0
+## Instrument: ClimaLab Core v4.0
 
-8 dimensions × 4-5 items = 35 items + 2 attention checks:
+21 dimensions in 4 categories + ENG (transversal DV) = 105 items + 2 attention checks:
 
-1. **LID** — Liderazgo y Supervisión (5 items, based on LMX-7)
-2. **JUS** — Justicia Organizacional (5 items, based on Colquitt 2001)
-3. **PER** — Sentido de Pertenencia (4 items, based on Mael & Ashforth 1992)
-4. **INN** — Innovación y Cambio (5 items, based on Edmondson 1999)
-5. **BIE** — Bienestar y Equilibrio (4 items, based on JD-R Model)
-6. **CLA** — Claridad y Desarrollo (4 items, based on Rizzo 1970)
-7. **COM** — Comunicación y Participación (4 items, based on Roberts & O'Reilly 1974)
-8. **ENG** — Engagement y Compromiso (4 items, based on UWES-9) — serves as DV
+### Bienestar (6)
+1. **ORG** — Orgullo Institucional (5 items, Mael & Ashforth 1992)
+2. **PRO** — Propósito del Trabajo (5 items, Steger 2012)
+3. **SEG** — Seguridad Física y Psicológica (5 items, JD-R Model)
+4. **BAL** — Balance Vida-Trabajo (5 items, Greenhaus 2003)
+5. **CUI** — Cuidado Mutuo (5 items, Eisenberger 1986)
+6. **DEM** — Demandas Laborales (4 items, JD-R Model)
+
+### Liderazgo (5)
+7. **LID** — Liderazgo Efectivo (8 items, LMX-7)
+8. **AUT** — Autonomía (5 items, SDT Deci & Ryan 2000)
+9. **COM** — Comunicación Interna (6 items, Roberts & O'Reilly 1974)
+10. **CON** — Confianza Institucional (5 items, Mayer 1995)
+11. **ROL** — Claridad de Rol (4 items, Rizzo 1970)
+
+### Compensación (4)
+12. **CMP** — Compensación (5 items, Adams 1963)
+13. **REC** — Reconocimiento (5 items, POS)
+14. **BEN** — Beneficios (4 items, Total Rewards)
+15. **EQA** — Equidad en Ascensos (7 items, Colquitt 2001)
+
+### Cultura (5)
+16. **COH** — Cohesión de Equipo (6 items, Carron 1985)
+17. **INN** — Innovación y Cambio (6 items, Edmondson 1999)
+18. **RES** — Resultados y Logros (4 items, Locke & Latham 1990)
+19. **DES** — Desarrollo Profesional (5 items, Kraimer 2011)
+20. **APR** — Aprendizaje Organizacional (4 items, Senge 1990)
+
+### Engagement (transversal)
+21. **ENG** — Engagement y Compromiso (6 items, UWES-9) — serves as DV
+
+### Optional Modules
+- **CAM** — Gestión del Cambio (8 items, Armenakis 1993)
+- **CLI** — Orientación al Cliente (4 items, Narver & Slater 1990)
+- **DIG** — Preparación Digital (4 items, Davis 1989)
 
 ## User Roles
 
@@ -79,12 +117,18 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 ## Measurement Flow
 
-1. Admin creates campaign (selects org + instrument)
-2. Admin generates respondent links (anonymous tokens)
+1. Admin creates campaign (selects org + instrument, sets objective and target departments)
+2. Admin adds participants or generates anonymous respondent links
 3. Admin activates campaign
-4. Respondents access `/survey/[token]` — demographics → Likert questions → open questions
-5. Admin closes campaign → `calculateResults()` computes all statistics
-6. Admin views results dashboard (KPIs, radar, heatmap, engagement profiles, top/bottom items)
+4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks
+5. Admin closes campaign → `calculateResults()` computes all statistics:
+   - Attention check filtering → reverse item inversion → dimension/item aggregation
+   - Engagement profiles (ambassadors/committed/neutral/disengaged)
+   - eNPS calculation
+   - Segment analysis (department, tenure, gender) with anonymity threshold
+   - Pearson correlation matrix → engagement drivers → automatic alerts → category scores
+   - Ficha técnica (population, sample, response rate, margin of error with FPC)
+6. Admin views results dashboard (9 sub-pages: overview, dimensions, heatmap, items, engagement, eNPS, correlations, comments, ficha técnica)
 
 ## Local Development
 
