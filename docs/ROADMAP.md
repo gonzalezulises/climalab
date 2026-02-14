@@ -1,6 +1,6 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.1.1
+## Estado Actual: v4.2
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento
 
@@ -21,6 +21,15 @@
 - Perfiles narrativos de segmentos con fortalezas/riesgos
 - Narrativa de tendencias: trayectoria, dimensiones mejorando/declinando
 - Reporte ejecutivo IA descargable (.txt)
+
+**Multi-instrumento v4.2**:
+
+- Campañas con instrumento base (Core/Pulso) + hasta 3 módulos opcionales
+- Enum `instrument_type` (base/module) para clasificar instrumentos
+- Columna `module_instrument_ids uuid[]` en campaigns
+- UI: Select de base + checkboxes de módulos al crear campaña
+- Dimensiones de módulos en pestaña "Módulos Opcionales" en resultados
+- Datos demo: campaña Q1 2026 incluye módulos CAM + DIG con respuestas generadas
 
 ---
 
@@ -99,6 +108,7 @@
 - Módulos especializados por industria (salud, educación, retail, manufactura)
 - Dimensiones adicionales específicas del sector
 - Normas sectoriales diferenciadas
+- **Nota**: La infraestructura multi-instrumento (base + módulos) ya está implementada en v4.2. Solo se requiere crear los módulos sectoriales como nuevos instrumentos con `instrument_type = 'module'`
 
 ### Integraciones API
 

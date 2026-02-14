@@ -27,8 +27,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels
 - `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights)
 - `src/types/` — Database types (generated) and derived types
-- `supabase/migrations/` — SQL migrations (17 files)
-- `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~22K lines)
+- `supabase/migrations/` — SQL migrations (18 files)
+- `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns
 - `messages/` — i18n translation files
@@ -41,13 +41,13 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 - `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category
 - `profiles` — User profiles (extends auth.users)
-- `instruments` — Survey templates (full/pulse modes, version tracking)
+- `instruments` — Survey templates (full/pulse modes, version tracking, instrument_type: base/module)
 - `dimensions` — Instrument dimensions (22 in Core v4.0) with category and theoretical_basis
 - `items` — Survey items with is_reverse, is_anchor, is_attention_check flags
 
 ### Measurement Pipeline
 
-- `campaigns` — Measurement waves per organization (draft → active → closed → archived)
+- `campaigns` — Measurement waves per organization (draft → active → closed → archived), with `module_instrument_ids uuid[]` for optional modules
 - `respondents` — Anonymous participants with unique tokens (+ enps_score)
 - `participants` — PII table (name, email) separated from respondents for survey anonymity
 - `responses` — Likert 1-5 scores per item per respondent
@@ -72,6 +72,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **eNPS**: 0-10 scale, promoters ≥9, passives 7-8, detractors ≤6
 - **localStorage backup**: survey responses backed up client-side with automatic recovery
 - **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
+- **Multi-instrument**: campaigns have `instrument_id` (base) + `module_instrument_ids uuid[]` (up to 3 modules). Dimension loading uses `.in("instrument_id", [base, ...modules])` in calculateResults, survey page, and seed-results
+- **Module categories**: Module dimensions have `category = NULL` in DB, mapped to `"modulos"` pseudo-category in UI. Naturally excluded from category score aggregation
 
 ## Statistical Methods (v4.1)
 
@@ -175,7 +177,7 @@ The technical page (ficha técnica) auto-generates:
 
 ## Measurement Flow
 
-1. Admin creates campaign (selects org + instrument, sets objective and target departments)
+1. Admin creates campaign (selects org + base instrument + optional modules, sets objective and target departments)
 2. Admin adds participants or generates anonymous respondent links
 3. Admin activates campaign
 4. Respondents access `/survey/[token]` — welcome → demographics → dimensions (shuffled items) → open questions + eNPS → thanks

@@ -1,6 +1,6 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
@@ -123,7 +123,7 @@ El instrumento incluye 2 ítems de verificación (`is_attention_check = true`) i
 
 ### 1.7 Módulos Opcionales
 
-Los módulos son instrumentos independientes que pueden aplicarse junto con el Core:
+Los módulos son instrumentos con `instrument_type = 'module'` que se combinan con un instrumento base (Core o Pulso) al crear una campaña. Se seleccionan hasta 3 módulos mediante checkboxes en el diálogo de creación, y sus IDs se almacenan en `campaigns.module_instrument_ids` (uuid[]). Las dimensiones de los módulos tienen `category = NULL` y se presentan en la UI bajo una pseudo-categoría "Módulos Opcionales":
 
 | Módulo                 | Código | Ítems                      | Base Teórica                                                                   |
 | ---------------------- | ------ | -------------------------- | ------------------------------------------------------------------------------ |
@@ -347,7 +347,7 @@ if (sampleN > 0 && populationN > 1) {
 
 ### 3.9 Puntajes por Categoría
 
-El puntaje de cada categoría (bienestar, liderazgo, compensación, cultura) se calcula como la media de **todos los ítems** de todas las dimensiones de esa categoría, no como la media de las medias dimensionales.
+El puntaje de cada categoría (bienestar, dirección, compensación, cultura) se calcula como la media de **todos los ítems** de todas las dimensiones de esa categoría, no como la media de las medias dimensionales. Las dimensiones de módulos opcionales tienen `category = NULL` y son excluidas automáticamente de los puntajes por categoría.
 
 **Referencia en código** (`src/actions/campaigns.ts:907-932`):
 
@@ -446,21 +446,21 @@ Antes de insertar, se eliminan los resultados previos de la campaña para garant
 
 #### Tablas del Instrumento
 
-| Tabla         | Descripción                 | Columnas Clave                                                                              |
-| ------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| `instruments` | Plantillas de encuesta      | `id`, `name`, `slug`, `mode` (full/pulse), `version`, `target_size`, `is_active`            |
-| `dimensions`  | Dimensiones del instrumento | `id`, `instrument_id`, `name`, `code`, `category`, `theoretical_basis`, `sort_order`        |
-| `items`       | Ítems de cada dimensión     | `id`, `dimension_id`, `text`, `is_reverse`, `is_anchor`, `is_attention_check`, `sort_order` |
+| Tabla         | Descripción                 | Columnas Clave                                                                                                    |
+| ------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `instruments` | Plantillas de encuesta      | `id`, `name`, `slug`, `mode` (full/pulse), `version`, `target_size`, `is_active`, `instrument_type` (base/module) |
+| `dimensions`  | Dimensiones del instrumento | `id`, `instrument_id`, `name`, `code`, `category`, `theoretical_basis`, `sort_order`                              |
+| `items`       | Ítems de cada dimensión     | `id`, `dimension_id`, `text`, `is_reverse`, `is_anchor`, `is_attention_check`, `sort_order`                       |
 
 #### Tablas del Pipeline de Medición
 
-| Tabla            | Descripción                                      | Columnas Clave                                                                                                                                                                                                         |
-| ---------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `campaigns`      | Olas de medición por organización                | `id`, `organization_id`, `instrument_id`, `name`, `status`, `starts_at`, `ends_at`, `population_n`, `sample_n`, `response_rate`, `margin_of_error`, `target_departments`, `target_population`, `measurement_objective` |
-| `respondents`    | Participantes anónimos con tokens                | `id`, `campaign_id`, `token` (hex único), `department`, `tenure`, `gender`, `status`, `enps_score`                                                                                                                     |
-| `participants`   | Datos PII separados (nombre, email)              | `id`, `campaign_id`, `respondent_id`, `name`, `email`, `department`, `invitation_status`                                                                                                                               |
-| `responses`      | Respuestas Likert (1 por ítem por respondente)   | `id`, `respondent_id`, `item_id`, `score` (1-5), UNIQUE(`respondent_id`, `item_id`)                                                                                                                                    |
-| `open_responses` | Respuestas abiertas (fortaleza, mejora, general) | `id`, `respondent_id`, `question_type`, `text` (3-2000 chars)                                                                                                                                                          |
+| Tabla            | Descripción                                      | Columnas Clave                                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `campaigns`      | Olas de medición por organización                | `id`, `organization_id`, `instrument_id`, `name`, `status`, `starts_at`, `ends_at`, `population_n`, `sample_n`, `response_rate`, `margin_of_error`, `target_departments`, `target_population`, `measurement_objective`, `module_instrument_ids` (uuid[]) |
+| `respondents`    | Participantes anónimos con tokens                | `id`, `campaign_id`, `token` (hex único), `department`, `tenure`, `gender`, `status`, `enps_score`                                                                                                                                                       |
+| `participants`   | Datos PII separados (nombre, email)              | `id`, `campaign_id`, `respondent_id`, `name`, `email`, `department`, `invitation_status`                                                                                                                                                                 |
+| `responses`      | Respuestas Likert (1 por ítem por respondente)   | `id`, `respondent_id`, `item_id`, `score` (1-5), UNIQUE(`respondent_id`, `item_id`)                                                                                                                                                                      |
+| `open_responses` | Respuestas abiertas (fortaleza, mejora, general) | `id`, `respondent_id`, `question_type`, `text` (3-2000 chars)                                                                                                                                                                                            |
 
 #### Tablas de Resultados
 
@@ -478,6 +478,7 @@ Antes de insertar, se eliminan los resultados previos de la campaña para garant
 | `instrument_mode` | `full`, `pulse`                                                       |
 | `size_category`   | `micro` (1-10), `small` (11-50), `medium` (51-200), `large` (201-500) |
 | `target_size`     | `all`, `small`, `medium`                                              |
+| `instrument_type` | `base`, `module`                                                      |
 
 ### 5.3 Políticas RLS (Row Level Security)
 
@@ -754,7 +755,7 @@ Cada respondente tiene un token hexadecimal único de 32 caracteres generado por
 https://{dominio}/survey/{token}
 ```
 
-No se requiere autenticación. El cliente Supabase `anon` es suficiente para leer el instrumento y escribir respuestas.
+No se requiere autenticación. El cliente Supabase `anon` es suficiente para leer el instrumento y escribir respuestas. Si la campaña incluye módulos opcionales (`module_instrument_ids`), las dimensiones de los módulos se cargan junto con las del instrumento base y se presentan después de las dimensiones base.
 
 ### 6.2 Pasos de la Encuesta
 
@@ -850,7 +851,33 @@ draft → active → closed → archived
 | `closed`   | Encuesta finalizada       | Se ejecuta `calculateResults()`, se visualizan resultados |
 | `archived` | Histórico                 | Solo lectura, disponible para comparaciones               |
 
-### 7.2 Generación de Respondentes
+### 7.2 Multi-Instrumento: Base + Módulos (v4.2)
+
+Las campañas soportan un instrumento base obligatorio (Core o Pulso) + hasta 3 módulos opcionales. La clasificación se controla mediante el enum `instrument_type` (`base` | `module`) en la tabla `instruments`.
+
+**Esquema:**
+
+- `instruments.instrument_type` — clasifica instrumentos como base o módulo
+- `campaigns.module_instrument_ids uuid[]` — array de IDs de módulos seleccionados (default `{}`)
+
+**Flujo de selección:**
+
+1. El admin selecciona un instrumento base (Select filtrado por `instrument_type = 'base'`)
+2. Opcionalmente marca módulos (checkboxes filtrados por `instrument_type = 'module'`)
+3. Al crear la campaña, se valida que los IDs de módulos existan con tipo `module`
+
+**Carga de dimensiones:**
+
+En `calculateResults()`, el survey page y `seed-results.ts`, las dimensiones se cargan con:
+
+```typescript
+const allInstrumentIds = [campaign.instrument_id, ...(campaign.module_instrument_ids ?? [])];
+supabase.from("dimensions").select("*, items(*)").in("instrument_id", allInstrumentIds);
+```
+
+**Categorías:** Las dimensiones de módulos tienen `category = NULL` en la base de datos. En el cálculo de resultados, son excluidas automáticamente de los puntajes por categoría (`if (!cat) continue`). En la UI de dimensiones, se mapean a una pseudo-categoría `"modulos"` y se muestran en una pestaña "Módulos Opcionales" que aparece dinámicamente cuando hay resultados de módulos.
+
+### 7.3 Generación de Respondentes
 
 El admin genera respondentes en lote especificando la cantidad. Cada respondente recibe:
 
@@ -860,11 +887,11 @@ El admin genera respondentes en lote especificando la cantidad. Cada respondente
 
 Para campañas con participantes nombrados, se crea adicionalmente un registro en `participants` vinculado al respondente, con nombre y email para gestión de invitaciones.
 
-### 7.3 Cálculo de Resultados
+### 7.4 Cálculo de Resultados
 
 Al cerrar la campaña (transición `active` → `closed`), se ejecuta `calculateResults()` que:
 
-1. Obtiene la campaña, organización, instrumento y dimensiones
+1. Obtiene la campaña, organización, instrumento base y dimensiones (incluyendo módulos si `module_instrument_ids` tiene entries)
 2. Carga todos los respondentes con status `completed`
 3. Carga todas las respuestas
 4. Filtra por verificaciones de atención
@@ -873,7 +900,7 @@ Al cerrar la campaña (transición `active` → `closed`), se ejecuta `calculate
 7. Inserta resultados en `campaign_results` y `campaign_analytics`
 8. Actualiza la ficha técnica en la campaña (population_n, sample_n, response_rate, margin_of_error)
 
-### 7.4 Ficha Técnica
+### 7.5 Ficha Técnica
 
 Se calcula y almacena directamente en la tabla `campaigns`:
 
@@ -920,15 +947,15 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 
 ## Apéndice A: Archivos Fuente Clave
 
-| Archivo                                    | Líneas      | Descripción                                                |
-| ------------------------------------------ | ----------- | ---------------------------------------------------------- |
-| `src/actions/campaigns.ts`                 | 284–950     | `calculateResults()` — motor de cálculo estadístico        |
-| `src/actions/analytics.ts`                 | 1–221       | 7 server actions para consulta de analytics                |
-| `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo               |
-| `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32) |
-| `supabase/seed.sql`                        | ~22K líneas | Definición completa del instrumento v4.0 + datos demo      |
-| `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                  |
-| `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta            |
+| Archivo                                    | Líneas      | Descripción                                                           |
+| ------------------------------------------ | ----------- | --------------------------------------------------------------------- |
+| `src/actions/campaigns.ts`                 | 284–950     | `calculateResults()` — motor de cálculo estadístico                   |
+| `src/actions/analytics.ts`                 | 1–221       | 7 server actions para consulta de analytics                           |
+| `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo                          |
+| `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32)            |
+| `supabase/seed.sql`                        | ~24K líneas | Definición completa del instrumento v4.0 + datos demo (incl. módulos) |
+| `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                             |
+| `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta                       |
 
 ## Apéndice B: Migraciones SQL
 
@@ -950,6 +977,8 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `000014_fix_anon_responses_upsert.sql`    | Política UPDATE para anon en responses (fix de upsert silencioso)                                                                                                                 |
 | `000015_core_v4_instrument.sql`           | Rediseño Core v4.0: 3 nuevas dimensiones, 26 nuevos ítems, Pulso v4.0, módulos opcionales                                                                                         |
 | `000016_instrument_v4_corrections.sql`    | Correcciones psicométricas: desagregación EQA/NDI, reducción LID a 6 ítems, fix DEM reverse, fix SEG anchor, renombrar liderazgo→direccion, ítem de orientación al cliente en RES |
+| `000017_business_indicators.sql`          | Tabla business_indicators para métricas objetivas de negocio por campaña                                                                                                          |
+| `000018_multi_instrument_modules.sql`     | Enum `instrument_type` (base/module) en instruments + columna `module_instrument_ids uuid[]` en campaigns para soporte multi-instrumento                                          |
 
 ## Apéndice C: Server Actions de Analytics
 
