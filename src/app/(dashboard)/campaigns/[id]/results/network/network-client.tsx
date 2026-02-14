@@ -39,6 +39,15 @@ function generateNarrative(data: ONAResults): string {
   const { summary, communities, discriminants, bridges } = data;
   const parts: string[] = [];
 
+  // Stability warning first if weak
+  if (data.stability) {
+    if (data.stability.label === "weak") {
+      parts.push(
+        `Nota: La estructura comunitaria tiene baja estabilidad (NMI=${data.stability.nmi.toFixed(2)}). Los clusters detectados pueden variar entre ejecuciones y deben interpretarse con cautela.`
+      );
+    }
+  }
+
   // Community count interpretation
   if (summary.communities === 1) {
     parts.push(
@@ -175,7 +184,60 @@ export function NetworkClient({ data }: { data: ONAResults | null }) {
           value={summary.avg_clustering.toFixed(3)}
           subtitle="Coef. agrupamiento"
         />
+        {data.stability && (
+          <KpiCard
+            label="Estabilidad"
+            value={data.stability.nmi.toFixed(3)}
+            subtitle={
+              data.stability.label === "robust"
+                ? "Estructura robusta"
+                : data.stability.label === "moderate"
+                  ? "Moderada"
+                  : "Débil"
+            }
+          />
+        )}
       </div>
+
+      {/* Stability indicator */}
+      {data.stability && (
+        <Card
+          className={
+            data.stability.label === "robust"
+              ? "border-green-200 bg-green-50/50"
+              : data.stability.label === "moderate"
+                ? "border-yellow-200 bg-yellow-50/50"
+                : "border-red-200 bg-red-50/50"
+          }
+        >
+          <CardContent className="flex items-center gap-3 p-4">
+            <Badge
+              variant={
+                data.stability.label === "robust"
+                  ? "default"
+                  : data.stability.label === "moderate"
+                    ? "secondary"
+                    : "destructive"
+              }
+            >
+              {data.stability.label === "robust"
+                ? "Estructura robusta"
+                : data.stability.label === "moderate"
+                  ? "Estructura moderada"
+                  : "Estructura débil"}
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              NMI = {data.stability.nmi.toFixed(3)} sobre {data.stability.iterations} iteraciones de
+              Leiden.
+              {data.stability.label === "robust"
+                ? " Las comunidades detectadas son consistentes y confiables."
+                : data.stability.label === "moderate"
+                  ? " Las comunidades son parcialmente estables — interpretar con cautela."
+                  : " Las comunidades varían significativamente entre ejecuciones — la estructura comunitaria puede ser débil o inexistente."}
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section 3: Community profiles */}
       <Card>
@@ -301,6 +363,29 @@ export function NetworkClient({ data }: { data: ONAResults | null }) {
         </CardContent>
       </Card>
 
+      {/* Graph visualization */}
+      {data.graph_image && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Visualización del grafo</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Cada nodo es un respondente. El color indica la comunidad perceptual. El tamaño
+              refleja la centralidad (betweenness). Las conexiones representan alta similitud en el
+              perfil dimensional.
+            </p>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`data:image/png;base64,${data.graph_image}`}
+              alt="Grafo de similitud perceptual"
+              className="max-w-full h-auto rounded-lg border"
+              style={{ maxHeight: 600 }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Section 4: Discriminant dimensions */}
       <Card>
         <CardHeader>
@@ -408,6 +493,66 @@ export function NetworkClient({ data }: { data: ONAResults | null }) {
                     </TableCell>
                     <TableCell className="text-right">{b.communities_bridged}</TableCell>
                     <TableCell className="text-right">{b.connections}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section 7: Critical inter-community edges */}
+      {data.critical_edges && data.critical_edges.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Conexiones inter-comunitarias críticas</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Pares de respondentes de diferentes comunidades con la mayor centralidad de
+              intermediación. Representan los &quot;puentes&quot; más transitados entre grupos
+              perceptuales.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Departamento A</TableHead>
+                  <TableHead>Comunidad</TableHead>
+                  <TableHead>Departamento B</TableHead>
+                  <TableHead>Comunidad</TableHead>
+                  <TableHead className="text-right">Edge Betweenness</TableHead>
+                  <TableHead className="text-right">Similitud</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.critical_edges.map((e, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{e.source_dept}</TableCell>
+                    <TableCell>
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-1"
+                        style={{
+                          backgroundColor:
+                            CLUSTER_COLORS[e.source_community % CLUSTER_COLORS.length],
+                        }}
+                      />
+                      {e.source_community + 1}
+                    </TableCell>
+                    <TableCell>{e.target_dept}</TableCell>
+                    <TableCell>
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-1"
+                        style={{
+                          backgroundColor:
+                            CLUSTER_COLORS[e.target_community % CLUSTER_COLORS.length],
+                        }}
+                      />
+                      {e.target_community + 1}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {e.edge_betweenness.toFixed(4)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{e.weight.toFixed(4)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

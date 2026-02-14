@@ -2,37 +2,46 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#     "python-igraph>=1.0.0",
 #     "supabase>=2.0.0",
-#     "networkx>=3.0",
 #     "numpy>=1.24",
 #     "pandas>=2.0",
 #     "scipy>=1.10",
+#     "matplotlib>=3.7",
 # ]
 # ///
 """
 ONA — Perceptual Network Analysis for ClimaLab campaigns.
 
 Builds a cosine-similarity graph from respondent dimension-score vectors,
-detects communities (Louvain), computes centrality metrics, and stores
-the results in campaign_analytics as analysis_type = 'ona_network'.
+detects communities (Leiden with stability analysis), computes centrality
+metrics, generates a static graph image, and stores results in
+campaign_analytics as analysis_type = 'ona_network'.
 
 Usage:
     uv run scripts/ona-analysis.py                  # all closed/archived campaigns
     uv run scripts/ona-analysis.py <campaign_id>    # single campaign
+    python3 scripts/ona-analysis.py <campaign_id>   # fallback without uv
 """
 
 import os
 import sys
+import base64
+import io
 from datetime import datetime, timezone
+from collections import defaultdict
 
-import networkx as nx
+import igraph as ig
 import numpy as np
 import pandas as pd
-from scipy.spatial.distance import cosine as cosine_dist
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist, squareform
 from supabase import create_client, Client
 
 # ---------------------------------------------------------------------------
-# Supabase client
+# Config
 # ---------------------------------------------------------------------------
 SUPABASE_URL = os.environ.get(
     "NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321"
@@ -46,6 +55,9 @@ SUPABASE_KEY = os.environ.get(
 
 MIN_RESPONDENTS = 10
 ENG_CODE = "ENG"  # excluded from similarity vectors (dependent variable)
+STABILITY_ITERATIONS = 50  # number of Leiden runs for stability analysis
+CLUSTER_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6", "#ec4899",
+                  "#0ea5e9", "#f97316", "#14b8a6", "#a855f7"]
 
 
 def get_supabase() -> Client:
@@ -53,14 +65,15 @@ def get_supabase() -> Client:
 
 
 # ---------------------------------------------------------------------------
-# 1. Fetch campaign data and build dimension-score vectors
+# 1. Fetch campaign data
 # ---------------------------------------------------------------------------
 def fetch_campaign_data(
     sb: Client, campaign_id: str
 ) -> tuple[pd.DataFrame, list[str]] | None:
-    """Return (respondent_vectors DataFrame, dim_codes list) or None."""
+    """Return (respondent_vectors DataFrame, dim_codes list) or None.
 
-    # Campaign + instrument ids
+    DataFrame columns: dim_codes + ['_id', '_dept']
+    """
     camp = (
         sb.table("campaigns")
         .select("instrument_id, module_instrument_ids")
@@ -76,7 +89,6 @@ def fetch_campaign_data(
         camp.data.get("module_instrument_ids") or []
     )
 
-    # Dimensions (exclude ENG — it is the DV)
     dims = (
         sb.table("dimensions")
         .select("id, code, instrument_id")
@@ -90,7 +102,6 @@ def fetch_campaign_data(
     dim_codes = sorted(set(d["code"] for d in dim_rows))
     dim_id_to_code = {d["id"]: d["code"] for d in dim_rows}
 
-    # Items mapped to dimension codes
     items = (
         sb.table("items")
         .select("id, dimension_id, is_reverse, is_attention_check")
@@ -103,15 +114,11 @@ def fetch_campaign_data(
             continue
         dim_code = dim_id_to_code.get(it["dimension_id"])
         if dim_code:
-            item_map[it["id"]] = {
-                "code": dim_code,
-                "reverse": it["is_reverse"],
-            }
+            item_map[it["id"]] = {"code": dim_code, "reverse": it["is_reverse"]}
 
-    # Valid respondents
     respondents = (
         sb.table("respondents")
-        .select("id, department")
+        .select("id, department, tenure, gender")
         .eq("campaign_id", campaign_id)
         .eq("status", "completed")
         .execute()
@@ -122,9 +129,8 @@ def fetch_campaign_data(
         return None
 
     resp_ids = [r["id"] for r in resp_list]
-    dept_map = {r["id"]: r.get("department") or "Sin departamento" for r in resp_list}
+    meta_map = {r["id"]: r for r in resp_list}
 
-    # Responses (batched)
     all_responses: list[dict] = []
     for i in range(0, len(resp_ids), 50):
         batch = resp_ids[i : i + 50]
@@ -136,8 +142,6 @@ def fetch_campaign_data(
         )
         all_responses.extend(res.data or [])
 
-    # Build per-respondent dimension score vectors
-    # {resp_id: {dim_code: [adjusted scores]}}
     resp_dim_scores: dict[str, dict[str, list[float]]] = {
         rid: {c: [] for c in dim_codes} for rid in resp_ids
     }
@@ -150,7 +154,6 @@ def fetch_campaign_data(
             score = 6 - score
         resp_dim_scores[r["respondent_id"]][info["code"]].append(float(score))
 
-    # Average per dimension → vector
     rows = []
     for rid in resp_ids:
         vec = {}
@@ -163,7 +166,9 @@ def fetch_campaign_data(
             vec[code] = float(np.mean(scores))
         if valid:
             vec["_id"] = rid
-            vec["_dept"] = dept_map[rid]
+            vec["_dept"] = meta_map[rid].get("department") or "Sin departamento"
+            vec["_tenure"] = meta_map[rid].get("tenure") or ""
+            vec["_gender"] = meta_map[rid].get("gender") or ""
             rows.append(vec)
 
     if len(rows) < MIN_RESPONDENTS:
@@ -176,23 +181,19 @@ def fetch_campaign_data(
 
 
 # ---------------------------------------------------------------------------
-# 2. Build similarity graph with adaptive threshold
+# 2. Build similarity graph — returns igraph.Graph
 # ---------------------------------------------------------------------------
 def build_similarity_graph(
     df: pd.DataFrame, dim_codes: list[str]
-) -> nx.Graph:
+) -> ig.Graph:
     """Cosine similarity graph with adaptive threshold targeting 10-30% density."""
     vectors = df[dim_codes].values  # (n, d)
     n = len(vectors)
 
-    # Compute full similarity matrix
-    sim_matrix = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i + 1, n):
-            sim = 1.0 - cosine_dist(vectors[i], vectors[j])
-            sim_matrix[i, j] = sim
-            sim_matrix[j, i] = sim
-        sim_matrix[i, i] = 1.0
+    # Compute full similarity matrix (vectorized with scipy)
+    dists = pdist(vectors, metric="cosine")
+    sim_matrix = 1.0 - squareform(dists)
+    np.fill_diagonal(sim_matrix, 1.0)
 
     # Adaptive threshold via binary search targeting 10-30% edge density
     upper_tri = sim_matrix[np.triu_indices(n, k=1)]
@@ -208,99 +209,175 @@ def build_similarity_graph(
             best_threshold = mid
             break
         elif density < 0.10:
-            hi = mid  # threshold too high → lower it
+            hi = mid
         else:
-            lo = mid  # density too high → raise threshold
+            lo = mid
         best_threshold = mid
         if hi - lo < 1e-6:
             break
 
-    # Build graph
-    G = nx.Graph()
+    # Build igraph Graph
     ids = df["_id"].tolist()
     depts = df["_dept"].tolist()
-    for i in range(n):
-        G.add_node(ids[i], department=depts[i], index=i)
+
+    g = ig.Graph()
+    g.add_vertices(n)
+    g.vs["respondent_id"] = ids
+    g.vs["department"] = depts
+    g.vs["label"] = [rid[:6] for rid in ids]
+
+    edges = []
+    weights = []
     for i in range(n):
         for j in range(i + 1, n):
             if sim_matrix[i, j] >= best_threshold:
-                G.add_edge(ids[i], ids[j], weight=float(sim_matrix[i, j]))
+                edges.append((i, j))
+                weights.append(float(sim_matrix[i, j]))
+
+    g.add_edges(edges)
+    g.es["weight"] = weights
+
+    actual_density = g.density()
+    print(
+        f"  Graph: {g.vcount()} nodes, {g.ecount()} edges, "
+        f"threshold={best_threshold:.3f}, density={actual_density:.3f}"
+    )
+    return g
+
+
+# ---------------------------------------------------------------------------
+# 3. Community detection with stability analysis (Leiden + NMI)
+# ---------------------------------------------------------------------------
+def detect_communities_with_stability(
+    g: ig.Graph, n_iterations: int = STABILITY_ITERATIONS
+) -> tuple[ig.VertexClustering, float, str]:
+    """
+    Run Leiden community detection n_iterations times.
+    Return (best_partition, stability_nmi, stability_label).
+
+    stability_nmi: mean pairwise NMI across all iterations.
+      > 0.80 → robust (the same communities appear consistently)
+      0.50-0.80 → moderate (some variation between runs)
+      < 0.50 → weak (communities are unstable, likely noise)
+    """
+    partitions = []
+    modularities = []
+
+    for i in range(n_iterations):
+        part = g.community_leiden(
+            objective_function="modularity",
+            weights="weight",
+            n_iterations=2,
+            # No fixed seed → each run explores different random orderings
+        )
+        partitions.append(part)
+        modularities.append(part.modularity)
+
+    # Best partition = highest modularity
+    best_idx = int(np.argmax(modularities))
+    best_partition = partitions[best_idx]
+
+    # Pairwise NMI (sample if too many pairs)
+    n_partitions = len(partitions)
+    if n_partitions <= 20:
+        # All pairs
+        nmis = []
+        for i in range(n_partitions):
+            for j in range(i + 1, n_partitions):
+                nmi = ig.compare_communities(
+                    partitions[i], partitions[j], method="nmi"
+                )
+                nmis.append(nmi)
+    else:
+        # Sample ~200 pairs
+        import random
+        random.seed(42)
+        nmis = []
+        for _ in range(200):
+            i, j = random.sample(range(n_partitions), 2)
+            nmi = ig.compare_communities(
+                partitions[i], partitions[j], method="nmi"
+            )
+            nmis.append(nmi)
+
+    stability = float(np.mean(nmis)) if nmis else 0.0
+
+    if stability >= 0.80:
+        label = "robust"
+    elif stability >= 0.50:
+        label = "moderate"
+    else:
+        label = "weak"
 
     print(
-        f"  Graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges, "
-        f"threshold={best_threshold:.2f}, density={nx.density(G):.3f}"
+        f"  Leiden: {len(best_partition)} communities, "
+        f"modularity={best_partition.modularity:.3f}, "
+        f"stability={stability:.3f} ({label})"
     )
-    return G
+    return best_partition, stability, label
 
 
 # ---------------------------------------------------------------------------
-# 3. Compute ONA metrics
+# 4. Compute ONA metrics — adapted for igraph
 # ---------------------------------------------------------------------------
 def compute_ona_metrics(
-    G: nx.Graph, df: pd.DataFrame, dim_codes: list[str]
+    g: ig.Graph, partition: ig.VertexClustering,
+    stability: float, stability_label: str,
+    df: pd.DataFrame, dim_codes: list[str]
 ) -> dict:
-    """Community detection, centrality, profiles, discriminants, bridges."""
+    """Centrality, profiles, discriminants, bridges, stability."""
 
-    # Louvain communities
-    communities = nx.community.louvain_communities(G, seed=42, weight="weight")
-    community_map: dict[str, int] = {}
-    for idx, comm in enumerate(communities):
-        for node in comm:
-            community_map[node] = idx
+    n_communities = len(partition)
+    modularity = partition.modularity
+    avg_clustering = g.transitivity_avglocal_undirected(weights="weight")
+    if avg_clustering != avg_clustering:  # NaN check
+        avg_clustering = 0.0
 
-    # Add community attribute
-    nx.set_node_attributes(G, community_map, "community")
+    # Community membership per vertex
+    membership = partition.membership
 
-    n_communities = len(communities)
-    modularity = nx.community.modularity(G, communities, weight="weight")
-    avg_clustering = nx.average_clustering(G, weight="weight")
+    # Centrality metrics
+    eigenvector_cent = g.eigenvector_centrality(weights="weight")
+    betweenness_cent = g.betweenness(weights="weight")
+    # Normalize betweenness to [0,1]
+    max_btw = max(betweenness_cent) if betweenness_cent else 1.0
+    betweenness_norm = [b / max_btw if max_btw > 0 else 0 for b in betweenness_cent]
+    degree_cent = [g.degree(v) / (g.vcount() - 1) for v in range(g.vcount())]
 
-    print(f"  Communities: {n_communities}, modularity={modularity:.3f}, clustering={avg_clustering:.3f}")
-
-    # Centrality (handle disconnected graphs)
-    try:
-        eigenvector_cent = nx.eigenvector_centrality(
-            G, max_iter=500, weight="weight"
-        )
-    except (nx.PowerIterationFailedConvergence, nx.AmbiguousSolution):
-        eigenvector_cent = {n: 0.0 for n in G.nodes()}
-    betweenness_cent = nx.betweenness_centrality(G, weight="weight")
-    degree_cent = nx.degree_centrality(G)
+    # Edge betweenness (new metric)
+    edge_betweenness = g.edge_betweenness(weights="weight")
+    max_eb = max(edge_betweenness) if edge_betweenness else 1.0
+    edge_btw_norm = [eb / max_eb if max_eb > 0 else 0 for eb in edge_betweenness]
 
     # Node metrics
-    ids = df["_id"].tolist()
-    depts = df["_dept"].tolist()
-    id_to_dept = dict(zip(ids, depts))
+    ids = g.vs["respondent_id"]
+    depts = g.vs["department"]
     node_metrics = []
-    for node in G.nodes():
-        node_metrics.append(
-            {
-                "id": node[:8],  # anonymized
-                "full_id": node,
-                "department": id_to_dept.get(node, ""),
-                "community": community_map.get(node, -1),
-                "eigenvector": round(eigenvector_cent.get(node, 0), 4),
-                "betweenness": round(betweenness_cent.get(node, 0), 4),
-                "degree": round(degree_cent.get(node, 0), 4),
-                "connections": G.degree(node),
-            }
-        )
+    for v in range(g.vcount()):
+        node_metrics.append({
+            "id": ids[v][:8],
+            "department": depts[v],
+            "community": membership[v],
+            "eigenvector": round(eigenvector_cent[v], 4),
+            "betweenness": round(betweenness_norm[v], 4),
+            "degree": round(degree_cent[v], 4),
+            "connections": g.degree(v),
+        })
 
     # Community profiles
     id_to_index = {row["_id"]: i for i, row in df.iterrows()}
-    community_profiles = []
     global_means = {c: float(df[c].mean()) for c in dim_codes}
+    community_profiles = []
 
-    for cidx, comm_nodes in enumerate(communities):
-        comm_ids = list(comm_nodes)
-        comm_indices = [id_to_index[nid] for nid in comm_ids if nid in id_to_index]
+    for cidx in range(n_communities):
+        comm_vertices = [v for v in range(g.vcount()) if membership[v] == cidx]
+        comm_ids = [ids[v] for v in comm_vertices]
+        comm_indices = [id_to_index[rid] for rid in comm_ids if rid in id_to_index]
         comm_df = df.iloc[comm_indices]
 
-        # Dimension scores
         dim_scores = {c: round(float(comm_df[c].mean()), 3) for c in dim_codes}
         avg_score = round(float(np.mean(list(dim_scores.values()))), 3)
 
-        # Department distribution
         dept_counts = comm_df["_dept"].value_counts().to_dict()
         dept_dist = {
             k: {"count": int(v), "pct": round(v / len(comm_df) * 100, 1)}
@@ -308,147 +385,172 @@ def compute_ona_metrics(
         }
         dominant_dept = max(dept_counts, key=dept_counts.get) if dept_counts else ""
 
-        # Top 3 dimensions where this cluster differs most from global mean
         diffs = sorted(
             [(c, dim_scores[c] - global_means[c]) for c in dim_codes],
-            key=lambda x: abs(x[1]),
-            reverse=True,
+            key=lambda x: abs(x[1]), reverse=True,
         )
         top_diffs = [
             {"code": c, "diff": round(d, 3), "cluster_score": dim_scores[c]}
             for c, d in diffs[:3]
         ]
 
-        community_profiles.append(
-            {
-                "id": cidx,
-                "size": len(comm_ids),
-                "pct": round(len(comm_ids) / G.number_of_nodes() * 100, 1),
-                "avg_score": avg_score,
-                "dominant_department": dominant_dept,
-                "department_distribution": dept_dist,
-                "dimension_scores": dim_scores,
-                "top_differences": top_diffs,
-            }
-        )
+        community_profiles.append({
+            "id": cidx,
+            "size": len(comm_ids),
+            "pct": round(len(comm_ids) / g.vcount() * 100, 1),
+            "avg_score": avg_score,
+            "dominant_department": dominant_dept,
+            "department_distribution": dept_dist,
+            "dimension_scores": dim_scores,
+            "top_differences": top_diffs,
+        })
 
-    # Discriminant dimensions (spread = max - min cluster mean)
+    # Discriminant dimensions
     discriminants = []
     for code in dim_codes:
         cluster_means = [p["dimension_scores"][code] for p in community_profiles]
         if len(cluster_means) < 2:
             continue
         spread = max(cluster_means) - min(cluster_means)
-        best_cluster = int(np.argmax(cluster_means))
-        worst_cluster = int(np.argmin(cluster_means))
-        discriminants.append(
-            {
-                "code": code,
-                "spread": round(spread, 3),
-                "max_cluster": best_cluster,
-                "max_value": round(max(cluster_means), 3),
-                "min_cluster": worst_cluster,
-                "min_value": round(min(cluster_means), 3),
-            }
-        )
+        discriminants.append({
+            "code": code,
+            "spread": round(spread, 3),
+            "max_cluster": int(np.argmax(cluster_means)),
+            "max_value": round(max(cluster_means), 3),
+            "min_cluster": int(np.argmin(cluster_means)),
+            "min_value": round(min(cluster_means), 3),
+        })
     discriminants.sort(key=lambda x: x["spread"], reverse=True)
 
-    # Department density heatmap (intra/inter department similarity)
+    # Department density heatmap
     all_depts = sorted(set(depts))
     dept_density: dict[str, dict[str, float | None]] = {}
+    dept_to_vertices: dict[str, list[int]] = defaultdict(list)
+    for v in range(g.vcount()):
+        dept_to_vertices[depts[v]].append(v)
+
     for da in all_depts:
         dept_density[da] = {}
-        nodes_a = [n for n in G.nodes() if id_to_dept.get(n) == da]
+        va = dept_to_vertices[da]
         for db in all_depts:
-            nodes_b = [n for n in G.nodes() if id_to_dept.get(n) == db]
-            if not nodes_a or not nodes_b:
+            vb = dept_to_vertices[db]
+            if not va or not vb:
                 dept_density[da][db] = None
                 continue
-            # Count edges between groups / possible edges
             edge_count = 0
             if da == db:
-                possible = len(nodes_a) * (len(nodes_a) - 1) / 2
-                for i, na in enumerate(nodes_a):
-                    for nb in nodes_a[i + 1 :]:
-                        if G.has_edge(na, nb):
+                possible = len(va) * (len(va) - 1) / 2
+                for i, a in enumerate(va):
+                    for b in va[i + 1:]:
+                        if g.are_connected(a, b):
                             edge_count += 1
             else:
-                possible = len(nodes_a) * len(nodes_b)
-                for na in nodes_a:
-                    for nb in nodes_b:
-                        if G.has_edge(na, nb):
+                possible = len(va) * len(vb)
+                for a in va:
+                    for b in vb:
+                        if g.are_connected(a, b):
                             edge_count += 1
-            dept_density[da][db] = (
-                round(edge_count / possible, 3) if possible > 0 else None
-            )
+            dept_density[da][db] = round(edge_count / possible, 3) if possible > 0 else None
 
-    # Bridge nodes: high betweenness + neighbors in multiple communities
-    bridge_threshold = np.percentile(
-        list(betweenness_cent.values()), 75
-    ) if betweenness_cent else 0
+    # Bridge nodes
+    btw_threshold = float(np.percentile(betweenness_norm, 75)) if betweenness_norm else 0
     bridges = []
-    for node in G.nodes():
-        if betweenness_cent.get(node, 0) < bridge_threshold:
+    for v in range(g.vcount()):
+        if betweenness_norm[v] < btw_threshold:
             continue
-        neighbor_communities = set()
-        for neighbor in G.neighbors(node):
-            neighbor_communities.add(community_map.get(neighbor, -1))
-        if len(neighbor_communities) >= 2:
-            bridges.append(
-                {
-                    "id": node[:8],
-                    "department": id_to_dept.get(node, ""),
-                    "community": community_map.get(node, -1),
-                    "betweenness": round(betweenness_cent[node], 4),
-                    "communities_bridged": len(neighbor_communities),
-                    "connections": G.degree(node),
-                }
-            )
+        neighbor_comms = set()
+        for neighbor in g.neighbors(v):
+            neighbor_comms.add(membership[neighbor])
+        if len(neighbor_comms) >= 2:
+            bridges.append({
+                "id": ids[v][:8],
+                "department": depts[v],
+                "community": membership[v],
+                "betweenness": round(betweenness_norm[v], 4),
+                "communities_bridged": len(neighbor_comms),
+                "connections": g.degree(v),
+            })
     bridges.sort(key=lambda x: x["betweenness"], reverse=True)
 
-    result = {
+    # Critical edges (top 10 by edge betweenness that cross communities)
+    critical_edges = []
+    for eidx in range(g.ecount()):
+        edge = g.es[eidx]
+        src, tgt = edge.source, edge.target
+        if membership[src] != membership[tgt]:
+            critical_edges.append({
+                "source_dept": depts[src],
+                "target_dept": depts[tgt],
+                "source_community": membership[src],
+                "target_community": membership[tgt],
+                "edge_betweenness": round(edge_btw_norm[eidx], 4),
+                "weight": round(edge["weight"], 4),
+            })
+    critical_edges.sort(key=lambda x: x["edge_betweenness"], reverse=True)
+
+    # Narrative
+    narrative = _generate_narrative(
+        n_communities, modularity, community_profiles,
+        discriminants, bridges, stability, stability_label,
+    )
+
+    return {
+        # ---- Existing contract (unchanged) ----
         "summary": {
-            "nodes": G.number_of_nodes(),
-            "edges": G.number_of_edges(),
-            "density": round(nx.density(G), 4),
+            "nodes": g.vcount(),
+            "edges": g.ecount(),
+            "density": round(g.density(), 4),
             "communities": n_communities,
             "modularity": round(modularity, 4),
             "avg_clustering": round(avg_clustering, 4),
         },
         "communities": community_profiles,
-        "discriminants": discriminants[:10],  # top 10
+        "discriminants": discriminants[:10],
         "department_density": dept_density,
-        "bridges": bridges[:20],  # top 20
+        "bridges": bridges[:20],
         "global_means": {c: round(v, 3) for c, v in global_means.items()},
+        "narrative": narrative,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        # ---- New fields ----
+        "stability": {
+            "nmi": round(stability, 4),
+            "label": stability_label,
+            "iterations": STABILITY_ITERATIONS,
+            "method": "leiden",
+        },
+        "critical_edges": critical_edges[:10],
     }
-    result["narrative"] = _generate_narrative(result)
-    return result
 
 
-def _generate_narrative(data: dict) -> str:
-    """Template-based narrative (no LLM). Mirrors network-client.tsx logic."""
-    summary = data["summary"]
-    communities = data["communities"]
-    discriminants = data["discriminants"]
-    bridges = data["bridges"]
+def _generate_narrative(
+    n_communities: int, modularity: float,
+    communities: list[dict], discriminants: list[dict],
+    bridges: list[dict], stability: float, stability_label: str,
+) -> str:
+    """Template-based narrative (no LLM)."""
     parts: list[str] = []
 
-    nc = summary["communities"]
-    if nc == 1:
+    # Stability warning first if weak
+    if stability_label == "weak":
+        parts.append(
+            f"Nota: La estructura comunitaria tiene baja estabilidad (NMI={stability:.2f}). "
+            "Los clusters detectados pueden variar entre ejecuciones y deben interpretarse con cautela."
+        )
+
+    if n_communities == 1:
         parts.append(
             "La organización presenta una percepción homogénea: todos los "
             "colaboradores viven una realidad organizacional similar."
         )
-    elif nc <= 3:
+    elif n_communities <= 3:
         parts.append(
-            f"Se identificaron {nc} grupos perceptuales diferenciados dentro "
+            f"Se identificaron {n_communities} grupos perceptuales diferenciados dentro "
             "de la organización, lo que sugiere que coexisten realidades "
             "organizacionales distintas."
         )
     else:
         parts.append(
-            f"La organización está fragmentada en {nc} comunidades "
+            f"La organización está fragmentada en {n_communities} comunidades "
             "perceptuales, indicando múltiples realidades organizacionales "
             "paralelas."
         )
@@ -487,26 +589,111 @@ def _generate_narrative(data: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 4. Save results to campaign_analytics
+# 5. Generate static graph image
+# ---------------------------------------------------------------------------
+def generate_graph_image(
+    g: ig.Graph, membership: list[int]
+) -> str:
+    """Generate PNG graph visualization, return base64 string."""
+
+    n_communities = max(membership) + 1 if membership else 1
+
+    # Assign colors by community
+    colors = []
+    for m in membership:
+        colors.append(CLUSTER_COLORS[m % len(CLUSTER_COLORS)])
+    g.vs["color"] = colors
+
+    # Size by betweenness (rescale to 15-40)
+    btw = g.betweenness(weights="weight")
+    max_btw = max(btw) if btw and max(btw) > 0 else 1.0
+    g.vs["size"] = [15 + 25 * (b / max_btw) for b in btw]
+
+    # Edge styling: intra-community = community color (light), inter = gray
+    edge_colors = []
+    edge_widths = []
+    for edge in g.es:
+        src_comm = membership[edge.source]
+        tgt_comm = membership[edge.target]
+        if src_comm == tgt_comm:
+            base_color = CLUSTER_COLORS[src_comm % len(CLUSTER_COLORS)]
+            edge_colors.append(base_color + "40")  # alpha
+            edge_widths.append(0.3)
+        else:
+            edge_colors.append("#94a3b888")
+            edge_widths.append(0.5)
+    g.es["color"] = edge_colors
+    g.es["width"] = edge_widths
+
+    # Layout: Fruchterman-Reingold (best for community structure visualization)
+    layout = g.layout("fruchterman_reingold", weights="weight", niter=500)
+
+    # Plot with matplotlib backend
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor("white")
+
+    ig.plot(
+        g,
+        target=ax,
+        layout=layout,
+        vertex_label=None,  # no labels for anonymity
+        vertex_frame_color="white",
+        vertex_frame_width=1.0,
+        edge_curved=0.1,
+    )
+
+    # Legend
+    legend_handles = []
+    for i in range(n_communities):
+        count = membership.count(i)
+        handle = ax.scatter(
+            [], [], s=80,
+            facecolor=CLUSTER_COLORS[i % len(CLUSTER_COLORS)],
+            edgecolor="white", linewidth=0.5,
+            label=f"Grupo {i+1} ({count})"
+        )
+        legend_handles.append(handle)
+    ax.legend(
+        handles=legend_handles,
+        title="Comunidades",
+        loc="upper left",
+        fontsize=9,
+        title_fontsize=10,
+        framealpha=0.9,
+    )
+
+    ax.set_title("Red de similitud perceptual", fontsize=14, fontweight="bold", pad=15)
+    ax.axis("off")
+
+    # Save to base64
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    buf.seek(0)
+    b64 = base64.b64encode(buf.read()).decode("utf-8")
+
+    print(f"  Graph image: {len(b64) // 1024} KB")
+    return b64
+
+
+# ---------------------------------------------------------------------------
+# 6. Save results
 # ---------------------------------------------------------------------------
 def save_results(sb: Client, campaign_id: str, data: dict) -> None:
-    # Delete previous ONA result
     sb.table("campaign_analytics").delete().eq(
         "campaign_id", campaign_id
     ).eq("analysis_type", "ona_network").execute()
 
-    sb.table("campaign_analytics").insert(
-        {
-            "campaign_id": campaign_id,
-            "analysis_type": "ona_network",
-            "data": data,
-        }
-    ).execute()
+    sb.table("campaign_analytics").insert({
+        "campaign_id": campaign_id,
+        "analysis_type": "ona_network",
+        "data": data,
+    }).execute()
     print(f"  Saved ONA results for campaign {campaign_id}")
 
 
 # ---------------------------------------------------------------------------
-# 5. Main
+# 7. Main
 # ---------------------------------------------------------------------------
 def process_campaign(sb: Client, campaign_id: str) -> None:
     print(f"\n=== ONA Analysis: {campaign_id} ===")
@@ -515,12 +702,23 @@ def process_campaign(sb: Client, campaign_id: str) -> None:
         return
     df, dim_codes = result
 
-    G = build_similarity_graph(df, dim_codes)
-    if G.number_of_edges() == 0:
+    g = build_similarity_graph(df, dim_codes)
+    if g.ecount() == 0:
         print("  No edges — skipping")
         return
 
-    metrics = compute_ona_metrics(G, df, dim_codes)
+    # Community detection with stability analysis
+    partition, stability, stability_label = detect_communities_with_stability(g)
+
+    # Compute all metrics
+    metrics = compute_ona_metrics(
+        g, partition, stability, stability_label, df, dim_codes
+    )
+
+    # Generate graph image
+    graph_image_b64 = generate_graph_image(g, partition.membership)
+    metrics["graph_image"] = graph_image_b64
+
     save_results(sb, campaign_id, metrics)
 
 
@@ -528,10 +726,8 @@ def main() -> None:
     sb = get_supabase()
 
     if len(sys.argv) > 1:
-        # Single campaign
         process_campaign(sb, sys.argv[1])
     else:
-        # All closed/archived campaigns
         camps = (
             sb.table("campaigns")
             .select("id")

@@ -1,6 +1,6 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2 | **ONA perceptual**: v4.3
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2 | **ONA perceptual**: v4.3 (igraph/Leiden)
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
@@ -956,7 +956,7 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `src/actions/analytics.ts`                 | 1–221       | 7 server actions para consulta de analytics                           |
 | `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo                          |
 | `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32)            |
-| `scripts/ona-analysis.py`                  | —           | Análisis de redes perceptuales (Python/NetworkX)                      |
+| `scripts/ona-analysis.py`                  | —           | Análisis de redes perceptuales (Python/igraph, Leiden + NMI)          |
 | `supabase/seed.sql`                        | ~24K líneas | Definición completa del instrumento v4.0 + datos demo (incl. módulos) |
 | `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                             |
 | `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta                       |
@@ -1174,14 +1174,24 @@ El módulo ONA (Organizational Network Analysis) construye un grafo de similitud
 
 1. **Vectores dimensionales**: Para cada respondente válido, se calcula el puntaje promedio en cada una de las 21 dimensiones (excluyendo ENG como variable dependiente). Los ítems inversos se ajustan antes del cálculo.
 
-2. **Grafo de similitud**: Se calcula la similitud coseno entre todos los pares de respondentes. Se aplica un umbral adaptativo (inicia en 0.85, ajusta ±0.05) buscando una densidad de aristas entre 10-30%.
+2. **Grafo de similitud**: Se calcula la similitud coseno entre todos los pares de respondentes (vectorizado con `scipy.spatial.distance.pdist`). Se aplica un umbral adaptativo mediante búsqueda binaria buscando una densidad de aristas entre 10-30%.
 
-3. **Detección de comunidades**: Algoritmo de Louvain (Blondel et al. 2008) con seed=42 para reproducibilidad. Maximiza la modularidad del grafo.
+3. **Detección de comunidades**: Algoritmo de Leiden (Traag et al. 2019) ejecutado 50 veces sin seed fijo. Se selecciona la partición con mayor modularidad. La estabilidad se mide calculando el NMI (Normalized Mutual Information) promedio entre todos los pares de particiones.
 
-4. **Métricas de centralidad**:
+4. **Análisis de estabilidad (NMI)**:
+   - Se ejecutan 50 iteraciones de Leiden, cada una con ordenamiento aleatorio distinto
+   - Se calcula NMI entre todos los pares de particiones (C(50,2) = 1225 comparaciones)
+   - **NMI > 0.80**: Comunidades robustas (consistentes entre ejecuciones)
+   - **NMI 0.50-0.80**: Estructura moderada (interpretar con cautela)
+   - **NMI < 0.50**: Estructura débil (las comunidades pueden ser artefactos)
+
+5. **Métricas de centralidad**:
    - **Eigenvector**: Influencia basada en conexiones con nodos influyentes
-   - **Betweenness**: Control de flujo de información entre comunidades
+   - **Betweenness (vértice)**: Control de flujo de información entre comunidades
+   - **Betweenness (arista)**: Importancia de cada conexión como puente
    - **Degree**: Número de conexiones directas
+
+6. **Visualización del grafo**: Se genera una imagen PNG server-side con layout Fruchterman-Reingold (igraph + matplotlib). Nodos coloreados por comunidad, tamaño proporcional a betweenness. Se almacena como base64 en el JSONB.
 
 ### 12.3 Resultados Almacenados
 
@@ -1195,16 +1205,19 @@ Se almacena en `campaign_analytics` con `analysis_type = 'ona_network'`:
 | `department_density` | Matriz de densidad de conexiones entre departamentos                                                                        |
 | `bridges`            | Nodos puente (alto betweenness + vecinos en múltiples comunidades)                                                          |
 | `global_means`       | Promedios globales por dimensión                                                                                            |
+| `stability`          | NMI promedio, label (robust/moderate/weak), iteraciones, método (leiden)                                                    |
+| `critical_edges`     | Top 10 aristas inter-comunitarias por edge betweenness                                                                      |
+| `graph_image`        | PNG del grafo en base64 (~100-200 KB para 200 nodos)                                                                        |
 
 ### 12.4 Parámetros
 
-| Parámetro         | Valor   | Justificación                        |
-| ----------------- | ------- | ------------------------------------ |
-| Mín. respondentes | 10      | Mínimo para grafo significativo      |
-| Umbral inicial    | 0.85    | Coseno alto = percepción muy similar |
-| Densidad objetivo | 10-30%  | Balance entre señal y ruido          |
-| Algoritmo         | Louvain | Escalable, determinista con seed     |
-| Seed              | 42      | Reproducibilidad                     |
+| Parámetro          | Valor  | Justificación                      |
+| ------------------ | ------ | ---------------------------------- |
+| Mín. respondentes  | 10     | Mínimo para grafo significativo    |
+| Densidad objetivo  | 10-30% | Balance entre señal y ruido        |
+| Algoritmo          | Leiden | Mejor convergencia que Louvain     |
+| Iteraciones estab. | 50     | Suficiente para NMI confiable      |
+| Iteraciones Leiden | 2      | Por ejecución (50 × 2 = 100 total) |
 
 ### 12.5 Interpretación
 
@@ -1212,23 +1225,25 @@ Se almacena en `campaign_analytics` con `analysis_type = 'ona_network'`:
 - **2-3 comunidades**: Realidades diferenciadas (valor diagnóstico alto)
 - **4+ comunidades**: Fragmentación organizacional
 - **Modularidad > 0.3**: Estructura comunitaria clara
+- **NMI > 0.80**: Comunidades confiables para toma de decisiones
 - **Nodos puente**: "Traductores culturales" que conectan mundos perceptuales diferentes
+- **Aristas críticas**: Conexiones inter-comunitarias más transitadas
 
 ### 12.6 Limitaciones
 
 - Los vectores se basan en promedios dimensionales, no en ítems individuales
 - La similitud coseno no captura diferencias de magnitud (solo patrón)
-- Louvain puede producir soluciones ligeramente diferentes con grafos cerca del umbral de resolución
 - Con < 30 respondentes, las comunidades pueden ser artefactos del tamaño muestral
+- La imagen del grafo se almacena como base64 en JSONB (~100-200 KB). Si el tamaño crece, considerar mover a Supabase Storage
 - NO es análisis sociométrico — no mide interacciones reales entre personas
 
 ### 12.7 Stack Técnico
 
-- **Python**: NetworkX (grafos), scipy (coseno), numpy (vectores), pandas (dataframes)
+- **Python**: python-igraph (C core, grafos + Leiden + NMI), scipy (coseno vectorizado), numpy (vectores), pandas (dataframes), matplotlib (visualización)
 - **Dependencias**: PEP 723 inline script metadata — `uv run` resuelve e instala automáticamente, sin pasos manuales
 - **Invocación**: `uv run scripts/ona-analysis.py [campaign_id]` (prefiere uv, fallback a `python3`)
 - **Integración**: Se invoca automáticamente al cerrar campaña (async, non-blocking) y en `seed-results.ts` (sync). Ambos usan cadena de fallback: intenta `uv run` primero, luego `python3`. Si ninguno está disponible, falla silenciosamente sin afectar el flujo principal
-- **Narrativa server-side**: El script genera una narrativa template-based que se almacena en el campo `narrative` del JSON. El cliente usa esta narrativa si existe, con fallback a generación client-side
+- **Narrativa server-side**: El script genera una narrativa template-based que incluye advertencias de estabilidad débil. El cliente usa esta narrativa si existe, con fallback a generación client-side
 
 ---
 

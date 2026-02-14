@@ -14,7 +14,7 @@
 | Export Excel + PDF                             | Implementado                  | 8d423fa           |
 | Benchmarks internos                            | Implementado                  | 8d423fa           |
 | Multi-instrumento (base + modulos)             | Implementado                  | 531ec39           |
-| ONA perceptual (NetworkX, Louvain)             | Implementado                  | a553ea2           |
+| ONA perceptual (igraph, Leiden, stability NMI) | Implementado                  | a553ea2           |
 | Tests + CI/CD + Error boundaries               | Implementado                  | d817d19           |
 | Pulsos automatizados                           | Pendiente                     | —                 |
 | Reportes PDF con marca blanca                  | Pendiente (PDF basico existe) | —                 |

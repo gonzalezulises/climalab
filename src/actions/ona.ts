@@ -49,6 +49,22 @@ export interface ONABridge {
   connections: number;
 }
 
+export interface ONAStability {
+  nmi: number;
+  label: "robust" | "moderate" | "weak";
+  iterations: number;
+  method: string;
+}
+
+export interface ONACriticalEdge {
+  source_dept: string;
+  target_dept: string;
+  source_community: number;
+  target_community: number;
+  edge_betweenness: number;
+  weight: number;
+}
+
 export interface ONAResults {
   summary: ONAGraphSummary;
   communities: ONACommunity[];
@@ -58,6 +74,10 @@ export interface ONAResults {
   global_means: Record<string, number>;
   narrative?: string;
   generated_at: string;
+  // New fields (optional for backwards compat with old data)
+  stability?: ONAStability;
+  critical_edges?: ONACriticalEdge[];
+  graph_image?: string; // base64 PNG
 }
 
 // ---------------------------------------------------------------------------

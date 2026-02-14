@@ -101,13 +101,17 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 
 ## ONA — Perceptual Network Analysis
 
-Python-based (NetworkX) module that builds a cosine-similarity graph from respondent 22-dimension score vectors (excluding ENG as DV). NOT sociometric ONA — detects clusters of people who perceive the organization similarly.
+Python-based (igraph) module that builds a cosine-similarity graph from respondent 22-dimension score vectors (excluding ENG as DV). NOT sociometric ONA — measures shared perception, not interaction patterns.
 
-- **Script**: `scripts/ona-analysis.py` — fetches data from Supabase, builds graph, runs Louvain community detection, computes centrality metrics. PEP 723 inline deps — just `uv run scripts/ona-analysis.py`, zero setup
+- **Algorithm**: Leiden community detection with stability analysis (50 iterations + NMI)
+- **Stability metric**: Mean pairwise NMI across iterations. >0.80 robust, 0.50-0.80 moderate, <0.50 weak
+- **Centrality**: Eigenvector, betweenness (vertex + edge), degree
+- **Graph image**: Server-side PNG generation with Fruchterman-Reingold layout (matplotlib + igraph)
+- **Stack**: python-igraph (C core), scipy, matplotlib. Invoked non-blocking from calculateResults
+- **Script**: `scripts/ona-analysis.py` — PEP 723 inline deps, just `uv run scripts/ona-analysis.py`
 - **Server action**: `src/actions/ona.ts` — `getONAResults()` retrieves from `campaign_analytics` where `analysis_type = 'ona_network'`
-- **Results page**: `src/app/(dashboard)/campaigns/[id]/results/network/` — 6 sections: narrative, KPI cards, community profiles (tabs with radar + bar charts), discriminant dimensions, department density heatmap, bridge nodes table
-- **Integration**: `calculateResults()` fires ONA asynchronously (non-blocking). `seed-results.ts` invokes it synchronously at end.
-- **Adaptive threshold**: starts at 0.85 cosine similarity, adjusts ±0.05 targeting 10-30% edge density
+- **Results page**: `src/app/(dashboard)/campaigns/[id]/results/network/` — 9 sections: narrative, KPI cards (incl. stability), stability badge, community profiles, graph image, discriminant dimensions, density heatmap, bridge nodes, critical edges
+- **Storage**: campaign_analytics with analysis_type='ona_network' (JSONB includes base64 PNG)
 - **Min respondents**: 10
 
 ## Business Indicators
