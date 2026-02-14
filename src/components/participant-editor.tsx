@@ -21,12 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Check,
   ChevronDown,
@@ -89,7 +84,10 @@ function parseCSV(text: string): ParticipantEntry[] {
 // ---------------------------------------------------------------------------
 // Status badges
 // ---------------------------------------------------------------------------
-const INVITATION_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const INVITATION_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   pending: { label: "Pendiente", variant: "outline" },
   sent: { label: "Enviada", variant: "default" },
   delivered: { label: "Entregada", variant: "default" },
@@ -97,7 +95,10 @@ const INVITATION_LABELS: Record<string, { label: string; variant: "default" | "s
   failed: { label: "Fallida", variant: "destructive" },
 };
 
-const SURVEY_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const SURVEY_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   pending: { label: "Pendiente", variant: "outline" },
   in_progress: { label: "En progreso", variant: "secondary" },
   completed: { label: "Completado", variant: "default" },
@@ -126,7 +127,9 @@ function DeptField({
         </SelectTrigger>
         <SelectContent>
           {departments.map((d) => (
-            <SelectItem key={d} value={d}>{d}</SelectItem>
+            <SelectItem key={d} value={d}>
+              {d}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -333,8 +336,12 @@ export function ParticipantEditor({
   // ---------------------------------------------------------------------------
   // Stats
   // ---------------------------------------------------------------------------
-  const pendingInvitations = participants.filter((p) => p.invitation_status === "pending" || p.invitation_status === "failed").length;
-  const sentCount = participants.filter((p) => p.invitation_status === "sent" || p.invitation_status === "delivered").length;
+  const pendingInvitations = participants.filter(
+    (p) => p.invitation_status === "pending" || p.invitation_status === "failed"
+  ).length;
+  const sentCount = participants.filter(
+    (p) => p.invitation_status === "sent" || p.invitation_status === "delivered"
+  ).length;
   const completedCount = participants.filter((p) => p.respondent_status === "completed").length;
 
   return (
@@ -345,14 +352,24 @@ export function ParticipantEditor({
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSingle(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddSingle();
+              }
+            }}
             placeholder="Nombre"
             className="flex-1"
           />
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSingle(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddSingle();
+              }
+            }}
             placeholder="Email"
             type="email"
             className="flex-1"
@@ -364,6 +381,7 @@ export function ParticipantEditor({
             size="icon"
             onClick={handleAddSingle}
             disabled={loading}
+            aria-label="Agregar participante"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </Button>
@@ -382,7 +400,11 @@ export function ParticipantEditor({
             >
               <Upload className="mr-2 h-4 w-4" />
               Importar datos
-              {showImport ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
+              {showImport ? (
+                <ChevronUp className="ml-1 h-3 w-3" />
+              ) : (
+                <ChevronDown className="ml-1 h-3 w-3" />
+              )}
             </Button>
             <input
               ref={fileInputRef}
@@ -433,8 +455,8 @@ export function ParticipantEditor({
                     </TableBody>
                   </Table>
                   <p className="text-muted-foreground mt-2 font-sans">
-                    Con la IA puedes pegar cualquier formato: tablas de Excel,
-                    listas de correo, texto libre, etc.
+                    Con la IA puedes pegar cualquier formato: tablas de Excel, listas de correo,
+                    texto libre, etc.
                   </p>
                 </div>
               )}
@@ -443,7 +465,9 @@ export function ParticipantEditor({
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={5}
-                placeholder={"María García, maria@empresa.com, Ventas\nJuan López, juan@empresa.com, IT\n\nO pega cualquier texto y usa la IA..."}
+                placeholder={
+                  "María García, maria@empresa.com, Ventas\nJuan López, juan@empresa.com, IT\n\nO pega cualquier texto y usa la IA..."
+                }
                 className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
               />
 
@@ -495,11 +519,7 @@ export function ParticipantEditor({
           </p>
           <div className="flex gap-2">
             {pendingInvitations > 0 && (
-              <Button
-                size="sm"
-                onClick={handleSendAll}
-                disabled={sendingAll}
-              >
+              <Button size="sm" onClick={handleSendAll} disabled={sendingAll}>
                 {sendingAll ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -541,7 +561,7 @@ export function ParticipantEditor({
               {participants.map((p) => {
                 const invInfo = INVITATION_LABELS[p.invitation_status] ?? INVITATION_LABELS.pending;
                 const surveyInfo = p.respondent_status
-                  ? SURVEY_LABELS[p.respondent_status] ?? SURVEY_LABELS.pending
+                  ? (SURVEY_LABELS[p.respondent_status] ?? SURVEY_LABELS.pending)
                   : null;
                 const isEditing = editingId === p.id;
 
@@ -552,7 +572,13 @@ export function ParticipantEditor({
                         <Input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(p.id); } if (e.key === "Escape") cancelEdit(); }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit(p.id);
+                            }
+                            if (e.key === "Escape") cancelEdit();
+                          }}
                           className="h-8"
                           autoFocus
                         />
@@ -561,13 +587,24 @@ export function ParticipantEditor({
                         <Input
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(p.id); } if (e.key === "Escape") cancelEdit(); }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit(p.id);
+                            }
+                            if (e.key === "Escape") cancelEdit();
+                          }}
                           type="email"
                           className="h-8"
                         />
                       </TableCell>
                       <TableCell>
-                        <DeptField value={editDept} onChange={setEditDept} departments={departments} className="h-8 w-full" />
+                        <DeptField
+                          value={editDept}
+                          onChange={setEditDept}
+                          departments={departments}
+                          className="h-8 w-full"
+                        />
                       </TableCell>
                       <TableCell>
                         <Badge variant={invInfo.variant}>{invInfo.label}</Badge>
@@ -589,7 +626,11 @@ export function ParticipantEditor({
                                 disabled={saving}
                                 className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
                               >
-                                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                {saving ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5" />
+                                )}
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>Guardar</TooltipContent>
@@ -665,30 +706,32 @@ export function ParticipantEditor({
                           </Tooltip>
                         )}
                         {/* Resend */}
-                        {canEdit && p.invitation_status !== "pending" && p.respondent_status !== "completed" && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  setResendingId(p.id);
-                                  const ok = await onResend(p.id);
-                                  if (ok) toast.success(`Recordatorio enviado a ${p.name}`);
-                                  setResendingId(null);
-                                }}
-                                disabled={resendingId === p.id}
-                                className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                              >
-                                {resendingId === p.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <MailWarning className="h-3.5 w-3.5" />
-                                )}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Reenviar invitación</TooltipContent>
-                          </Tooltip>
-                        )}
+                        {canEdit &&
+                          p.invitation_status !== "pending" &&
+                          p.respondent_status !== "completed" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setResendingId(p.id);
+                                    const ok = await onResend(p.id);
+                                    if (ok) toast.success(`Recordatorio enviado a ${p.name}`);
+                                    setResendingId(null);
+                                  }}
+                                  disabled={resendingId === p.id}
+                                  className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                >
+                                  {resendingId === p.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <MailWarning className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reenviar invitación</TooltipContent>
+                            </Tooltip>
+                          )}
                         {/* Remove (draft only) */}
                         {isDraft && (
                           <Tooltip>

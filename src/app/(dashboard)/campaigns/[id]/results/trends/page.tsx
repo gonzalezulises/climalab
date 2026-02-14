@@ -16,7 +16,9 @@ export default async function TrendsPage({ params }: { params: Promise<{ id: str
     return (
       <div className="space-y-6">
         <h1 className="text-xl font-bold">Tendencias Históricas</h1>
-        <p className="text-muted-foreground">Se necesitan al menos 2 campañas cerradas para mostrar tendencias.</p>
+        <p className="text-muted-foreground">
+          Se necesitan al menos 2 campañas cerradas para mostrar tendencias.
+        </p>
       </div>
     );
   }

@@ -4,21 +4,11 @@ import { getCampaign, getRespondents } from "@/actions/campaigns";
 import { getParticipants } from "@/actions/participants";
 import { getOrganization } from "@/actions/organizations";
 import { getBusinessIndicators } from "@/actions/business-indicators";
+import { env } from "@/lib/env";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
@@ -27,26 +17,25 @@ import { MonitoringPanel } from "./monitoring-panel";
 import { BusinessIndicatorsPanel } from "@/components/results/business-indicators-panel";
 import type { Department } from "@/types";
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   draft: { label: "Borrador", variant: "secondary" },
   active: { label: "Activa", variant: "default" },
   closed: { label: "Cerrada", variant: "outline" },
   archived: { label: "Archivada", variant: "destructive" },
 };
 
-
-export default async function CampaignDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, respondentsResult, participantsResult, indicatorsResult] = await Promise.all([
-    getCampaign(id),
-    getRespondents(id),
-    getParticipants(id),
-    getBusinessIndicators(id),
-  ]);
+  const [campaignResult, respondentsResult, participantsResult, indicatorsResult] =
+    await Promise.all([
+      getCampaign(id),
+      getRespondents(id),
+      getParticipants(id),
+      getBusinessIndicators(id),
+    ]);
 
   if (!campaignResult.success) {
     notFound();
@@ -63,9 +52,10 @@ export default async function CampaignDetailPage({
     ? ((orgResult.data.departments as Department[] | null) ?? []).map((d) => d.name)
     : [];
   const targetDepts = campaign.target_departments as string[] | null;
-  const departments = targetDepts && targetDepts.length > 0
-    ? allOrgDepts.filter((name) => targetDepts.includes(name))
-    : allOrgDepts;
+  const departments =
+    targetDepts && targetDepts.length > 0
+      ? allOrgDepts.filter((name) => targetDepts.includes(name))
+      : allOrgDepts;
 
   const statusInfo = STATUS_LABELS[campaign.status] ?? STATUS_LABELS.draft;
 
@@ -73,9 +63,7 @@ export default async function CampaignDetailPage({
   const inProgressCount = respondents.filter((r) => r.status === "in_progress").length;
   const pendingCount = respondents.filter((r) => r.status === "pending").length;
 
-  const baseUrl = typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-    : "http://localhost:3000";
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL;
 
   return (
     <div className="space-y-6">
@@ -103,9 +91,7 @@ export default async function CampaignDetailPage({
       <Tabs defaultValue="config">
         <TabsList>
           <TabsTrigger value="config">Configuración</TabsTrigger>
-          <TabsTrigger value="participants">
-            Participantes ({participants.length})
-          </TabsTrigger>
+          <TabsTrigger value="participants">Participantes ({participants.length})</TabsTrigger>
           <TabsTrigger value="monitoring">Monitoreo</TabsTrigger>
         </TabsList>
 
@@ -146,9 +132,7 @@ export default async function CampaignDetailPage({
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Ficha técnica
-                    </p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Ficha técnica</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Población (N): </span>
@@ -163,8 +147,8 @@ export default async function CampaignDetailPage({
                         {campaign.response_rate}%
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Margen error: </span>
-                        ±{campaign.margin_of_error}%
+                        <span className="text-muted-foreground">Margen error: </span>±
+                        {campaign.margin_of_error}%
                       </div>
                     </div>
                   </div>

@@ -3,10 +3,7 @@ import { z } from "zod";
 const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 export const createInstrumentSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Mínimo 2 caracteres")
-    .max(100, "Máximo 100 caracteres"),
+  name: z.string().min(2, "Mínimo 2 caracteres").max(100, "Máximo 100 caracteres"),
   slug: z
     .string()
     .min(2, "Mínimo 2 caracteres")
@@ -20,10 +17,7 @@ export const createInstrumentSchema = z.object({
 
 export const updateItemSchema = z.object({
   id: z.string().regex(uuidRegex, "UUID inválido"),
-  text: z
-    .string()
-    .min(5, "Mínimo 5 caracteres")
-    .max(500, "Máximo 500 caracteres"),
+  text: z.string().min(5, "Mínimo 5 caracteres").max(500, "Máximo 500 caracteres"),
   is_reverse: z.boolean(),
   is_anchor: z.boolean(),
   is_attention_check: z.boolean(),

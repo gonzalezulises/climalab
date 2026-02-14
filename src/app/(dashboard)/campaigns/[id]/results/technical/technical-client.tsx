@@ -1,8 +1,17 @@
 "use client";
 
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -68,7 +77,9 @@ export function TechnicalClient({
                   </BarChart>
                 </ResponsiveContainer>
               )}
-              <div className="mt-2 text-xs text-muted-foreground text-center">Total: {total} respondentes</div>
+              <div className="mt-2 text-xs text-muted-foreground text-center">
+                Total: {total} respondentes
+              </div>
             </CardContent>
           </Card>
         );

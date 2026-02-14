@@ -45,6 +45,4 @@ export type InstrumentWithDimensions = Instrument & {
 export type Department = { name: string; headcount: number | null };
 
 // Action result type
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+export type ActionResult<T = void> = { success: true; data: T } | { success: false; error: string };

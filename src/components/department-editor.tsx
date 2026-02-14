@@ -54,10 +54,7 @@ function parseCSV(text: string): Department[] {
   return results;
 }
 
-function mergeDepartments(
-  existing: Department[],
-  incoming: Department[]
-): Department[] {
+function mergeDepartments(existing: Department[], incoming: Department[]): Department[] {
   const merged = [...existing];
   for (const imp of incoming) {
     const found = merged.find((d) => d.name === imp.name);
@@ -87,10 +84,7 @@ export function DepartmentEditor({
   const [showExample, setShowExample] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const totalHeadcount = departments.reduce(
-    (sum, d) => sum + (d.headcount ?? 0),
-    0
-  );
+  const totalHeadcount = departments.reduce((sum, d) => sum + (d.headcount ?? 0), 0);
   const headcountMismatch =
     employeeCount != null &&
     departments.length > 0 &&
@@ -128,9 +122,7 @@ export function DepartmentEditor({
   function updateHeadcount(name: string, value: string) {
     onChange(
       departments.map((d) =>
-        d.name === name
-          ? { ...d, headcount: value ? Number(value) : null }
-          : d
+        d.name === name ? { ...d, headcount: value ? Number(value) : null } : d
       )
     );
   }
@@ -175,9 +167,7 @@ export function DepartmentEditor({
         onChange(mergeDepartments(departments, result.data));
         setImportText("");
         setShowImport(false);
-        toast.success(
-          `${result.data.length} departamentos importados con IA`
-        );
+        toast.success(`${result.data.length} departamentos importados con IA`);
       }
     } else {
       toast.error(result.error);
@@ -241,7 +231,13 @@ export function DepartmentEditor({
             placeholder="Personas"
           />
         </div>
-        <Button type="button" variant="outline" size="icon" onClick={addCustom}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={addCustom}
+          aria-label="Agregar departamento"
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -275,9 +271,7 @@ export function DepartmentEditor({
         {showImport && (
           <div className="space-y-3 rounded-lg border p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">
-                Pega o sube tus datos de departamentos
-              </p>
+              <p className="text-sm font-medium">Pega o sube tus datos de departamentos</p>
               <button
                 type="button"
                 onClick={() => setShowExample(!showExample)}
@@ -314,17 +308,15 @@ export function DepartmentEditor({
                     </TableRow>
                   </TableBody>
                 </Table>
-                <p className="text-muted-foreground mt-2 font-sans">
-                  Texto equivalente:
-                </p>
+                <p className="text-muted-foreground mt-2 font-sans">Texto equivalente:</p>
                 <pre className="mt-1">
-{`Ingeniería, 45
+                  {`Ingeniería, 45
 Marketing, 20
 Recursos Humanos, 15`}
                 </pre>
                 <p className="text-muted-foreground mt-2 font-sans">
-                  Con la IA puedes pegar cualquier formato: tablas de Excel,
-                  listas, texto libre, etc.
+                  Con la IA puedes pegar cualquier formato: tablas de Excel, listas, texto libre,
+                  etc.
                 </p>
               </div>
             )}
@@ -333,7 +325,9 @@ Recursos Humanos, 15`}
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               rows={5}
-              placeholder={"Ingeniería, 45\nMarketing, 20\nRecursos Humanos, 15\n\nO pega cualquier texto y usa la IA para extraer los datos..."}
+              placeholder={
+                "Ingeniería, 45\nMarketing, 20\nRecursos Humanos, 15\n\nO pega cualquier texto y usa la IA para extraer los datos..."
+              }
               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
             />
 
@@ -412,9 +406,7 @@ Recursos Humanos, 15`}
           <TableFooter>
             <TableRow>
               <TableCell className="font-medium">Total</TableCell>
-              <TableCell className="text-right font-medium">
-                {totalHeadcount}
-              </TableCell>
+              <TableCell className="text-right font-medium">{totalHeadcount}</TableCell>
               <TableCell />
             </TableRow>
           </TableFooter>
@@ -427,8 +419,8 @@ Recursos Humanos, 15`}
 
       {headcountMismatch && (
         <p className="text-sm text-amber-600">
-          La suma de personas ({totalHeadcount}) no coincide con el total de
-          empleados ({employeeCount}).
+          La suma de personas ({totalHeadcount}) no coincide con el total de empleados (
+          {employeeCount}).
         </p>
       )}
     </div>

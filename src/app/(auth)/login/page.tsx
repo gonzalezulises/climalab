@@ -4,13 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { signInWithMagicLink } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -56,17 +50,9 @@ export default function LoginPage() {
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">{t("email")}</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="tu@empresa.com"
-              required
-            />
+            <Input id="email" name="email" type="email" placeholder="tu@empresa.com" required />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Enviando..." : t("sendMagicLink")}
           </Button>

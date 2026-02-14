@@ -22,9 +22,7 @@ export function EditItemDialog({ item }: { item: Item }) {
   const [text, setText] = useState(item.text);
   const [isReverse, setIsReverse] = useState(item.is_reverse);
   const [isAnchor, setIsAnchor] = useState(item.is_anchor);
-  const [isAttentionCheck, setIsAttentionCheck] = useState(
-    item.is_attention_check
-  );
+  const [isAttentionCheck, setIsAttentionCheck] = useState(item.is_attention_check);
 
   async function handleSubmit() {
     setLoading(true);
@@ -50,7 +48,7 @@ export function EditItemDialog({ item }: { item: Item }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar ítem">
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
@@ -61,11 +59,7 @@ export function EditItemDialog({ item }: { item: Item }) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="text">Texto del item</Label>
-            <Input
-              id="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
+            <Input id="text" value={text} onChange={(e) => setText(e.target.value)} />
           </div>
           <div className="space-y-3">
             <label className="flex items-center gap-2">
@@ -97,11 +91,7 @@ export function EditItemDialog({ item }: { item: Item }) {
             </label>
           </div>
           <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>

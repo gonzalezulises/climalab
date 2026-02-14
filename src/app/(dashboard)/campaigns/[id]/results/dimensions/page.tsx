@@ -5,10 +5,27 @@ import { DimensionsClient } from "./dimensions-client";
 
 // Map dimension codes to categories (matches seed)
 const dimCategory: Record<string, string> = {
-  ORG: "bienestar", PRO: "bienestar", SEG: "bienestar", BAL: "bienestar", CUI: "bienestar", DEM: "bienestar",
-  LID: "direccion", AUT: "direccion", COM: "direccion", CON: "direccion", ROL: "direccion",
-  CMP: "compensacion", REC: "compensacion", BEN: "compensacion", EQA: "compensacion", NDI: "compensacion",
-  COH: "cultura", INN: "cultura", RES: "cultura", DES: "cultura", APR: "cultura",
+  ORG: "bienestar",
+  PRO: "bienestar",
+  SEG: "bienestar",
+  BAL: "bienestar",
+  CUI: "bienestar",
+  DEM: "bienestar",
+  LID: "direccion",
+  AUT: "direccion",
+  COM: "direccion",
+  CON: "direccion",
+  ROL: "direccion",
+  CMP: "compensacion",
+  REC: "compensacion",
+  BEN: "compensacion",
+  EQA: "compensacion",
+  NDI: "compensacion",
+  COH: "cultura",
+  INN: "cultura",
+  RES: "cultura",
+  DES: "cultura",
+  APR: "cultura",
   ENG: "engagement",
 };
 

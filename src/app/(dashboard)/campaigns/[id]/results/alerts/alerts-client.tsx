@@ -23,7 +23,11 @@ type Alert = {
 const sevConfig: Record<string, { label: string; bg: string; border: string }> = {
   crisis: { label: "Crisis", bg: "bg-red-600 text-white", border: "border-l-red-600" },
   attention: { label: "Atención", bg: "bg-yellow-500 text-white", border: "border-l-yellow-500" },
-  risk_group: { label: "Grupo de riesgo", bg: "bg-orange-500 text-white", border: "border-l-orange-500" },
+  risk_group: {
+    label: "Grupo de riesgo",
+    bg: "bg-orange-500 text-white",
+    border: "border-l-orange-500",
+  },
   decline: { label: "Declive", bg: "bg-purple-500 text-white", border: "border-l-purple-500" },
 };
 
@@ -107,7 +111,9 @@ export function AlertsClient({
 
       {/* Alert list */}
       {alerts.length === 0 ? (
-        <p className="text-muted-foreground">No se detectaron alertas. Todas las métricas están dentro de los umbrales aceptables.</p>
+        <p className="text-muted-foreground">
+          No se detectaron alertas. Todas las métricas están dentro de los umbrales aceptables.
+        </p>
       ) : (
         <div className="space-y-3">
           {alerts.map((alert, i) => {
@@ -121,7 +127,9 @@ export function AlertsClient({
                     <div className="flex-1">
                       <p className="text-sm">{alert.message}</p>
                       {alert.item_text && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">&quot;{alert.item_text}&quot;</p>
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          &quot;{alert.item_text}&quot;
+                        </p>
                       )}
                       {ctx && (
                         <div className="mt-2 rounded-md border border-purple-200 bg-purple-50/50 p-2 space-y-1">
@@ -137,7 +145,9 @@ export function AlertsClient({
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold">{typeof alert.value === "number" ? alert.value.toFixed(1) : alert.value}%</p>
+                      <p className="text-sm font-bold">
+                        {typeof alert.value === "number" ? alert.value.toFixed(1) : alert.value}%
+                      </p>
                       <p className="text-xs text-muted-foreground">Umbral: {alert.threshold}%</p>
                     </div>
                   </div>

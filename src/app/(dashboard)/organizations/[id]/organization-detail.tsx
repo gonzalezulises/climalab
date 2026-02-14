@@ -7,13 +7,7 @@ import { toast } from "sonner";
 import { updateOrganization } from "@/actions/organizations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,12 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -65,15 +54,11 @@ export function OrganizationDetail({
 
   // Form state — initialized from org
   const [name, setName] = useState(org.name);
-  const [commercialName, setCommercialName] = useState(
-    org.commercial_name ?? ""
-  );
+  const [commercialName, setCommercialName] = useState(org.commercial_name ?? "");
   const [slug, setSlug] = useState(org.slug);
   const [industry, setIndustry] = useState(org.industry ?? "");
   const [country, setCountry] = useState(org.country);
-  const [employeeCount, setEmployeeCount] = useState(
-    String(org.employee_count)
-  );
+  const [employeeCount, setEmployeeCount] = useState(String(org.employee_count));
   const [contactName, setContactName] = useState(org.contact_name ?? "");
   const [contactEmail, setContactEmail] = useState(org.contact_email ?? "");
   const [contactRole, setContactRole] = useState(org.contact_role ?? "");
@@ -81,14 +66,10 @@ export function OrganizationDetail({
     (org.departments as unknown as Department[]) ?? []
   );
 
-  const totalHeadcount = departments.reduce(
-    (sum, d) => sum + (d.headcount ?? 0),
-    0
-  );
+  const totalHeadcount = departments.reduce((sum, d) => sum + (d.headcount ?? 0), 0);
 
   const countryName =
-    COUNTRIES.find((c) => c.code === (editing ? country : org.country))?.name ||
-    org.country;
+    COUNTRIES.find((c) => c.code === (editing ? country : org.country))?.name || org.country;
 
   function startEditing() {
     // Reset form state to current org data
@@ -141,14 +122,10 @@ export function OrganizationDetail({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
-            <Badge variant="secondary">
-              {SIZE_CATEGORIES[org.size_category]}
-            </Badge>
+            <Badge variant="secondary">{SIZE_CATEGORIES[org.size_category]}</Badge>
           </div>
           {org.commercial_name && (
-            <p className="text-lg text-muted-foreground">
-              {org.commercial_name}
-            </p>
+            <p className="text-lg text-muted-foreground">{org.commercial_name}</p>
           )}
           <p className="text-muted-foreground">{org.slug}</p>
         </div>
@@ -179,10 +156,7 @@ export function OrganizationDetail({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Razón social</Label>
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
+                      <Input value={name} onChange={(e) => setName(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label>Nombre comercial</Label>
@@ -195,17 +169,11 @@ export function OrganizationDetail({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Slug</Label>
-                      <Input
-                        value={slug}
-                        onChange={(e) => setSlug(e.target.value)}
-                      />
+                      <Input value={slug} onChange={(e) => setSlug(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label>Industria</Label>
-                      <Input
-                        value={industry}
-                        onChange={(e) => setIndustry(e.target.value)}
-                      />
+                      <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -237,16 +205,11 @@ export function OrganizationDetail({
                   </div>
 
                   <Separator />
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Contacto principal
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Contacto principal</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Nombre</Label>
-                      <Input
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                      />
+                      <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label>Email</Label>
@@ -260,10 +223,7 @@ export function OrganizationDetail({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Cargo</Label>
-                      <Input
-                        value={contactRole}
-                        onChange={(e) => setContactRole(e.target.value)}
-                      />
+                      <Input value={contactRole} onChange={(e) => setContactRole(e.target.value)} />
                     </div>
                   </div>
                 </>
@@ -271,27 +231,19 @@ export function OrganizationDetail({
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Industria
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">Industria</p>
                       <p>{org.industry || "No especificada"}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        País
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">País</p>
                       <p>{countryName}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Empleados
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">Empleados</p>
                       <p>{org.employee_count}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Categoría
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">Categoría</p>
                       <p>{SIZE_CATEGORIES[org.size_category]}</p>
                     </div>
                   </div>
@@ -306,17 +258,13 @@ export function OrganizationDetail({
                         <div className="grid grid-cols-2 gap-4">
                           {org.contact_name && (
                             <div>
-                              <p className="text-sm text-muted-foreground">
-                                Nombre
-                              </p>
+                              <p className="text-sm text-muted-foreground">Nombre</p>
                               <p>{org.contact_name}</p>
                             </div>
                           )}
                           {org.contact_email && (
                             <div>
-                              <p className="text-sm text-muted-foreground">
-                                Email
-                              </p>
+                              <p className="text-sm text-muted-foreground">Email</p>
                               <a
                                 href={`mailto:${org.contact_email}`}
                                 className="text-primary hover:underline"
@@ -327,9 +275,7 @@ export function OrganizationDetail({
                           )}
                           {org.contact_role && (
                             <div>
-                              <p className="text-sm text-muted-foreground">
-                                Cargo
-                              </p>
+                              <p className="text-sm text-muted-foreground">Cargo</p>
                               <p>{org.contact_role}</p>
                             </div>
                           )}
@@ -342,14 +288,8 @@ export function OrganizationDetail({
 
               <Separator />
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <div>
-                  Creada:{" "}
-                  {new Date(org.created_at).toLocaleDateString("es-MX")}
-                </div>
-                <div>
-                  Actualizada:{" "}
-                  {new Date(org.updated_at).toLocaleDateString("es-MX")}
-                </div>
+                <div>Creada: {new Date(org.created_at).toLocaleDateString("es-MX")}</div>
+                <div>Actualizada: {new Date(org.updated_at).toLocaleDateString("es-MX")}</div>
               </div>
             </CardContent>
           </Card>
@@ -360,9 +300,7 @@ export function OrganizationDetail({
           <Card>
             <CardHeader>
               <CardTitle>Departamentos</CardTitle>
-              <CardDescription>
-                {departments.length} departamentos registrados
-              </CardDescription>
+              <CardDescription>{departments.length} departamentos registrados</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {editing ? (
@@ -372,9 +310,7 @@ export function OrganizationDetail({
                   employeeCount={Number(employeeCount) || undefined}
                 />
               ) : departments.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No hay departamentos registrados
-                </p>
+                <p className="text-muted-foreground">No hay departamentos registrados</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -388,9 +324,7 @@ export function OrganizationDetail({
                     {departments.map((dept) => (
                       <TableRow key={dept.name}>
                         <TableCell>{dept.name}</TableCell>
-                        <TableCell className="text-right">
-                          {dept.headcount ?? "—"}
-                        </TableCell>
+                        <TableCell className="text-right">{dept.headcount ?? "—"}</TableCell>
                         <TableCell className="text-right">
                           {dept.headcount != null && totalHeadcount > 0
                             ? `${Math.round((dept.headcount / totalHeadcount) * 100)}%`
@@ -402,9 +336,7 @@ export function OrganizationDetail({
                   <TableFooter>
                     <TableRow>
                       <TableCell className="font-medium">Total</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {totalHeadcount}
-                      </TableCell>
+                      <TableCell className="text-right font-medium">{totalHeadcount}</TableCell>
                       <TableCell className="text-right font-medium">
                         {totalHeadcount > 0 ? "100%" : "—"}
                       </TableCell>
@@ -421,15 +353,11 @@ export function OrganizationDetail({
           <Card>
             <CardHeader>
               <CardTitle>Historial de mediciones</CardTitle>
-              <CardDescription>
-                {campaigns.length} campañas registradas
-              </CardDescription>
+              <CardDescription>{campaigns.length} campañas registradas</CardDescription>
             </CardHeader>
             <CardContent>
               {campaigns.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No hay mediciones registradas aún.
-                </p>
+                <p className="text-muted-foreground">No hay mediciones registradas aún.</p>
               ) : (
                 <div className="space-y-3">
                   {campaigns.map((campaign) => (
@@ -445,9 +373,7 @@ export function OrganizationDetail({
                       <div>
                         <p className="font-medium">{campaign.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(
-                            campaign.created_at
-                          ).toLocaleDateString("es-MX")}
+                          {new Date(campaign.created_at).toLocaleDateString("es-MX")}
                           {campaign.response_rate !== null &&
                             ` · Respuesta: ${campaign.response_rate}%`}
                         </p>

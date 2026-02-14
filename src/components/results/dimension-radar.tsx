@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   RadarChart,
@@ -8,11 +8,11 @@ import {
   Radar,
   ResponsiveContainer,
   Tooltip,
-} from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DimensionRadarProps {
-  data: Array<{ code: string; name: string; avg: number }>
+  data: Array<{ code: string; name: string; avg: number }>;
 }
 
 export function DimensionRadar({ data }: DimensionRadarProps) {
@@ -25,15 +25,8 @@ export function DimensionRadar({ data }: DimensionRadarProps) {
         <ResponsiveContainer width="100%" height={500}>
           <RadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
             <PolarGrid />
-            <PolarAngleAxis
-              dataKey="code"
-              tick={{ fontSize: 11 }}
-            />
-            <PolarRadiusAxis
-              domain={[0, 5]}
-              tickCount={6}
-              tick={{ fontSize: 10 }}
-            />
+            <PolarAngleAxis dataKey="code" tick={{ fontSize: 11 }} />
+            <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 10 }} />
             <Radar
               name="Promedio"
               dataKey="avg"
@@ -44,13 +37,13 @@ export function DimensionRadar({ data }: DimensionRadarProps) {
             <Tooltip
               formatter={(value) => [Number(value).toFixed(2), "Promedio"]}
               labelFormatter={(label) => {
-                const item = data.find((d) => d.code === String(label))
-                return item ? item.name : String(label)
+                const item = data.find((d) => d.code === String(label));
+                return item ? item.name : String(label);
               }}
             />
           </RadarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

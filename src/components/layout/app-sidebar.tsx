@@ -45,10 +45,7 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                  >
+                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                     <Link href={item.href}>
                       <item.icon />
                       <span>{item.title}</span>

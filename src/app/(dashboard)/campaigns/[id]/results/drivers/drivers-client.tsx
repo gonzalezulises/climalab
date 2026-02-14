@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +49,7 @@ export function DriversClient({
 
   // Build insight
   const topDriver = drivers[0];
-  const actionable = drivers.find(
-    (d) => Math.abs(d.r) > 0.3 && (dimScores[d.code] ?? 5) < 4.0
-  );
+  const actionable = drivers.find((d) => Math.abs(d.r) > 0.3 && (dimScores[d.code] ?? 5) < 4.0);
 
   const barData = drivers.map((d) => ({
     name: d.code,
@@ -61,12 +66,22 @@ export function DriversClient({
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-4">
             <p className="text-sm">
-              La dimensión con mayor impacto en engagement es <strong>{topDriver.name}</strong> (r={topDriver.r}).
+              La dimensión con mayor impacto en engagement es <strong>{topDriver.name}</strong> (r=
+              {topDriver.r}).
               {actionable && actionable.code !== topDriver.code && (
-                <> Para mejorar engagement, enfócate en <strong>{actionable.name}</strong> que tiene correlación fuerte (r={actionable.r}) pero score bajo ({dimScores[actionable.code]?.toFixed(2)}).</>
+                <>
+                  {" "}
+                  Para mejorar engagement, enfócate en <strong>{actionable.name}</strong> que tiene
+                  correlación fuerte (r={actionable.r}) pero score bajo (
+                  {dimScores[actionable.code]?.toFixed(2)}).
+                </>
               )}
               {actionable && actionable.code === topDriver.code && (
-                <> Este driver también tiene un score de {dimScores[topDriver.code]?.toFixed(2)}, lo que representa una oportunidad de alto impacto.</>
+                <>
+                  {" "}
+                  Este driver también tiene un score de {dimScores[topDriver.code]?.toFixed(2)}, lo
+                  que representa una oportunidad de alto impacto.
+                </>
               )}
             </p>
           </CardContent>
@@ -85,10 +100,12 @@ export function DriversClient({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => startTransition(async () => {
-                  const result = await interpretDrivers(campaignId);
-                  if (result.success) setInsights(result.data);
-                })}
+                onClick={() =>
+                  startTransition(async () => {
+                    const result = await interpretDrivers(campaignId);
+                    if (result.success) setInsights(result.data);
+                  })
+                }
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -134,10 +151,12 @@ export function DriversClient({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => startTransition(async () => {
-            const result = await interpretDrivers(campaignId);
-            if (result.success) setInsights(result.data);
-          })}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await interpretDrivers(campaignId);
+              if (result.success) setInsights(result.data);
+            })
+          }
           disabled={isPending}
         >
           {isPending ? (
@@ -190,7 +209,9 @@ export function DriversClient({
                 <tr>
                   <th className="py-1 pr-2"></th>
                   {dimensionCodes.map((c) => (
-                    <th key={c} className="px-1 py-1 text-center">{c}</th>
+                    <th key={c} className="px-1 py-1 text-center">
+                      {c}
+                    </th>
                   ))}
                 </tr>
               </thead>

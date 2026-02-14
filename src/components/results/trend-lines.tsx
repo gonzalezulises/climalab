@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   LineChart,
@@ -9,18 +9,18 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-} from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Campaign {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 interface TrendLinesProps {
-  campaigns: Campaign[]
-  series: Record<string, Array<{ campaign_id: string; avg_score: number }>>
-  selectedDimensions?: string[]
+  campaigns: Campaign[];
+  series: Record<string, Array<{ campaign_id: string; avg_score: number }>>;
+  selectedDimensions?: string[];
 }
 
 const LINE_COLORS = [
@@ -42,21 +42,21 @@ const LINE_COLORS = [
   "#15803d",
   "#b91c1c",
   "#1d4ed8",
-]
+];
 
 export function TrendLines({ campaigns, series, selectedDimensions }: TrendLinesProps) {
-  const dimensionKeys = selectedDimensions ?? Object.keys(series)
+  const dimensionKeys = selectedDimensions ?? Object.keys(series);
 
   const chartData = campaigns.map((campaign) => {
-    const point: Record<string, string | number> = { name: campaign.name }
+    const point: Record<string, string | number> = { name: campaign.name };
     dimensionKeys.forEach((dim) => {
-      const match = series[dim]?.find((s) => s.campaign_id === campaign.id)
+      const match = series[dim]?.find((s) => s.campaign_id === campaign.id);
       if (match) {
-        point[dim] = match.avg_score
+        point[dim] = match.avg_score;
       }
-    })
-    return point
-  })
+    });
+    return point;
+  });
 
   return (
     <Card>
@@ -88,5 +88,5 @@ export function TrendLines({ campaigns, series, selectedDimensions }: TrendLines
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

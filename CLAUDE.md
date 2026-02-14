@@ -38,6 +38,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 ## Database Schema
 
 ### Core Tables
+
 - `organizations` — Multi-tenant orgs with departments (JSONB), employee_count, size_category
 - `profiles` — User profiles (extends auth.users)
 - `instruments` — Survey templates (full/pulse modes, version tracking)
@@ -45,6 +46,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `items` — Survey items with is_reverse, is_anchor, is_attention_check flags
 
 ### Measurement Pipeline
+
 - `campaigns` — Measurement waves per organization (draft → active → closed → archived)
 - `respondents` — Anonymous participants with unique tokens (+ enps_score)
 - `participants` — PII table (name, email) separated from respondents for survey anonymity
@@ -88,6 +90,7 @@ Objective business metrics tracked per campaign in `business_indicators` table. 
 ## Analysis Levels (EMCO-aligned)
 
 3-level presentation framework for dimension results (presentation layer only, no instrument changes):
+
 - **Individual**: Bienestar dimensions
 - **Interpersonal**: Dirección y Supervisión dimensions
 - **Organizacional**: Compensación + Cultura dimensions
@@ -97,20 +100,21 @@ Objective business metrics tracked per campaign in `business_indicators` table. 
 
 AI-powered analysis across 6 result pages, using Ollama (Qwen 2.5 72B) via `OLLAMA_BASE_URL` env var. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
 
-| analysis_type | Page | What it generates |
-|---|---|---|
-| `comment_analysis` | Comments | Theme extraction, sentiment distribution, summary per question type |
-| `dashboard_narrative` | Dashboard | Executive summary, highlights, concerns, recommendation |
-| `driver_insights` | Drivers | Narrative interpretation, paradoxes, quick wins |
-| `alert_context` | Alerts | Root cause hypothesis + recommendation per alert |
-| `segment_profiles` | Segments | Per-segment narrative with strengths/risks |
-| `trends_narrative` | Trends | Trajectory, improving/declining/stable dims, inflection points |
+| analysis_type         | Page      | What it generates                                                   |
+| --------------------- | --------- | ------------------------------------------------------------------- |
+| `comment_analysis`    | Comments  | Theme extraction, sentiment distribution, summary per question type |
+| `dashboard_narrative` | Dashboard | Executive summary, highlights, concerns, recommendation             |
+| `driver_insights`     | Drivers   | Narrative interpretation, paradoxes, quick wins                     |
+| `alert_context`       | Alerts    | Root cause hypothesis + recommendation per alert                    |
+| `segment_profiles`    | Segments  | Per-segment narrative with strengths/risks                          |
+| `trends_narrative`    | Trends    | Trajectory, improving/declining/stable dims, inflection points      |
 
 **Architecture**: `src/actions/ai-insights.ts` contains 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel and stores results. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights.
 
 ## Psychometric Reporting
 
 The technical page (ficha técnica) auto-generates:
+
 - Cronbach's alpha table per dimension with acceptability thresholds
 - rwg global table per dimension with agreement thresholds
 - Limitations section: auto-detects low alpha, low rwg, low response rate, small sample
@@ -121,6 +125,7 @@ The technical page (ficha técnica) auto-generates:
 22 dimensions in 4 categories + ENG (transversal DV) = 107 items + 2 attention checks:
 
 ### Bienestar (6)
+
 1. **ORG** — Orgullo Institucional (4 items, Mael & Ashforth 1992)
 2. **PRO** — Propósito del Trabajo (5 items, Steger 2012)
 3. **SEG** — Seguridad Física y Psicológica (5 items, JD-R Model)
@@ -129,6 +134,7 @@ The technical page (ficha técnica) auto-generates:
 6. **DEM** — Demandas Laborales (4 items, JD-R Model)
 
 ### Dirección y Supervisión (5)
+
 7. **LID** — Liderazgo Efectivo (6 items, LMX-7 / Servant Leadership)
 8. **AUT** — Autonomía (5 items, SDT Deci & Ryan 2000)
 9. **COM** — Comunicación Interna (5 items, Roberts & O'Reilly 1974)
@@ -136,6 +142,7 @@ The technical page (ficha técnica) auto-generates:
 11. **ROL** — Claridad de Rol (5 items, Rizzo 1970)
 
 ### Compensación (5)
+
 12. **CMP** — Compensación (4 items, Adams 1963)
 13. **REC** — Reconocimiento (4 items, POS)
 14. **BEN** — Beneficios (4 items, Total Rewards)
@@ -143,6 +150,7 @@ The technical page (ficha técnica) auto-generates:
 16. **NDI** — No Discriminación e Inclusión (6 items, Colquitt 2001 / DEI)
 
 ### Cultura (5)
+
 17. **COH** — Cohesión de Equipo (6 items, Carron 1985)
 18. **INN** — Innovación y Cambio (6 items, Edmondson 1999)
 19. **RES** — Resultados y Logros (5 items, Locke & Latham 1990)
@@ -150,9 +158,11 @@ The technical page (ficha técnica) auto-generates:
 21. **APR** — Aprendizaje Organizacional (4 items, Senge 1990)
 
 ### Engagement (transversal)
+
 22. **ENG** — Engagement y Compromiso (5 items, UWES-9) — serves as DV
 
 ### Optional Modules
+
 - **CAM** — Gestión del Cambio (8 items, Armenakis 1993)
 - **CLI** — Orientación al Cliente (4 items, Narver & Slater 1990)
 - **DIG** — Preparación Digital (4 items, Davis 1989)

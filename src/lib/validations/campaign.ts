@@ -6,10 +6,7 @@ const zUuid = (msg?: string) => z.string().regex(uuidRegex, msg ?? "UUID inváli
 export const createCampaignSchema = z.object({
   organization_id: zUuid("ID de organización inválido"),
   instrument_id: zUuid("ID de instrumento inválido"),
-  name: z
-    .string()
-    .min(2, "Mínimo 2 caracteres")
-    .max(100, "Máximo 100 caracteres"),
+  name: z.string().min(2, "Mínimo 2 caracteres").max(100, "Máximo 100 caracteres"),
   anonymous: z.boolean().default(true),
   allow_comments: z.boolean().default(true),
   starts_at: z.string().datetime().optional(),

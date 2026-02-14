@@ -24,10 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { INDICATOR_TYPES } from "@/lib/constants";
-import {
-  createBusinessIndicator,
-  deleteBusinessIndicator,
-} from "@/actions/business-indicators";
+import { createBusinessIndicator, deleteBusinessIndicator } from "@/actions/business-indicators";
 import type { BusinessIndicator } from "@/types";
 
 const DEFAULT_UNITS: Record<string, string> = {
@@ -131,10 +128,7 @@ export function BusinessIndicatorsPanel({
               <div className="space-y-4">
                 <div>
                   <Label>Tipo de indicador</Label>
-                  <Select
-                    value={indicatorType}
-                    onValueChange={handleTypeChange}
-                  >
+                  <Select value={indicatorType} onValueChange={handleTypeChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -208,10 +202,7 @@ export function BusinessIndicatorsPanel({
                 <DialogClose asChild>
                   <Button variant="outline">Cancelar</Button>
                 </DialogClose>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading || !name || !value}
-                >
+                <Button onClick={handleSubmit} disabled={loading || !name || !value}>
                   {loading ? "Guardando..." : "Guardar"}
                 </Button>
               </DialogFooter>
@@ -227,10 +218,7 @@ export function BusinessIndicatorsPanel({
         ) : (
           <div className="space-y-2">
             {indicators.map((ind) => (
-              <div
-                key={ind.id}
-                className="flex items-center justify-between rounded-md border p-3"
-              >
+              <div key={ind.id} className="flex items-center justify-between rounded-md border p-3">
                 <div className="flex items-center gap-3">
                   <div>
                     <p className="text-sm font-medium">{ind.indicator_name}</p>
@@ -260,6 +248,7 @@ export function BusinessIndicatorsPanel({
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-red-600"
                     onClick={() => handleDelete(ind.id)}
+                    aria-label="Eliminar indicador"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

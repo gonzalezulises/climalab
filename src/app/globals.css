@@ -126,7 +126,11 @@
 }
 
 @media print {
-  nav, aside, header, footer, .print\:hidden {
+  nav,
+  aside,
+  header,
+  footer,
+  .print\:hidden {
     display: none !important;
   }
 
@@ -137,7 +141,8 @@
     padding: 20px !important;
   }
 
-  .card, [class*="Card"] {
+  .card,
+  [class*="Card"] {
     break-inside: avoid;
     page-break-inside: avoid;
   }

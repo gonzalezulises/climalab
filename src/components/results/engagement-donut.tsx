@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface EngagementProfile {
-  count: number
-  pct: number
+  count: number;
+  pct: number;
 }
 
 interface EngagementDonutProps {
   profiles: {
-    ambassadors: EngagementProfile
-    committed: EngagementProfile
-    neutral: EngagementProfile
-    disengaged: EngagementProfile
-  }
+    ambassadors: EngagementProfile;
+    committed: EngagementProfile;
+    neutral: EngagementProfile;
+    disengaged: EngagementProfile;
+  };
 }
 
 const PROFILE_CONFIG = [
@@ -22,7 +22,7 @@ const PROFILE_CONFIG = [
   { key: "committed", label: "Comprometidos", color: "#2563eb" },
   { key: "neutral", label: "Neutrales", color: "#eab308" },
   { key: "disengaged", label: "Desvinculados", color: "#dc2626" },
-] as const
+] as const;
 
 export function EngagementDonut({ profiles }: EngagementDonutProps) {
   const chartData = PROFILE_CONFIG.map((config) => ({
@@ -30,7 +30,7 @@ export function EngagementDonut({ profiles }: EngagementDonutProps) {
     value: profiles[config.key].count,
     pct: profiles[config.key].pct,
     color: config.color,
-  }))
+  }));
 
   return (
     <Card>
@@ -57,8 +57,8 @@ export function EngagementDonut({ profiles }: EngagementDonutProps) {
             </Pie>
             <Tooltip
               formatter={(value, name) => {
-                const item = chartData.find((d) => d.name === String(name))
-                return [`${value} (${item?.pct.toFixed(1)}%)`, String(name)]
+                const item = chartData.find((d) => d.name === String(name));
+                return [`${value} (${item?.pct.toFixed(1)}%)`, String(name)];
               }}
             />
             <Legend />
@@ -66,5 +66,5 @@ export function EngagementDonut({ profiles }: EngagementDonutProps) {
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

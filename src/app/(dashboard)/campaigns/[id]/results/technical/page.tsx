@@ -37,7 +37,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
     .filter((r) => r.result_type === "item" && r.segment_type === "global")
     .map((r) => ({
       text: (r.metadata as { item_text?: string })?.item_text ?? "",
-      dimension: (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code ?? "",
+      dimension:
+        (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code ?? "",
       avg: Number(r.avg_score),
       fav: Number(r.favorability_pct),
     }))
@@ -90,7 +91,9 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
 
       {/* Statistical card */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Ficha técnica estadística</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Ficha técnica estadística</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-5">
             <div>
@@ -222,39 +225,39 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
         <CardContent>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>
-              Este instrumento mide percepciones individuales agregadas a nivel de grupo.
-              Los resultados reflejan la experiencia subjetiva colectiva de los colaboradores,
-              no una evaluación objetiva de las condiciones organizacionales.
+              Este instrumento mide percepciones individuales agregadas a nivel de grupo. Los
+              resultados reflejan la experiencia subjetiva colectiva de los colaboradores, no una
+              evaluación objetiva de las condiciones organizacionales.
             </p>
             {lowAlphaDims.length > 0 && (
               <p className="text-yellow-700">
-                Las siguientes dimensiones presentaron consistencia interna baja
-                (α &lt; 0.60): {lowAlphaDims.map((d) => d.dimension_code).join(", ")}.
-                Los resultados de estas dimensiones deben interpretarse con cautela.
+                Las siguientes dimensiones presentaron consistencia interna baja (α &lt; 0.60):{" "}
+                {lowAlphaDims.map((d) => d.dimension_code).join(", ")}. Los resultados de estas
+                dimensiones deben interpretarse con cautela.
               </p>
             )}
             {lowRwgDims.length > 0 && (
               <p className="text-yellow-700">
-                Las siguientes dimensiones presentaron bajo acuerdo entre respondentes
-                (rwg &lt; 0.50): {lowRwgDims.map((d) => d.code).join(", ")}.
-                El promedio grupal puede no representar una percepción compartida.
+                Las siguientes dimensiones presentaron bajo acuerdo entre respondentes (rwg &lt;
+                0.50): {lowRwgDims.map((d) => d.code).join(", ")}. El promedio grupal puede no
+                representar una percepción compartida.
               </p>
             )}
             {responseRate < 60 && (
               <p className="text-yellow-700">
-                La tasa de respuesta ({responseRate}%) es inferior al 60% recomendado,
-                lo que puede introducir sesgo de no respuesta.
+                La tasa de respuesta ({responseRate}%) es inferior al 60% recomendado, lo que puede
+                introducir sesgo de no respuesta.
               </p>
             )}
             {sampleN > 0 && sampleN < 30 && (
               <p className="text-yellow-700">
-                La muestra válida (n={sampleN}) es inferior a 30, lo que limita
-                la precisión de las estimaciones estadísticas.
+                La muestra válida (n={sampleN}) es inferior a 30, lo que limita la precisión de las
+                estimaciones estadísticas.
               </p>
             )}
             <p>
-              Las comparaciones entre organizaciones requieren evidencia de equivalencia
-              de medición (invariancia factorial), la cual no ha sido establecida en esta versión.
+              Las comparaciones entre organizaciones requieren evidencia de equivalencia de medición
+              (invariancia factorial), la cual no ha sido establecida en esta versión.
             </p>
           </div>
         </CardContent>
@@ -262,7 +265,9 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
 
       {/* Top 5 items */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Top 5 ítems (mayor score)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Top 5 ítems (mayor score)</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {top5.map((item, i) => (
@@ -282,12 +287,16 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
 
       {/* Bottom 5 items */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Bottom 5 ítems (menor score)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Bottom 5 ítems (menor score)</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {bottom5.map((item, i) => (
               <div key={i} className="flex items-center gap-3">
-                <span className="text-xs font-bold w-6 text-red-600">#{itemResults.length - i}</span>
+                <span className="text-xs font-bold w-6 text-red-600">
+                  #{itemResults.length - i}
+                </span>
                 <div className="flex-1">
                   <p className="text-sm">{item.text}</p>
                   <p className="text-xs text-muted-foreground">{item.dimension}</p>

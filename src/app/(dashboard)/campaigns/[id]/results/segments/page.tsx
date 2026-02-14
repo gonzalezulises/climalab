@@ -19,7 +19,10 @@ export default async function SegmentsPage({ params }: { params: Promise<{ id: s
   const heatmapData = heatmapResult.success ? heatmapResult.data : [];
 
   // Get global ENG score for reference
-  const engGlobal = results.find((r) => r.result_type === "dimension" && r.dimension_code === "ENG" && r.segment_type === "global");
+  const engGlobal = results.find(
+    (r) =>
+      r.result_type === "dimension" && r.dimension_code === "ENG" && r.segment_type === "global"
+  );
   const globalEngScore = engGlobal ? Number(engGlobal.avg_score) : 0;
 
   // Build dimension code list from global results

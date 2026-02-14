@@ -6,13 +6,14 @@ import { DriversClient } from "./drivers-client";
 
 export default async function DriversPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, driversResult, matrixResult, resultsResult, insightsResult] = await Promise.all([
-    getCampaign(id),
-    getEngagementDrivers(id),
-    getCorrelationMatrix(id),
-    getCampaignResults(id),
-    getDriverInsights(id),
-  ]);
+  const [campaignResult, driversResult, matrixResult, resultsResult, insightsResult] =
+    await Promise.all([
+      getCampaign(id),
+      getEngagementDrivers(id),
+      getCorrelationMatrix(id),
+      getCampaignResults(id),
+      getDriverInsights(id),
+    ]);
 
   if (!campaignResult.success) notFound();
 

@@ -81,8 +81,7 @@ export async function parseDepartmentsWithAI(
       )
       .map((item) => ({
         name: item.name.trim(),
-        headcount:
-          typeof item.headcount === "number" ? item.headcount : null,
+        headcount: typeof item.headcount === "number" ? item.headcount : null,
       }))
       .filter((d) => d.name.length > 0);
 
@@ -91,8 +90,7 @@ export async function parseDepartmentsWithAI(
     if (err instanceof SyntaxError) {
       return { success: false, error: "El modelo devolvió JSON inválido" };
     }
-    const message =
-      err instanceof Error ? err.message : "Error de conexión con el modelo";
+    const message = err instanceof Error ? err.message : "Error de conexión con el modelo";
     return { success: false, error: message };
   }
 }

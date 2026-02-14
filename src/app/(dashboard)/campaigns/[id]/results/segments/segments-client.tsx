@@ -56,7 +56,11 @@ export function SegmentsClient({
     const dims = dimensionCodes;
 
     if (segments.length === 0) {
-      return <p className="text-sm text-muted-foreground">No hay datos suficientes (mínimo 5 respondentes por segmento).</p>;
+      return (
+        <p className="text-sm text-muted-foreground">
+          No hay datos suficientes (mínimo 5 respondentes por segmento).
+        </p>
+      );
     }
 
     // Build lookup
@@ -79,16 +83,22 @@ export function SegmentsClient({
           <table className="w-full text-sm">
             <thead>
               <tr>
-                <th className="text-left py-2 pr-4 sticky left-0 bg-background">{segLabels[segType]}</th>
+                <th className="text-left py-2 pr-4 sticky left-0 bg-background">
+                  {segLabels[segType]}
+                </th>
                 {dims.map((dim) => (
-                  <th key={dim} className="text-center px-1 py-2 text-xs">{dim}</th>
+                  <th key={dim} className="text-center px-1 py-2 text-xs">
+                    {dim}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {segments.map((seg) => (
                 <tr key={seg}>
-                  <td className="py-1 pr-4 font-medium text-xs sticky left-0 bg-background">{seg}</td>
+                  <td className="py-1 pr-4 font-medium text-xs sticky left-0 bg-background">
+                    {seg}
+                  </td>
                   {dims.map((dim) => {
                     const score = lookup.get(`${seg}|${dim}`);
                     const cellRwg = rwgLookup.get(`${seg}|${dim}`);
@@ -96,7 +106,9 @@ export function SegmentsClient({
                       <td key={dim} className="px-0.5 py-0.5">
                         {score != null ? (
                           <div className="flex flex-col items-center gap-0.5">
-                            <div className={`text-center rounded px-1 py-0.5 text-xs font-medium w-full ${heatColor(score)}`}>
+                            <div
+                              className={`text-center rounded px-1 py-0.5 text-xs font-medium w-full ${heatColor(score)}`}
+                            >
                               {score.toFixed(2)}
                             </div>
                             {cellRwg !== null && cellRwg !== undefined && cellRwg < 0.7 && (
@@ -119,14 +131,18 @@ export function SegmentsClient({
         {[...engBySegment.entries()].filter(([, v]) => v < 3.5).length > 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-red-600">Grupos de riesgo (Engagement &lt; 3.5)</CardTitle>
+              <CardTitle className="text-sm text-red-600">
+                Grupos de riesgo (Engagement &lt; 3.5)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {[...engBySegment.entries()]
                   .filter(([, v]) => v < 3.5)
                   .map(([seg, v]) => (
-                    <Badge key={seg} variant="destructive">{seg}: {v.toFixed(2)}</Badge>
+                    <Badge key={seg} variant="destructive">
+                      {seg}: {v.toFixed(2)}
+                    </Badge>
                   ))}
               </div>
             </CardContent>
@@ -140,14 +156,20 @@ export function SegmentsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Segmentación Demográfica</h1>
-        <p className="text-sm text-muted-foreground">Engagement global: {globalEngScore.toFixed(2)}</p>
+        <p className="text-sm text-muted-foreground">
+          Engagement global: {globalEngScore.toFixed(2)}
+        </p>
       </div>
-      <p className="text-xs text-muted-foreground">Nota: Segmentos con menos de 5 respondentes no se muestran para proteger el anonimato.</p>
+      <p className="text-xs text-muted-foreground">
+        Nota: Segmentos con menos de 5 respondentes no se muestran para proteger el anonimato.
+      </p>
 
       <Tabs defaultValue="department">
         <TabsList>
           {segmentTypes.map((st) => (
-            <TabsTrigger key={st} value={st}>{segLabels[st]}</TabsTrigger>
+            <TabsTrigger key={st} value={st}>
+              {segLabels[st]}
+            </TabsTrigger>
           ))}
         </TabsList>
         {segmentTypes.map((st) => (
@@ -172,10 +194,12 @@ export function SegmentsClient({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => startTransition(async () => {
-                  const result = await profileSegments(campaignId);
-                  if (result.success) setProfiles(result.data);
-                })}
+                onClick={() =>
+                  startTransition(async () => {
+                    const result = await profileSegments(campaignId);
+                    if (result.success) setProfiles(result.data);
+                  })
+                }
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -188,20 +212,26 @@ export function SegmentsClient({
                 <div key={i} className="rounded-md border p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{p.segment}</p>
-                    <Badge variant="outline" className="text-xs">{segLabels[p.segment_type] ?? p.segment_type}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {segLabels[p.segment_type] ?? p.segment_type}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{p.narrative}</p>
                   {p.strengths.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {p.strengths.map((s, j) => (
-                        <Badge key={j} className="bg-green-100 text-green-800 text-xs">{s}</Badge>
+                        <Badge key={j} className="bg-green-100 text-green-800 text-xs">
+                          {s}
+                        </Badge>
                       ))}
                     </div>
                   )}
                   {p.risks.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {p.risks.map((r, j) => (
-                        <Badge key={j} className="bg-red-100 text-red-800 text-xs">{r}</Badge>
+                        <Badge key={j} className="bg-red-100 text-red-800 text-xs">
+                          {r}
+                        </Badge>
                       ))}
                     </div>
                   )}
@@ -214,10 +244,12 @@ export function SegmentsClient({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => startTransition(async () => {
-            const result = await profileSegments(campaignId);
-            if (result.success) setProfiles(result.data);
-          })}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await profileSegments(campaignId);
+              if (result.success) setProfiles(result.data);
+            })
+          }
           disabled={isPending}
         >
           {isPending ? (

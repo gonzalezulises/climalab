@@ -1,20 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  BarChart3,
-  Eye,
-  Target,
-  CheckCircle2,
-  ArrowRight,
-  ChevronDown,
-} from "lucide-react";
+import { BarChart3, Eye, Target, CheckCircle2, ArrowRight, ChevronDown } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -43,8 +31,8 @@ export default function HomePage() {
           Mide lo que importa en tu organización
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-          ClimaLab es una plataforma de diagnóstico de clima organizacional que
-          transforma datos en decisiones accionables sobre tu gente.
+          ClimaLab es una plataforma de diagnóstico de clima organizacional que transforma datos en
+          decisiones accionables sobre tu gente.
         </p>
         <div className="mt-8 flex items-center justify-center gap-4">
           <Button asChild size="lg">
@@ -65,9 +53,7 @@ export default function HomePage() {
       {/* ¿Para qué sirve? */}
       <section id="para-que-sirve" className="border-t bg-muted/30 py-20">
         <div className="mx-auto max-w-5xl px-4">
-          <h2 className="text-center text-3xl font-bold tracking-tight">
-            ¿Para qué sirve?
-          </h2>
+          <h2 className="text-center text-3xl font-bold tracking-tight">¿Para qué sirve?</h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-3">
             <Card>
               <CardHeader>
@@ -76,8 +62,7 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Mide</CardTitle>
                 <CardDescription className="text-sm">
-                  Diagnóstico de 6 indicadores clave de clima en menos de 10
-                  minutos por persona
+                  Diagnóstico de 6 indicadores clave de clima en menos de 10 minutos por persona
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -88,8 +73,8 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Entiende</CardTitle>
                 <CardDescription className="text-sm">
-                  Visualiza resultados por área, antigüedad y perfiles de
-                  compromiso de forma inmediata
+                  Visualiza resultados por área, antigüedad y perfiles de compromiso de forma
+                  inmediata
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -100,8 +85,7 @@ export default function HomePage() {
                 </div>
                 <CardTitle>Actúa</CardTitle>
                 <CardDescription className="text-sm">
-                  Recibe recomendaciones basadas en evidencia para intervenir
-                  donde más importa
+                  Recibe recomendaciones basadas en evidencia para intervenir donde más importa
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -114,9 +98,9 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight">¿Para quién?</h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Empresas de 20 a 500+ colaboradores que quieren gestionar su clima
-            con datos, no con intuición. Ideal para Recursos Humanos, Gerencia
-            General y equipos de transformación organizacional.
+            Empresas de 20 a 500+ colaboradores que quieren gestionar su clima con datos, no con
+            intuición. Ideal para Recursos Humanos, Gerencia General y equipos de transformación
+            organizacional.
           </p>
         </div>
       </section>

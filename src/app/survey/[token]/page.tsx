@@ -65,8 +65,9 @@ async function getSurveyData(token: string) {
     .select("item_id, score")
     .eq("respondent_id", respondent.id);
 
-  const existingResponses = (rawExistingResponses ?? [])
-    .filter((r): r is typeof r & { score: number } => r.score !== null);
+  const existingResponses = (rawExistingResponses ?? []).filter(
+    (r): r is typeof r & { score: number } => r.score !== null
+  );
 
   const org = campaign.organizations as unknown as {
     name: string;
@@ -77,9 +78,10 @@ async function getSurveyData(token: string) {
   // Extract department names, filtering by target_departments if set
   const targetDepts = (campaign as { target_departments?: string[] | null }).target_departments;
   const allDeptNames = (org?.departments ?? []).map((d) => d.name);
-  const filteredDeptNames = targetDepts && targetDepts.length > 0
-    ? allDeptNames.filter((name) => targetDepts.includes(name))
-    : allDeptNames;
+  const filteredDeptNames =
+    targetDepts && targetDepts.length > 0
+      ? allDeptNames.filter((name) => targetDepts.includes(name))
+      : allDeptNames;
 
   return {
     respondent,
@@ -91,11 +93,7 @@ async function getSurveyData(token: string) {
   };
 }
 
-export default async function SurveyPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default async function SurveyPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const data = await getSurveyData(token);
 
@@ -105,12 +103,9 @@ export default async function SurveyPage({
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
           <div className="max-w-md w-full text-center space-y-4">
             <div className="text-5xl">&#10003;</div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Ya completaste esta encuesta
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Ya completaste esta encuesta</h1>
             <p className="text-gray-600">
-              Tus respuestas fueron registradas de forma anónima. Gracias por tu
-              participación.
+              Tus respuestas fueron registradas de forma anónima. Gracias por tu participación.
             </p>
           </div>
         </div>
@@ -120,9 +115,7 @@ export default async function SurveyPage({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md w-full text-center space-y-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Encuesta no disponible
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Encuesta no disponible</h1>
           <p className="text-gray-600">{data.error}</p>
         </div>
       </div>

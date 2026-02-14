@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getRespondents } from "@/actions/campaigns";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardDescription,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type RespondentStats = {
@@ -52,15 +46,15 @@ export function MonitoringPanel({
     return () => clearInterval(interval);
   }, [campaignId, isActive]);
 
-  const responsePct = stats.total > 0
-    ? Math.round((stats.completed / stats.total) * 100)
-    : 0;
+  const responsePct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
   return (
     <div className="space-y-4">
       {isActive && (
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="animate-pulse">En vivo</Badge>
+          <Badge variant="default" className="animate-pulse">
+            En vivo
+          </Badge>
           <span className="text-xs text-muted-foreground">
             Actualización automática cada 30s · Última: {lastUpdate.toLocaleTimeString("es-MX")}
           </span>
@@ -102,7 +96,9 @@ export function MonitoringPanel({
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{stats.completed} de {stats.total} participantes</span>
+                <span>
+                  {stats.completed} de {stats.total} participantes
+                </span>
                 <span className="font-medium">{responsePct}%</span>
               </div>
               <div className="h-3 bg-gray-200 rounded-full overflow-hidden">

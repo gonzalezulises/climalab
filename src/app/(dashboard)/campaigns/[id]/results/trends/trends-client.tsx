@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +19,24 @@ import { generateTrendsNarrative } from "@/actions/ai-insights";
 import type { TrendsNarrative } from "@/actions/ai-insights";
 
 const COLORS = [
-  "#2563eb", "#dc2626", "#16a34a", "#eab308", "#7c3aed",
-  "#0891b2", "#ea580c", "#4f46e5", "#059669", "#be123c",
-  "#0284c7", "#65a30d", "#c026d3", "#f59e0b", "#6366f1",
-  "#14b8a6", "#e11d48", "#8b5cf6",
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#eab308",
+  "#7c3aed",
+  "#0891b2",
+  "#ea580c",
+  "#4f46e5",
+  "#059669",
+  "#be123c",
+  "#0284c7",
+  "#65a30d",
+  "#c026d3",
+  "#f59e0b",
+  "#6366f1",
+  "#14b8a6",
+  "#e11d48",
+  "#8b5cf6",
 ];
 
 type Props = {
@@ -26,16 +47,20 @@ type Props = {
   initialNarrative: TrendsNarrative | null;
 };
 
-export function TrendsClient({ campaignId, organizationId, campaigns, series, initialNarrative }: Props) {
+export function TrendsClient({
+  campaignId,
+  organizationId,
+  campaigns,
+  series,
+  initialNarrative,
+}: Props) {
   const allCodes = Object.keys(series);
   const [selected, setSelected] = useState<string[]>(["ENG"]);
   const [narrative, setNarrative] = useState<TrendsNarrative | null>(initialNarrative);
   const [isPending, startTransition] = useTransition();
 
   const toggleDim = (code: string) => {
-    setSelected((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
+    setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   };
 
   // Build chart data: one row per campaign
@@ -81,7 +106,9 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
 
       {/* Line chart */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Evolución por dimensión</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Evolución por dimensión</CardTitle>
+        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={chartData}>
@@ -91,7 +118,14 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
               <Tooltip formatter={(v) => Number(v).toFixed(2)} />
               <Legend />
               {selected.map((code, i) => (
-                <Line key={code} type="monotone" dataKey={code} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 4 }} />
+                <Line
+                  key={code}
+                  type="monotone"
+                  dataKey={code}
+                  stroke={COLORS[i % COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
               ))}
             </LineChart>
           </ResponsiveContainer>
@@ -100,7 +134,9 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
 
       {/* Comparison table */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Tabla comparativa</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Tabla comparativa</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -108,26 +144,41 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
                 <tr>
                   <th className="text-left py-2 pr-4">Dimensión</th>
                   {campaigns.map((c) => (
-                    <th key={c.id} className="text-center px-3 py-2">{c.name}</th>
+                    <th key={c.id} className="text-center px-3 py-2">
+                      {c.name}
+                    </th>
                   ))}
                   {campaigns.length >= 2 && <th className="text-center px-3 py-2">Δ</th>}
                 </tr>
               </thead>
               <tbody>
                 {tableData.map(({ code, values }) => {
-                  const delta = values.length >= 2 && values[values.length - 1] != null && values[values.length - 2] != null
-                    ? +(values[values.length - 1]! - values[values.length - 2]!).toFixed(2)
-                    : null;
+                  const delta =
+                    values.length >= 2 &&
+                    values[values.length - 1] != null &&
+                    values[values.length - 2] != null
+                      ? +(values[values.length - 1]! - values[values.length - 2]!).toFixed(2)
+                      : null;
                   return (
                     <tr key={code} className="border-t">
                       <td className="py-2 pr-4 font-medium">{code}</td>
                       {values.map((v, i) => (
-                        <td key={i} className="text-center px-3 py-2">{v?.toFixed(2) ?? "—"}</td>
+                        <td key={i} className="text-center px-3 py-2">
+                          {v?.toFixed(2) ?? "—"}
+                        </td>
                       ))}
                       {campaigns.length >= 2 && (
-                        <td className={`text-center px-3 py-2 font-bold ${
-                          delta == null ? "" : delta > 0 ? "text-green-600" : delta < 0 ? "text-red-600" : "text-gray-500"
-                        }`}>
+                        <td
+                          className={`text-center px-3 py-2 font-bold ${
+                            delta == null
+                              ? ""
+                              : delta > 0
+                                ? "text-green-600"
+                                : delta < 0
+                                  ? "text-red-600"
+                                  : "text-gray-500"
+                          }`}
+                        >
                           {delta != null ? `${delta > 0 ? "+" : ""}${delta}` : "—"}
                         </td>
                       )}
@@ -152,10 +203,12 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => startTransition(async () => {
-                  const result = await generateTrendsNarrative(organizationId);
-                  if (result.success) setNarrative(result.data);
-                })}
+                onClick={() =>
+                  startTransition(async () => {
+                    const result = await generateTrendsNarrative(organizationId);
+                    if (result.success) setNarrative(result.data);
+                  })
+                }
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -207,7 +260,9 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
                 <p className="text-xs font-medium text-amber-700 mb-1">Puntos de inflexión</p>
                 <ul className="space-y-1">
                   {narrative.inflection_points.map((item, i) => (
-                    <li key={i} className="text-xs">{item}</li>
+                    <li key={i} className="text-xs">
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -218,10 +273,12 @@ export function TrendsClient({ campaignId, organizationId, campaigns, series, in
         <Button
           size="sm"
           variant="outline"
-          onClick={() => startTransition(async () => {
-            const result = await generateTrendsNarrative(organizationId);
-            if (result.success) setNarrative(result.data);
-          })}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await generateTrendsNarrative(organizationId);
+              if (result.success) setNarrative(result.data);
+            })
+          }
           disabled={isPending}
         >
           {isPending ? (

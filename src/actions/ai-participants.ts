@@ -95,8 +95,7 @@ export async function parseParticipantsWithAI(
     if (err instanceof SyntaxError) {
       return { success: false, error: "El modelo devolvió JSON inválido" };
     }
-    const message =
-      err instanceof Error ? err.message : "Error de conexión con el modelo";
+    const message = err instanceof Error ? err.message : "Error de conexión con el modelo";
     return { success: false, error: message };
   }
 }

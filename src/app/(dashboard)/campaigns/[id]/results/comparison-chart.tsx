@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  Card, CardContent, CardHeader, CardTitle, CardDescription,
-} from "@/components/ui/card";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { compareCampaigns } from "@/actions/campaigns";
 
@@ -22,11 +31,16 @@ export function ComparisonChart({
   previousCampaigns: CampaignOption[];
 }) {
   const [selectedId, setSelectedId] = useState("");
-  const [data, setData] = useState<{ dimension: string; current: number; previous: number; delta: number }[] | null>(null);
+  const [data, setData] = useState<
+    { dimension: string; current: number; previous: number; delta: number }[] | null
+  >(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!selectedId) { setData(null); return; }
+    if (!selectedId) {
+      setData(null);
+      return;
+    }
     setLoading(true);
     compareCampaigns(currentCampaignId, selectedId).then((result) => {
       if (result.success) {
@@ -61,7 +75,9 @@ export function ComparisonChart({
             </SelectTrigger>
             <SelectContent>
               {previousCampaigns.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -84,8 +100,11 @@ export function ComparisonChart({
             {data.map((d) => (
               <div key={d.dimension} className="text-center text-sm">
                 <p className="font-medium truncate">{d.dimension}</p>
-                <p className={`text-lg font-bold ${d.delta > 0 ? "text-green-600" : d.delta < 0 ? "text-red-600" : "text-gray-500"}`}>
-                  {d.delta > 0 ? "+" : ""}{d.delta}
+                <p
+                  className={`text-lg font-bold ${d.delta > 0 ? "text-green-600" : d.delta < 0 ? "text-red-600" : "text-gray-500"}`}
+                >
+                  {d.delta > 0 ? "+" : ""}
+                  {d.delta}
                 </p>
               </div>
             ))}

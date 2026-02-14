@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface KpiCardProps {
-  label: string
-  value: string | number
-  delta?: number
-  subtitle?: string
-  className?: string
+  label: string;
+  value: string | number;
+  delta?: number;
+  subtitle?: string;
+  className?: string;
 }
 
 export function KpiCard({ label, value, delta, subtitle, className }: KpiCardProps) {
@@ -30,10 +30,8 @@ export function KpiCard({ label, value, delta, subtitle, className }: KpiCardPro
             </span>
           )}
         </div>
-        {subtitle && (
-          <span className="text-muted-foreground text-xs">{subtitle}</span>
-        )}
+        {subtitle && <span className="text-muted-foreground text-xs">{subtitle}</span>}
       </CardContent>
     </Card>
-  )
+  );
 }

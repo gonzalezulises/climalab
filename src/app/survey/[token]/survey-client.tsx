@@ -3,12 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -111,11 +106,7 @@ function clearBackup(token: string) {
   }
 }
 
-async function retryAsync<T>(
-  fn: () => Promise<T>,
-  retries = 3,
-  delayMs = 1000
-): Promise<T> {
+async function retryAsync<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       return await fn();
@@ -148,12 +139,7 @@ function shuffleArray<T>(arr: T[], seed: string): T[] {
 // ---------------------------------------------------------------------------
 // Steps: welcome, demographics, dimension pages, open questions, thanks
 // ---------------------------------------------------------------------------
-type Step =
-  | "welcome"
-  | "demographics"
-  | `dimension-${number}`
-  | "open"
-  | "thanks";
+type Step = "welcome" | "demographics" | `dimension-${number}` | "open" | "thanks";
 
 export function SurveyClient({
   token,
@@ -200,15 +186,9 @@ export function SurveyClient({
     respondentStatus === "in_progress" ? "demographics" : "welcome"
   );
   const [scores, setScores] = useState<Record<string, number>>(initialScores);
-  const [department, setDepartment] = useState(
-    respondentDemographics.department ?? ""
-  );
-  const [tenure, setTenure] = useState(
-    respondentDemographics.tenure ?? ""
-  );
-  const [gender, setGender] = useState(
-    respondentDemographics.gender ?? ""
-  );
+  const [department, setDepartment] = useState(respondentDemographics.department ?? "");
+  const [tenure, setTenure] = useState(respondentDemographics.tenure ?? "");
+  const [gender, setGender] = useState(respondentDemographics.gender ?? "");
   const [openStrength, setOpenStrength] = useState("");
   const [openImprovement, setOpenImprovement] = useState("");
   const [openGeneral, setOpenGeneral] = useState("");
@@ -223,10 +203,7 @@ export function SurveyClient({
   }, [scores, token]);
 
   // Calculate progress
-  const totalItems = shuffledDimensions.reduce(
-    (acc, d) => acc + d.items.length,
-    0
-  );
+  const totalItems = shuffledDimensions.reduce((acc, d) => acc + d.items.length, 0);
   const answeredItems = Object.keys(scores).length;
   const progressPct = Math.round((answeredItems / totalItems) * 100);
 
@@ -268,9 +245,7 @@ export function SurveyClient({
 
       if (respondentDemographics.department || respondentDemographics.tenure) {
         for (let i = 0; i < shuffledDimensions.length; i++) {
-          const allAnswered = shuffledDimensions[i].items.every((item) =>
-            answeredSet.has(item.id)
-          );
+          const allAnswered = shuffledDimensions[i].items.every((item) => answeredSet.has(item.id));
           if (!allAnswered) {
             resumeStep = `dimension-${i}`;
             break;
@@ -368,10 +343,7 @@ export function SurveyClient({
 
     // Save eNPS score
     if (enpsScore !== null) {
-      await supabase
-        .from("respondents")
-        .update({ enps_score: enpsScore })
-        .eq("id", respondentId);
+      await supabase.from("respondents").update({ enps_score: enpsScore }).eq("id", respondentId);
     }
   }, [supabase, respondentId, openStrength, openImprovement, openGeneral, enpsScore]);
 
@@ -412,9 +384,7 @@ export function SurveyClient({
       await saveDimensionResponses(dimIndex);
     } catch (err) {
       setSaving(false);
-      setSaveError(
-        err instanceof Error ? err.message : "Error guardando respuestas"
-      );
+      setSaveError(err instanceof Error ? err.message : "Error guardando respuestas");
       return;
     }
     setSaving(false);
@@ -447,9 +417,7 @@ export function SurveyClient({
 
   // Check if all items in a dimension are answered
   const isDimensionComplete = (dimIndex: number) => {
-    return shuffledDimensions[dimIndex].items.every(
-      (item) => scores[item.id] !== undefined
-    );
+    return shuffledDimensions[dimIndex].items.every((item) => scores[item.id] !== undefined);
   };
 
   // -------------------------------------------------------------------------
@@ -457,8 +425,7 @@ export function SurveyClient({
   // -------------------------------------------------------------------------
 
   // Progress bar (only show during questions)
-  const showProgress =
-    step !== "welcome" && step !== "thanks" && step !== "demographics";
+  const showProgress = step !== "welcome" && step !== "thanks" && step !== "demographics";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -471,37 +438,24 @@ export function SurveyClient({
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <div className="text-xs text-gray-500 text-center py-1">
-            {progressPct}% completado
-          </div>
+          <div className="text-xs text-gray-500 text-center py-1">{progressPct}% completado</div>
         </div>
       )}
 
-      <div
-        className={`max-w-2xl mx-auto px-4 py-8 ${showProgress ? "pt-14" : ""}`}
-      >
+      <div className={`max-w-2xl mx-auto px-4 py-8 ${showProgress ? "pt-14" : ""}`}>
         {/* WELCOME */}
         {step === "welcome" && (
           <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-6">
             {logoUrl && (
-              <img
-                src={logoUrl}
-                alt={organizationName}
-                className="h-16 object-contain"
-              />
+              <img src={logoUrl} alt={organizationName} className="h-16 object-contain" />
             )}
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Encuesta de Clima Organizacional
-              </h1>
-              {organizationName && (
-                <p className="text-lg text-gray-600">{organizationName}</p>
-              )}
+              <h1 className="text-3xl font-bold text-gray-900">Encuesta de Clima Organizacional</h1>
+              {organizationName && <p className="text-lg text-gray-600">{organizationName}</p>}
             </div>
             <p className="text-gray-600 max-w-md">
-              Tu opinión es importante para construir un mejor lugar de trabajo.
-              Esta encuesta es completamente anónima y tomará aproximadamente
-              8-10 minutos.
+              Tu opinión es importante para construir un mejor lugar de trabajo. Esta encuesta es
+              completamente anónima y tomará aproximadamente 8-10 minutos.
             </p>
             <Button size="lg" onClick={handleStart}>
               Comenzar
@@ -515,8 +469,8 @@ export function SurveyClient({
             <CardHeader>
               <CardTitle>Datos demográficos</CardTitle>
               <p className="text-sm text-gray-500">
-                Esta información se usa únicamente para análisis agregado y no
-                permite identificarte.
+                Esta información se usa únicamente para análisis agregado y no permite
+                identificarte.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -561,8 +515,7 @@ export function SurveyClient({
               {/* Gender (optional) */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Género{" "}
-                  <span className="text-gray-400 text-xs">(opcional)</span>
+                  Género <span className="text-gray-400 text-xs">(opcional)</span>
                 </label>
                 <Select value={gender} onValueChange={setGender}>
                   <SelectTrigger>
@@ -590,80 +543,76 @@ export function SurveyClient({
         )}
 
         {/* DIMENSION QUESTIONS */}
-        {step.startsWith("dimension-") && (() => {
-          const dimIndex = parseInt(step.split("-")[1]);
-          const dim = shuffledDimensions[dimIndex];
+        {step.startsWith("dimension-") &&
+          (() => {
+            const dimIndex = parseInt(step.split("-")[1]);
+            const dim = shuffledDimensions[dimIndex];
 
-          return (
-            <div className="space-y-6">
-              <div className="text-sm text-gray-500">
-                Sección {dimIndex + 1} de {shuffledDimensions.length}
-              </div>
-
-              {dim.items.map((item, itemIdx) => (
-                <Card key={item.id}>
-                  <CardContent className="pt-6">
-                    <p className="text-base font-medium mb-4">
-                      {itemIdx + 1}. {item.text}
-                    </p>
-                    <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                      {LIKERT_LABELS.map((likert) => (
-                        <button
-                          key={likert.value}
-                          onClick={() =>
-                            setScores((prev) => ({
-                              ...prev,
-                              [item.id]: likert.value,
-                            }))
-                          }
-                          className={`flex flex-col items-center justify-center rounded-lg border-2 p-2 sm:p-3 transition-colors text-xs sm:text-sm ${
-                            scores[item.id] === likert.value
-                              ? "border-blue-600 bg-blue-50 text-blue-700 font-medium"
-                              : "border-gray-200 hover:border-gray-300 text-gray-600"
-                          }`}
-                        >
-                          <span className="text-lg font-bold mb-1">
-                            {likert.value}
-                          </span>
-                          <span className="text-[10px] sm:text-xs leading-tight text-center">
-                            {likert.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {saveError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {saveError} — Intenta de nuevo.
+            return (
+              <div className="space-y-6">
+                <div className="text-sm text-gray-500">
+                  Sección {dimIndex + 1} de {shuffledDimensions.length}
                 </div>
-              )}
 
-              <div className="flex justify-between gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDimensionBack(dimIndex)}
-                >
-                  Atrás
-                </Button>
-                <Button
-                  onClick={() => handleDimensionNext(dimIndex)}
-                  disabled={!isDimensionComplete(dimIndex) || saving}
-                >
-                  {saving
-                    ? "Guardando..."
-                    : dimIndex < shuffledDimensions.length - 1
-                      ? "Siguiente"
-                      : allowComments
+                {dim.items.map((item, itemIdx) => (
+                  <Card key={item.id}>
+                    <CardContent className="pt-6">
+                      <p className="text-base font-medium mb-4">
+                        {itemIdx + 1}. {item.text}
+                      </p>
+                      <div className="grid grid-cols-5 gap-1 sm:gap-2">
+                        {LIKERT_LABELS.map((likert) => (
+                          <button
+                            key={likert.value}
+                            onClick={() =>
+                              setScores((prev) => ({
+                                ...prev,
+                                [item.id]: likert.value,
+                              }))
+                            }
+                            className={`flex flex-col items-center justify-center rounded-lg border-2 p-2 sm:p-3 transition-colors text-xs sm:text-sm ${
+                              scores[item.id] === likert.value
+                                ? "border-blue-600 bg-blue-50 text-blue-700 font-medium"
+                                : "border-gray-200 hover:border-gray-300 text-gray-600"
+                            }`}
+                          >
+                            <span className="text-lg font-bold mb-1">{likert.value}</span>
+                            <span className="text-[10px] sm:text-xs leading-tight text-center">
+                              {likert.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {saveError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {saveError} — Intenta de nuevo.
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-4">
+                  <Button variant="outline" onClick={() => handleDimensionBack(dimIndex)}>
+                    Atrás
+                  </Button>
+                  <Button
+                    onClick={() => handleDimensionNext(dimIndex)}
+                    disabled={!isDimensionComplete(dimIndex) || saving}
+                  >
+                    {saving
+                      ? "Guardando..."
+                      : dimIndex < shuffledDimensions.length - 1
                         ? "Siguiente"
-                        : "Finalizar"}
-                </Button>
+                        : allowComments
+                          ? "Siguiente"
+                          : "Finalizar"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* OPEN QUESTIONS + eNPS */}
         {step === "open" && (
@@ -672,8 +621,8 @@ export function SurveyClient({
               <CardHeader>
                 <CardTitle>eNPS</CardTitle>
                 <p className="text-sm text-gray-500">
-                  ¿Qué tan probable es que recomiendes esta organización como un
-                  buen lugar para trabajar?
+                  ¿Qué tan probable es que recomiendes esta organización como un buen lugar para
+                  trabajar?
                 </p>
               </CardHeader>
               <CardContent>
@@ -708,9 +657,7 @@ export function SurveyClient({
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    ¿Qué es lo mejor de trabajar aquí?
-                  </label>
+                  <label className="text-sm font-medium">¿Qué es lo mejor de trabajar aquí?</label>
                   <textarea
                     value={openStrength}
                     onChange={(e) => setOpenStrength(e.target.value)}
@@ -722,8 +669,7 @@ export function SurveyClient({
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Si pudieras cambiar una cosa de esta organización, ¿cuál
-                    sería?
+                    Si pudieras cambiar una cosa de esta organización, ¿cuál sería?
                   </label>
                   <textarea
                     value={openImprovement}
@@ -753,9 +699,7 @@ export function SurveyClient({
             <div className="flex justify-between gap-4">
               <Button
                 variant="outline"
-                onClick={() =>
-                  setStep(`dimension-${shuffledDimensions.length - 1}`)
-                }
+                onClick={() => setStep(`dimension-${shuffledDimensions.length - 1}`)}
               >
                 Atrás
               </Button>
@@ -777,19 +721,13 @@ export function SurveyClient({
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              ¡Gracias por tu participación!
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">¡Gracias por tu participación!</h1>
             <p className="text-gray-600 max-w-md">
-              Tus respuestas han sido registradas de forma anónima. Tu opinión
-              contribuye a mejorar el ambiente de trabajo.
+              Tus respuestas han sido registradas de forma anónima. Tu opinión contribuye a mejorar
+              el ambiente de trabajo.
             </p>
           </div>
         )}

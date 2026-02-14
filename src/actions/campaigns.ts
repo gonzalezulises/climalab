@@ -12,19 +12,16 @@ import {
 } from "@/lib/validations/campaign";
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
 import type { Json } from "@/types/database";
+import { mean, stdDev, favorability, rwg, cronbachAlpha, pearson } from "@/lib/statistics";
+import { rateLimit } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // getCampaigns — list campaigns with basic stats
 // ---------------------------------------------------------------------------
-export async function getCampaigns(
-  orgId?: string
-): Promise<ActionResult<Campaign[]>> {
+export async function getCampaigns(orgId?: string): Promise<ActionResult<Campaign[]>> {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("campaigns")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false });
 
   if (orgId) {
     query = query.eq("organization_id", orgId);
@@ -42,16 +39,10 @@ export async function getCampaigns(
 // ---------------------------------------------------------------------------
 // getCampaign — single campaign detail
 // ---------------------------------------------------------------------------
-export async function getCampaign(
-  id: string
-): Promise<ActionResult<Campaign>> {
+export async function getCampaign(id: string): Promise<ActionResult<Campaign>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("campaigns")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("campaigns").select("*").eq("id", id).single();
 
   if (error) {
     return { success: false, error: error.message };
@@ -63,9 +54,7 @@ export async function getCampaign(
 // ---------------------------------------------------------------------------
 // createCampaign
 // ---------------------------------------------------------------------------
-export async function createCampaign(
-  input: CreateCampaignInput
-): Promise<ActionResult<Campaign>> {
+export async function createCampaign(input: CreateCampaignInput): Promise<ActionResult<Campaign>> {
   const parsed = createCampaignSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -77,11 +66,7 @@ export async function createCampaign(
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("campaigns")
-    .insert(parsed.data)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("campaigns").insert(parsed.data).select().single();
 
   if (error) {
     return { success: false, error: error.message };
@@ -145,10 +130,7 @@ export async function generateRespondentLinks(
     campaign_id: parsed.data.campaign_id,
   }));
 
-  const { data, error } = await supabase
-    .from("respondents")
-    .insert(rows)
-    .select();
+  const { data, error } = await supabase.from("respondents").insert(rows).select();
 
   if (error) {
     return { success: false, error: error.message };
@@ -161,9 +143,7 @@ export async function generateRespondentLinks(
 // ---------------------------------------------------------------------------
 // getRespondents — list respondents for a campaign
 // ---------------------------------------------------------------------------
-export async function getRespondents(
-  campaignId: string
-): Promise<ActionResult<Respondent[]>> {
+export async function getRespondents(campaignId: string): Promise<ActionResult<Respondent[]>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -220,7 +200,10 @@ export async function getOpenResponses(
   const { data, error } = await supabase
     .from("open_responses")
     .select("question_type, text")
-    .in("respondent_id", respondents.map((r) => r.id))
+    .in(
+      "respondent_id",
+      respondents.map((r) => r.id)
+    )
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -236,10 +219,12 @@ export async function getOpenResponses(
 export async function compareCampaigns(
   currentId: string,
   previousId: string
-): Promise<ActionResult<{
-  current: { code: string; name: string; avg: number; fav: number }[];
-  previous: { code: string; name: string; avg: number; fav: number }[];
-}>> {
+): Promise<
+  ActionResult<{
+    current: { code: string; name: string; avg: number; fav: number }[];
+    previous: { code: string; name: string; avg: number; fav: number }[];
+  }>
+> {
   const supabase = await createClient();
 
   const [currentResults, previousResults] = await Promise.all([
@@ -281,10 +266,15 @@ export async function compareCampaigns(
 // ---------------------------------------------------------------------------
 // calculateResults — the statistical calculation engine
 // ---------------------------------------------------------------------------
-export async function calculateResults(
-  campaignId: string
-): Promise<ActionResult<void>> {
+export async function calculateResults(campaignId: string): Promise<ActionResult<void>> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const rl = rateLimit(`calc:${user?.id ?? "anon"}`, { limit: 3, windowMs: 60_000 });
+  if (!rl.success) {
+    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
+  }
 
   // 1. Fetch campaign + organization
   const { data: campaign, error: campaignError } = await supabase
@@ -309,7 +299,10 @@ export async function calculateResults(
   }
 
   // Build lookup maps
-  const itemMap = new Map<string, { dimension_code: string; is_reverse: boolean; is_attention_check: boolean }>();
+  const itemMap = new Map<
+    string,
+    { dimension_code: string; is_reverse: boolean; is_attention_check: boolean }
+  >();
   const attentionCheckItems: { id: string; expected_score: number }[] = [];
 
   for (const dim of dimensions) {
@@ -393,15 +386,16 @@ export async function calculateResults(
       validRespondentIds.add(respondent.id);
     } else {
       // Mark as disqualified
-      await supabase
-        .from("respondents")
-        .update({ status: "disqualified" })
-        .eq("id", respondent.id);
+      await supabase.from("respondents").update({ status: "disqualified" }).eq("id", respondent.id);
     }
   }
 
   if (validRespondentIds.size === 0) {
-    return { success: false, error: "Todos los respondentes fueron descalificados por fallar las verificaciones de atención" };
+    return {
+      success: false,
+      error:
+        "Todos los respondentes fueron descalificados por fallar las verificaciones de atención",
+    };
   }
 
   // 6. Build per-respondent, per-dimension adjusted scores
@@ -447,60 +441,7 @@ export async function calculateResults(
     respondentData.set(respondent.id, data);
   }
 
-  // 7. Helper functions
-  function mean(arr: number[]): number {
-    return arr.reduce((s, v) => s + v, 0) / arr.length;
-  }
-
-  function stdDev(arr: number[]): number {
-    if (arr.length < 2) return 0;
-    const m = mean(arr);
-    const variance = arr.reduce((s, v) => s + (v - m) ** 2, 0) / (arr.length - 1);
-    return Math.sqrt(variance);
-  }
-
-  function favorability(arr: number[]): number {
-    return (arr.filter((v) => v >= 4).length / arr.length) * 100;
-  }
-
-  // rwg(j) — within-group agreement index (James et al. 1984)
-  // Uses population variance (÷ N) and expected variance for 5-point Likert = 2.0
-  function rwg(scores: number[]): number | null {
-    if (scores.length < 3) return null;
-    const m = mean(scores);
-    const popVariance = scores.reduce((s, v) => s + (v - m) ** 2, 0) / scores.length;
-    const expectedVariance = 2.0; // (A² - 1) / 12 = (25 - 1) / 12
-    const value = 1 - popVariance / expectedVariance;
-    return Math.round(Math.max(0, Math.min(1, value)) * 1000) / 1000;
-  }
-
-  // Cronbach's alpha — internal consistency reliability
-  function cronbachAlpha(itemMatrix: number[][]): number | null {
-    // itemMatrix: rows = respondents, cols = items
-    const n = itemMatrix.length;
-    const k = itemMatrix[0]?.length ?? 0;
-    if (k < 2 || n < 10) return null;
-
-    // Variance of each item (column)
-    let sumItemVar = 0;
-    for (let j = 0; j < k; j++) {
-      const col = itemMatrix.map((row) => row[j]);
-      const m = mean(col);
-      const v = col.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1);
-      sumItemVar += v;
-    }
-
-    // Variance of total scores (row sums)
-    const totals = itemMatrix.map((row) => row.reduce((s, v) => s + v, 0));
-    const totalMean = mean(totals);
-    const totalVar = totals.reduce((s, v) => s + (v - totalMean) ** 2, 0) / (n - 1);
-
-    if (totalVar === 0) return null;
-    const alpha = (k / (k - 1)) * (1 - sumItemVar / totalVar);
-    return Math.round(alpha * 1000) / 1000;
-  }
-
-  // 8. Calculate dimension results (global + segments)
+  // 7. Calculate dimension results (global + segments)
   const results: Array<{
     campaign_id: string;
     result_type: string;
@@ -583,10 +524,9 @@ export async function calculateResults(
         }
 
         group.get(code)!.push(...scores);
-        segmentRespondentCounts.get(segValue)!.set(
-          code,
-          (segmentRespondentCounts.get(segValue)!.get(code) ?? 0) + 1
-        );
+        segmentRespondentCounts
+          .get(segValue)!
+          .set(code, (segmentRespondentCounts.get(segValue)!.get(code) ?? 0) + 1);
         segmentPerRespondentMeans.get(segValue)!.get(code)!.push(mean(scores));
       }
     }
@@ -696,15 +636,28 @@ export async function calculateResults(
       segment_type: "global",
       avg_score: Math.round(mean(engagementScores) * 100) / 100,
       std_score: Math.round(stdDev(engagementScores) * 100) / 100,
-      favorability_pct: Math.round(favorability(engagementScores.map((s) => Math.round(s))) * 10) / 10,
+      favorability_pct:
+        Math.round(favorability(engagementScores.map((s) => Math.round(s))) * 10) / 10,
       response_count: engagementScores.length,
       respondent_count: total,
       metadata: {
         profiles: {
-          ambassadors: { count: profiles.ambassadors, pct: Math.round((profiles.ambassadors / total) * 1000) / 10 },
-          committed: { count: profiles.committed, pct: Math.round((profiles.committed / total) * 1000) / 10 },
-          neutral: { count: profiles.neutral, pct: Math.round((profiles.neutral / total) * 1000) / 10 },
-          disengaged: { count: profiles.disengaged, pct: Math.round((profiles.disengaged / total) * 1000) / 10 },
+          ambassadors: {
+            count: profiles.ambassadors,
+            pct: Math.round((profiles.ambassadors / total) * 1000) / 10,
+          },
+          committed: {
+            count: profiles.committed,
+            pct: Math.round((profiles.committed / total) * 1000) / 10,
+          },
+          neutral: {
+            count: profiles.neutral,
+            pct: Math.round((profiles.neutral / total) * 1000) / 10,
+          },
+          disengaged: {
+            count: profiles.disengaged,
+            pct: Math.round((profiles.disengaged / total) * 1000) / 10,
+          },
         },
       } as Json,
     });
@@ -738,15 +691,24 @@ export async function calculateResults(
       respondent_count: enpsTotal,
       metadata: {
         promoters: { count: promoters, pct: Math.round((promoters / enpsTotal) * 1000) / 10 },
-        passives: { count: enpsTotal - promoters - detractors, pct: Math.round(((enpsTotal - promoters - detractors) / enpsTotal) * 1000) / 10 },
+        passives: {
+          count: enpsTotal - promoters - detractors,
+          pct: Math.round(((enpsTotal - promoters - detractors) / enpsTotal) * 1000) / 10,
+        },
         detractors: { count: detractors, pct: Math.round((detractors / enpsTotal) * 1000) / 10 },
       } as Json,
     });
   }
 
   // 11. Ficha técnica
-  const org = campaign.organizations as unknown as { employee_count: number; departments: unknown } | null;
-  const populationN = (campaign as { target_population?: number | null }).target_population ?? org?.employee_count ?? 0;
+  const org = campaign.organizations as unknown as {
+    employee_count: number;
+    departments: unknown;
+  } | null;
+  const populationN =
+    (campaign as { target_population?: number | null }).target_population ??
+    org?.employee_count ??
+    0;
   const sampleN = validRespondentIds.size;
   const responseRate = populationN > 0 ? Math.round((sampleN / populationN) * 10000) / 100 : 0;
 
@@ -769,17 +731,12 @@ export async function calculateResults(
     .eq("id", campaignId);
 
   // 13. Delete previous results and insert new ones
-  await supabase
-    .from("campaign_results")
-    .delete()
-    .eq("campaign_id", campaignId);
+  await supabase.from("campaign_results").delete().eq("campaign_id", campaignId);
 
   // Insert in batches of 50
   for (let i = 0; i < results.length; i += 50) {
     const batch = results.slice(i, i + 50);
-    const { error: insertError } = await supabase
-      .from("campaign_results")
-      .insert(batch);
+    const { error: insertError } = await supabase.from("campaign_results").insert(batch);
 
     if (insertError) {
       return { success: false, error: `Error guardando resultados: ${insertError.message}` };
@@ -804,30 +761,6 @@ export async function calculateResults(
       if (scores.length > 0) dimAvgs.set(code, mean(scores));
     }
     respondentDimAvgs.set(rid, dimAvgs);
-  }
-
-  function pearson(xArr: number[], yArr: number[]): { r: number; pValue: number; n: number } {
-    const n = xArr.length;
-    if (n < 10) return { r: 0, pValue: 1, n };
-    const mx = mean(xArr);
-    const my = mean(yArr);
-    let sumXY = 0, sumX2 = 0, sumY2 = 0;
-    for (let i = 0; i < n; i++) {
-      const dx = xArr[i] - mx;
-      const dy = yArr[i] - my;
-      sumXY += dx * dy;
-      sumX2 += dx * dx;
-      sumY2 += dy * dy;
-    }
-    const denom = Math.sqrt(sumX2 * sumY2);
-    if (denom === 0) return { r: 0, pValue: 1, n };
-    const r = sumXY / denom;
-    // t-test for significance
-    const t = r * Math.sqrt((n - 2) / (1 - r * r + 1e-10));
-    // Approximate p-value using t-distribution (two-tailed, rough)
-    const df = n - 2;
-    const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - 0.416 * t * t / df) : 1;
-    return { r: Math.round(r * 1000) / 1000, pValue: Math.round(pValue * 10000) / 10000, n };
   }
 
   // Correlation matrix
@@ -860,7 +793,8 @@ export async function calculateResults(
   });
 
   // Engagement drivers: correlation of each dimension with ENG
-  const engDrivers: Array<{ code: string; name: string; r: number; pValue: number; n: number }> = [];
+  const engDrivers: Array<{ code: string; name: string; r: number; pValue: number; n: number }> =
+    [];
   for (const code of dimensionCodes) {
     if (code === "ENG") continue;
     const corr = corrMatrix[code]?.["ENG"];
@@ -925,7 +859,11 @@ export async function calculateResults(
 
   // Check segment engagement < 3.5
   for (const result of results) {
-    if (result.result_type === "dimension" && result.dimension_code === "ENG" && result.segment_type !== "global") {
+    if (
+      result.result_type === "dimension" &&
+      result.dimension_code === "ENG" &&
+      result.segment_type !== "global"
+    ) {
       if (result.avg_score < 3.5) {
         alerts.push({
           severity: "risk_group",
@@ -960,7 +898,12 @@ export async function calculateResults(
     categoryMap[cat].push(dim.code);
   }
 
-  const categoryScores: Array<{ category: string; avg_score: number; favorability_pct: number; dimension_count: number }> = [];
+  const categoryScores: Array<{
+    category: string;
+    avg_score: number;
+    favorability_pct: number;
+    dimension_count: number;
+  }> = [];
   for (const [cat, codes] of Object.entries(categoryMap)) {
     const allScores: number[] = [];
     for (const code of codes) {
@@ -1008,7 +951,10 @@ export async function calculateResults(
       let complete = true;
       for (const item of dimItems) {
         const rawScore = responses.get(item.id);
-        if (rawScore === undefined) { complete = false; break; }
+        if (rawScore === undefined) {
+          complete = false;
+          break;
+        }
         const info = itemMap.get(item.id);
         row.push(info?.is_reverse ? 6 - rawScore : rawScore);
       }

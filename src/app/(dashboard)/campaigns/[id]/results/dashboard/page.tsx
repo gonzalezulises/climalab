@@ -5,14 +5,17 @@ import { getBusinessIndicators } from "@/actions/business-indicators";
 import { getDashboardNarrative } from "@/actions/ai-insights";
 import { DashboardClient } from "./dashboard-client";
 
-export default async function DashboardPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function DashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const [campaignResult, resultsResult, alertsResult, categoriesResult, indicatorsResult, narrativeResult] = await Promise.all([
+  const [
+    campaignResult,
+    resultsResult,
+    alertsResult,
+    categoriesResult,
+    indicatorsResult,
+    narrativeResult,
+  ] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getAlerts(id),
@@ -45,7 +48,16 @@ export default async function DashboardPage({
   const engResult = results.find((r) => r.result_type === "engagement");
   const engScore = engResult ? Number(engResult.avg_score) : 0;
   const profiles = engResult
-    ? (engResult.metadata as { profiles: { ambassadors: { count: number; pct: number }; committed: { count: number; pct: number }; neutral: { count: number; pct: number }; disengaged: { count: number; pct: number } } }).profiles
+    ? (
+        engResult.metadata as {
+          profiles: {
+            ambassadors: { count: number; pct: number };
+            committed: { count: number; pct: number };
+            neutral: { count: number; pct: number };
+            disengaged: { count: number; pct: number };
+          };
+        }
+      ).profiles
     : null;
 
   // eNPS result
@@ -53,9 +65,12 @@ export default async function DashboardPage({
   const enpsScore = enpsResult ? Number(enpsResult.avg_score) : 0;
 
   // Global favorability
-  const globalFav = dimensionResults.length > 0
-    ? Math.round(dimensionResults.reduce((s, d) => s + d.fav, 0) / dimensionResults.length * 10) / 10
-    : 0;
+  const globalFav =
+    dimensionResults.length > 0
+      ? Math.round(
+          (dimensionResults.reduce((s, d) => s + d.fav, 0) / dimensionResults.length) * 10
+        ) / 10
+      : 0;
 
   // Get previous campaigns for wave comparison
   const allCampaigns = await getCampaigns(campaign.organization_id);

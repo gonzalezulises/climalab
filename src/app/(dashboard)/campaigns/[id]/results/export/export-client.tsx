@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, FileDown, FileJson, Sparkles, Loader2 } from "lucide-react";
-import { generateAllInsights, getDashboardNarrative, getCommentAnalysis, getDriverInsights } from "@/actions/ai-insights";
+import {
+  generateAllInsights,
+  getDashboardNarrative,
+  getCommentAnalysis,
+  getDriverInsights,
+} from "@/actions/ai-insights";
 import type { DashboardNarrative, CommentAnalysis, DriverInsights } from "@/actions/ai-insights";
 
 type Props = {
@@ -24,7 +29,15 @@ type Props = {
   initialDriverInsights: DriverInsights | null;
 };
 
-export function ExportClient({ campaignId, campaignName, dimensionData, allResults, initialNarrative, initialCommentAnalysis, initialDriverInsights }: Props) {
+export function ExportClient({
+  campaignId,
+  campaignName,
+  dimensionData,
+  allResults,
+  initialNarrative,
+  initialCommentAnalysis,
+  initialDriverInsights,
+}: Props) {
   const [isPending, startTransition] = useTransition();
   const [report, setReport] = useState<string | null>(null);
   function exportPDF() {
@@ -32,9 +45,23 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
   }
 
   function exportCSV() {
-    const headers = ["Dimensión (código)", "Dimensión (nombre)", "Score promedio", "Desv. estándar", "Favorabilidad %", "n"];
+    const headers = [
+      "Dimensión (código)",
+      "Dimensión (nombre)",
+      "Score promedio",
+      "Desv. estándar",
+      "Favorabilidad %",
+      "n",
+    ];
     const rows = dimensionData.map((d) =>
-      [d.dimension_code, d.dimension_name, d.avg_score, d.std_score, d.favorability_pct, d.respondent_count].join(",")
+      [
+        d.dimension_code,
+        d.dimension_name,
+        d.avg_score,
+        d.std_score,
+        d.favorability_pct,
+        d.respondent_count,
+      ].join(",")
     );
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -68,7 +95,8 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
               <Printer className="h-5 w-5" /> Exportar PDF
             </CardTitle>
             <CardDescription>
-              Genera un PDF con el dashboard completo de resultados usando la función de impresión del navegador.
+              Genera un PDF con el dashboard completo de resultados usando la función de impresión
+              del navegador.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -84,7 +112,8 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
               <FileDown className="h-5 w-5" /> Exportar CSV
             </CardTitle>
             <CardDescription>
-              Descarga los scores por dimensión en formato CSV, compatible con Excel y Google Sheets.
+              Descarga los scores por dimensión en formato CSV, compatible con Excel y Google
+              Sheets.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -100,7 +129,8 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
               <FileJson className="h-5 w-5" /> Exportar JSON
             </CardTitle>
             <CardDescription>
-              Dump completo de todos los datos analíticos en formato JSON para integración con otros sistemas.
+              Dump completo de todos los datos analíticos en formato JSON para integración con otros
+              sistemas.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -115,7 +145,8 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
               <Sparkles className="h-5 w-5" /> Reporte Ejecutivo IA
             </CardTitle>
             <CardDescription>
-              Genera un informe ejecutivo con resumen, análisis de comentarios, drivers y recomendaciones.
+              Genera un informe ejecutivo con resumen, análisis de comentarios, drivers y
+              recomendaciones.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -216,7 +247,9 @@ export function ExportClient({ campaignId, campaignName, dimensionData, allResul
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Vista previa de datos</CardTitle>
-          <CardDescription>{dimensionData.length} dimensiones | {allResults.length} registros totales</CardDescription>
+          <CardDescription>
+            {dimensionData.length} dimensiones | {allResults.length} registros totales
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

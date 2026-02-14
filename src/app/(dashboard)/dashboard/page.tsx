@@ -2,22 +2,13 @@ import Link from "next/link";
 import { getOrganizations } from "@/actions/organizations";
 import { getCampaigns } from "@/actions/campaigns";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Plus, Users, BarChart3, Activity } from "lucide-react";
 import { SIZE_CATEGORIES } from "@/lib/constants";
 
 export default async function DashboardPage() {
-  const [orgsResult, campaignsResult] = await Promise.all([
-    getOrganizations(),
-    getCampaigns(),
-  ]);
+  const [orgsResult, campaignsResult] = await Promise.all([getOrganizations(), getCampaigns()]);
 
   const organizations = orgsResult.success ? orgsResult.data : [];
   const campaigns = campaignsResult.success ? campaignsResult.data : [];
@@ -25,22 +16,15 @@ export default async function DashboardPage() {
   const activeCampaigns = campaigns.filter((c) => c.status === "active");
   const closedCampaigns = campaigns
     .filter((c) => c.status === "closed")
-    .sort(
-      (a, b) =>
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    );
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   const lastMeasurement = closedCampaigns[0] ?? null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Panel de Control
-          </h1>
-          <p className="text-muted-foreground">
-            {organizations.length} organizaciones
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Panel de Control</h1>
+          <p className="text-muted-foreground">{organizations.length} organizaciones</p>
         </div>
         <Button asChild>
           <Link href="/organizations/new">
@@ -78,12 +62,8 @@ export default async function DashboardPage() {
           <CardContent>
             {lastMeasurement ? (
               <div>
-                <div className="text-2xl font-bold">
-                  {lastMeasurement.response_rate ?? "—"}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {lastMeasurement.name} · Respuesta
-                </p>
+                <div className="text-2xl font-bold">{lastMeasurement.response_rate ?? "—"}%</div>
+                <p className="text-xs text-muted-foreground">{lastMeasurement.name} · Respuesta</p>
               </div>
             ) : (
               <div className="text-2xl font-bold text-muted-foreground">—</div>
@@ -97,9 +77,7 @@ export default async function DashboardPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              No hay organizaciones registradas
-            </p>
+            <p className="text-muted-foreground">No hay organizaciones registradas</p>
           </CardContent>
         </Card>
       ) : (
@@ -110,13 +88,9 @@ export default async function DashboardPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{org.name}</CardTitle>
-                    <Badge variant="secondary">
-                      {SIZE_CATEGORIES[org.size_category]}
-                    </Badge>
+                    <Badge variant="secondary">{SIZE_CATEGORIES[org.size_category]}</Badge>
                   </div>
-                  <CardDescription>
-                    {org.industry || org.country}
-                  </CardDescription>
+                  <CardDescription>{org.industry || org.country}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -124,7 +98,9 @@ export default async function DashboardPage() {
                       <Users className="h-4 w-4" />
                       <span>{org.employee_count} empleados</span>
                     </div>
-                    <span>{Array.isArray(org.departments) ? org.departments.length : 0} departamentos</span>
+                    <span>
+                      {Array.isArray(org.departments) ? org.departments.length : 0} departamentos
+                    </span>
                   </div>
                 </CardContent>
               </Card>

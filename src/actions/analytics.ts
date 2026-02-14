@@ -18,7 +18,10 @@ export async function getCorrelationMatrix(
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data: data.data as Record<string, Record<string, { r: number; pValue: number; n: number }>> };
+  return {
+    success: true,
+    data: data.data as Record<string, Record<string, { r: number; pValue: number; n: number }>>,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -26,7 +29,9 @@ export async function getCorrelationMatrix(
 // ---------------------------------------------------------------------------
 export async function getEngagementDrivers(
   campaignId: string
-): Promise<ActionResult<Array<{ code: string; name: string; r: number; pValue: number; n: number }>>> {
+): Promise<
+  ActionResult<Array<{ code: string; name: string; r: number; pValue: number; n: number }>>
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -36,25 +41,30 @@ export async function getEngagementDrivers(
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data: data.data as Array<{ code: string; name: string; r: number; pValue: number; n: number }> };
+  return {
+    success: true,
+    data: data.data as Array<{ code: string; name: string; r: number; pValue: number; n: number }>,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // getAlerts — automatic alerts (crisis, attention, decline, risk_group)
 // ---------------------------------------------------------------------------
-export async function getAlerts(
-  campaignId: string
-): Promise<ActionResult<Array<{
-  severity: string;
-  type: string;
-  dimension_code?: string;
-  item_id?: string;
-  item_text?: string;
-  segment_key?: string;
-  value: number;
-  threshold: number;
-  message: string;
-}>>> {
+export async function getAlerts(campaignId: string): Promise<
+  ActionResult<
+    Array<{
+      severity: string;
+      type: string;
+      dimension_code?: string;
+      item_id?: string;
+      item_text?: string;
+      segment_key?: string;
+      value: number;
+      threshold: number;
+      message: string;
+    }>
+  >
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -64,15 +74,35 @@ export async function getAlerts(
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data: data.data as Array<{ severity: string; type: string; dimension_code?: string; item_id?: string; item_text?: string; segment_key?: string; value: number; threshold: number; message: string }> };
+  return {
+    success: true,
+    data: data.data as Array<{
+      severity: string;
+      type: string;
+      dimension_code?: string;
+      item_id?: string;
+      item_text?: string;
+      segment_key?: string;
+      value: number;
+      threshold: number;
+      message: string;
+    }>,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // getCategoryScores — average scores by dimension category
 // ---------------------------------------------------------------------------
-export async function getCategoryScores(
-  campaignId: string
-): Promise<ActionResult<Array<{ category: string; avg_score: number; favorability_pct: number; dimension_count: number }>>> {
+export async function getCategoryScores(campaignId: string): Promise<
+  ActionResult<
+    Array<{
+      category: string;
+      avg_score: number;
+      favorability_pct: number;
+      dimension_count: number;
+    }>
+  >
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -82,21 +112,31 @@ export async function getCategoryScores(
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data: data.data as Array<{ category: string; avg_score: number; favorability_pct: number; dimension_count: number }> };
+  return {
+    success: true,
+    data: data.data as Array<{
+      category: string;
+      avg_score: number;
+      favorability_pct: number;
+      dimension_count: number;
+    }>,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // getReliabilityData — Cronbach's alpha per dimension
 // ---------------------------------------------------------------------------
-export async function getReliabilityData(
-  campaignId: string
-): Promise<ActionResult<Array<{
-  dimension_code: string;
-  dimension_name: string;
-  alpha: number | null;
-  item_count: number;
-  respondent_count: number;
-}>>> {
+export async function getReliabilityData(campaignId: string): Promise<
+  ActionResult<
+    Array<{
+      dimension_code: string;
+      dimension_name: string;
+      alpha: number | null;
+      item_count: number;
+      respondent_count: number;
+    }>
+  >
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -121,21 +161,25 @@ export async function getReliabilityData(
 // ---------------------------------------------------------------------------
 // getHeatmapData — dimension scores segmented by department (with rwg)
 // ---------------------------------------------------------------------------
-export async function getHeatmapData(
-  campaignId: string
-): Promise<ActionResult<Array<{
-  segment_key: string;
-  segment_type: string;
-  dimension_code: string;
-  avg_score: number;
-  favorability_pct: number;
-  respondent_count: number;
-  rwg: number | null;
-}>>> {
+export async function getHeatmapData(campaignId: string): Promise<
+  ActionResult<
+    Array<{
+      segment_key: string;
+      segment_type: string;
+      dimension_code: string;
+      avg_score: number;
+      favorability_pct: number;
+      respondent_count: number;
+      rwg: number | null;
+    }>
+  >
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_results")
-    .select("segment_key, segment_type, dimension_code, avg_score, favorability_pct, respondent_count, metadata")
+    .select(
+      "segment_key, segment_type, dimension_code, avg_score, favorability_pct, respondent_count, metadata"
+    )
     .eq("campaign_id", campaignId)
     .eq("result_type", "dimension")
     .neq("segment_type", "global");
@@ -158,14 +202,16 @@ export async function getHeatmapData(
 // ---------------------------------------------------------------------------
 // getWaveComparison — compare all closed campaigns for an organization
 // ---------------------------------------------------------------------------
-export async function getWaveComparison(
-  organizationId: string
-): Promise<ActionResult<Array<{
-  campaign_id: string;
-  campaign_name: string;
-  ends_at: string;
-  dimensions: Array<{ code: string; avg_score: number; favorability_pct: number }>;
-}>>> {
+export async function getWaveComparison(organizationId: string): Promise<
+  ActionResult<
+    Array<{
+      campaign_id: string;
+      campaign_name: string;
+      ends_at: string;
+      dimensions: Array<{ code: string; avg_score: number; favorability_pct: number }>;
+    }>
+  >
+> {
   const supabase = await createClient();
 
   const { data: campaigns, error: campErr } = await supabase
@@ -205,12 +251,12 @@ export async function getWaveComparison(
 // ---------------------------------------------------------------------------
 // getTrendsData — historical dimension scores across all closed campaigns
 // ---------------------------------------------------------------------------
-export async function getTrendsData(
-  organizationId: string
-): Promise<ActionResult<{
-  campaigns: Array<{ id: string; name: string; ends_at: string }>;
-  series: Record<string, Array<{ campaign_id: string; avg_score: number }>>;
-}>> {
+export async function getTrendsData(organizationId: string): Promise<
+  ActionResult<{
+    campaigns: Array<{ id: string; name: string; ends_at: string }>;
+    series: Record<string, Array<{ campaign_id: string; avg_score: number }>>;
+  }>
+> {
   const supabase = await createClient();
 
   const { data: campaigns, error: campErr } = await supabase

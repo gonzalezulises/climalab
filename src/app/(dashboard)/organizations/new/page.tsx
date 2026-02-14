@@ -7,13 +7,7 @@ import { createOrganization } from "@/actions/organizations";
 import { createOrganizationSchema } from "@/lib/validations/organization";
 import { COUNTRIES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -73,17 +67,13 @@ export default function NewOrganizationPage() {
     const stepErrors: Record<string, string> = {};
 
     if (step === 1) {
-      if (!name || name.length < 2)
-        stepErrors.name = "Mínimo 2 caracteres";
-      if (!slug || slug.length < 2)
-        stepErrors.slug = "Mínimo 2 caracteres";
+      if (!name || name.length < 2) stepErrors.name = "Mínimo 2 caracteres";
+      if (!slug || slug.length < 2) stepErrors.slug = "Mínimo 2 caracteres";
       else if (!/^[a-z0-9-]+$/.test(slug))
         stepErrors.slug = "Solo letras minúsculas, números y guiones";
       if (!country) stepErrors.country = "País requerido";
-      if (!employeeCount || empCount < 1)
-        stepErrors.employee_count = "Mínimo 1 empleado";
-      if (empCount > 500)
-        stepErrors.employee_count = "Máximo 500 empleados";
+      if (!employeeCount || empCount < 1) stepErrors.employee_count = "Mínimo 1 empleado";
+      if (empCount > 500) stepErrors.employee_count = "Máximo 500 empleados";
     }
 
     if (step === 3) {
@@ -165,18 +155,14 @@ export default function NewOrganizationPage() {
             </div>
             <span
               className={`text-sm hidden sm:inline ${
-                step === s.number
-                  ? "font-medium text-foreground"
-                  : "text-muted-foreground"
+                step === s.number ? "font-medium text-foreground" : "text-muted-foreground"
               }`}
             >
               {s.label}
             </span>
             {i < STEPS.length - 1 && (
               <div
-                className={`w-8 h-0.5 ${
-                  step > s.number ? "bg-primary" : "bg-muted-foreground/30"
-                }`}
+                className={`w-8 h-0.5 ${step > s.number ? "bg-primary" : "bg-muted-foreground/30"}`}
               />
             )}
           </div>
@@ -191,12 +177,9 @@ export default function NewOrganizationPage() {
             {step === 3 && "Contacto Principal"}
           </CardTitle>
           <CardDescription>
-            {step === 1 &&
-              "Información básica de la organización."}
-            {step === 2 &&
-              "Define los departamentos y su dotación."}
-            {step === 3 &&
-              "Persona de contacto para la medición."}
+            {step === 1 && "Información básica de la organización."}
+            {step === 2 && "Define los departamentos y su dotación."}
+            {step === 3 && "Persona de contacto para la medición."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -214,9 +197,7 @@ export default function NewOrganizationPage() {
                   }}
                   placeholder="Empresa Demo S.A."
                 />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
-                )}
+                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
@@ -231,14 +212,8 @@ export default function NewOrganizationPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                />
-                {errors.slug && (
-                  <p className="text-sm text-destructive">{errors.slug}</p>
-                )}
+                <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} />
+                {errors.slug && <p className="text-sm text-destructive">{errors.slug}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -264,18 +239,12 @@ export default function NewOrganizationPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.country && (
-                    <p className="text-sm text-destructive">
-                      {errors.country}
-                    </p>
-                  )}
+                  {errors.country && <p className="text-sm text-destructive">{errors.country}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="employee_count">
-                  Número total de empleados *
-                </Label>
+                <Label htmlFor="employee_count">Número total de empleados *</Label>
                 <Input
                   id="employee_count"
                   type="number"
@@ -285,9 +254,7 @@ export default function NewOrganizationPage() {
                   onChange={(e) => setEmployeeCount(e.target.value)}
                 />
                 {errors.employee_count && (
-                  <p className="text-sm text-destructive">
-                    {errors.employee_count}
-                  </p>
+                  <p className="text-sm text-destructive">{errors.employee_count}</p>
                 )}
               </div>
             </>
@@ -306,8 +273,7 @@ export default function NewOrganizationPage() {
           {step === 3 && (
             <>
               <p className="text-sm text-muted-foreground">
-                Persona responsable de coordinar la medición de clima en la
-                organización.
+                Persona responsable de coordinar la medición de clima en la organización.
               </p>
 
               <div className="space-y-2">
@@ -330,9 +296,7 @@ export default function NewOrganizationPage() {
                   placeholder="maria@empresa.com"
                 />
                 {errors.contact_email && (
-                  <p className="text-sm text-destructive">
-                    {errors.contact_email}
-                  </p>
+                  <p className="text-sm text-destructive">{errors.contact_email}</p>
                 )}
               </div>
 
@@ -362,11 +326,7 @@ export default function NewOrganizationPage() {
                 Siguiente
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-              >
+              <Button type="button" onClick={handleSubmit} disabled={loading}>
                 {loading ? "Creando..." : "Crear Organización"}
               </Button>
             )}

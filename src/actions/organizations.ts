@@ -25,16 +25,10 @@ export async function getOrganizations(): Promise<ActionResult<Organization[]>> 
   return { success: true, data };
 }
 
-export async function getOrganization(
-  id: string
-): Promise<ActionResult<Organization>> {
+export async function getOrganization(id: string): Promise<ActionResult<Organization>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("organizations")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("organizations").select("*").eq("id", id).single();
 
   if (error) {
     return { success: false, error: error.message };

@@ -17,9 +17,13 @@ export function CopyAllLinksButton({ links }: { links: string[] }) {
   return (
     <Button variant="outline" size="sm" onClick={handleCopy}>
       {copied ? (
-        <><Check className="mr-1 h-4 w-4" /> Copiados ({links.length})</>
+        <>
+          <Check className="mr-1 h-4 w-4" /> Copiados ({links.length})
+        </>
       ) : (
-        <><Copy className="mr-1 h-4 w-4" /> Copiar todos</>
+        <>
+          <Copy className="mr-1 h-4 w-4" /> Copiar todos
+        </>
       )}
     </Button>
   );

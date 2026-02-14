@@ -1,34 +1,34 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface HeatmapDataPoint {
-  segment_key: string
-  segment_type: string
-  dimension_code: string
-  avg_score: number
+  segment_key: string;
+  segment_type: string;
+  dimension_code: string;
+  avg_score: number;
 }
 
 interface HeatmapChartProps {
-  data: HeatmapDataPoint[]
-  dimensionCodes: string[]
+  data: HeatmapDataPoint[];
+  dimensionCodes: string[];
 }
 
 function getCellStyle(score: number): string {
-  if (score >= 4.5) return "bg-green-700 text-white"
-  if (score >= 4.2) return "bg-green-500 text-white"
-  if (score >= 3.8) return "bg-yellow-400 text-black"
-  if (score >= 3.5) return "bg-orange-400 text-white"
-  return "bg-red-500 text-white"
+  if (score >= 4.5) return "bg-green-700 text-white";
+  if (score >= 4.2) return "bg-green-500 text-white";
+  if (score >= 3.8) return "bg-yellow-400 text-black";
+  if (score >= 3.5) return "bg-orange-400 text-white";
+  return "bg-red-500 text-white";
 }
 
 export function HeatmapChart({ data, dimensionCodes }: HeatmapChartProps) {
-  const segments = [...new Set(data.map((d) => d.segment_key))]
+  const segments = [...new Set(data.map((d) => d.segment_key))];
 
-  const lookup = new Map<string, number>()
+  const lookup = new Map<string, number>();
   data.forEach((d) => {
-    lookup.set(`${d.segment_key}__${d.dimension_code}`, d.avg_score)
-  })
+    lookup.set(`${d.segment_key}__${d.dimension_code}`, d.avg_score);
+  });
 
   return (
     <Card>
@@ -43,10 +43,7 @@ export function HeatmapChart({ data, dimensionCodes }: HeatmapChartProps) {
                 Segmento
               </th>
               {dimensionCodes.map((code) => (
-                <th
-                  key={code}
-                  className="p-2 text-center font-medium border-b min-w-[60px]"
-                >
+                <th key={code} className="p-2 text-center font-medium border-b min-w-[60px]">
                   {code}
                 </th>
               ))}
@@ -59,7 +56,7 @@ export function HeatmapChart({ data, dimensionCodes }: HeatmapChartProps) {
                   {segment}
                 </td>
                 {dimensionCodes.map((code) => {
-                  const score = lookup.get(`${segment}__${code}`)
+                  const score = lookup.get(`${segment}__${code}`);
                   return (
                     <td
                       key={code}
@@ -74,7 +71,7 @@ export function HeatmapChart({ data, dimensionCodes }: HeatmapChartProps) {
                     >
                       {score !== undefined ? score.toFixed(1) : "—"}
                     </td>
-                  )
+                  );
                 })}
               </tr>
             ))}
@@ -104,5 +101,5 @@ export function HeatmapChart({ data, dimensionCodes }: HeatmapChartProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

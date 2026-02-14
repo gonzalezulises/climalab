@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_LABELS } from "@/lib/constants";
+import { env } from "@/lib/env";
+import { rateLimit } from "@/lib/rate-limit";
 import type { ActionResult } from "@/types";
 import type { Database } from "@/types/database";
 
@@ -15,8 +17,8 @@ async function callOllama(
   userContent: string,
   opts?: { maxTokens?: number; temperature?: number; timeout?: number }
 ): Promise<ActionResult<string>> {
-  const baseUrl = process.env.OLLAMA_BASE_URL;
-  const model = process.env.OLLAMA_MODEL || "qwen2.5:72b";
+  const baseUrl = env.OLLAMA_BASE_URL;
+  const model = env.OLLAMA_MODEL;
 
   if (!baseUrl) {
     return { success: false, error: "OLLAMA_BASE_URL no configurado" };
@@ -58,9 +60,12 @@ function extractJSON<T>(text: string): T | null {
   // Try to find JSON object or array
   const objMatch = text.match(/\{[\s\S]*\}/);
   const arrMatch = text.match(/\[[\s\S]*\]/);
-  const match = objMatch && arrMatch
-    ? (objMatch.index! <= arrMatch.index! ? objMatch : arrMatch)
-    : objMatch ?? arrMatch;
+  const match =
+    objMatch && arrMatch
+      ? objMatch.index! <= arrMatch.index!
+        ? objMatch
+        : arrMatch
+      : (objMatch ?? arrMatch);
   if (!match) return null;
   try {
     return JSON.parse(match[0]) as T;
@@ -69,11 +74,30 @@ function extractJSON<T>(text: string): T | null {
   }
 }
 
+async function checkAiRateLimit(
+  limitPerMin: number
+): Promise<{ success: false; error: string } | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const rl = rateLimit(`ai:${user?.id ?? "anon"}`, { limit: limitPerMin, windowMs: 60_000 });
+  if (!rl.success) {
+    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Types for AI insight payloads
 // ---------------------------------------------------------------------------
 export type CommentAnalysis = {
-  themes: Array<{ theme: string; count: number; sentiment: "positive" | "negative" | "neutral"; examples: string[] }>;
+  themes: Array<{
+    theme: string;
+    count: number;
+    sentiment: "positive" | "negative" | "neutral";
+    examples: string[];
+  }>;
   summary: { strengths: string; improvements: string; general: string };
   sentiment_distribution: { positive: number; negative: number; neutral: number };
 };
@@ -135,6 +159,9 @@ Reglas:
 - Los números de sentiment_distribution deben sumar el total de comentarios`;
 
 export async function analyzeComments(campaignId: string): Promise<ActionResult<CommentAnalysis>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
 
   const { data: comments } = await supabase
@@ -193,7 +220,12 @@ Reglas:
 - Las recomendaciones deben ser accionables y priorizadas
 - Usa español latinoamericano profesional`;
 
-export async function generateNarrative(campaignId: string): Promise<ActionResult<DashboardNarrative>> {
+export async function generateNarrative(
+  campaignId: string
+): Promise<ActionResult<DashboardNarrative>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
 
   // Fetch all needed data
@@ -203,10 +235,7 @@ export async function generateNarrative(campaignId: string): Promise<ActionResul
       .select("result_type, segment_type, dimension_code, avg_score, favorability_pct, metadata")
       .eq("campaign_id", campaignId)
       .eq("segment_type", "global"),
-    supabase
-      .from("campaign_analytics")
-      .select("analysis_type, data")
-      .eq("campaign_id", campaignId),
+    supabase.from("campaign_analytics").select("analysis_type, data").eq("campaign_id", campaignId),
   ]);
 
   const results = resultsRes.data ?? [];
@@ -225,9 +254,13 @@ export async function generateNarrative(campaignId: string): Promise<ActionResul
   const engagement = results.find((r) => r.result_type === "engagement");
   const enps = results.find((r) => r.result_type === "enps");
   const alertsRaw = analytics.find((a) => a.analysis_type === "alerts")?.data;
-  const alertsArr = Array.isArray(alertsRaw) ? (alertsRaw as Array<{ severity: string; message: string }>) : [];
+  const alertsArr = Array.isArray(alertsRaw)
+    ? (alertsRaw as Array<{ severity: string; message: string }>)
+    : [];
   const categoriesRaw = analytics.find((a) => a.analysis_type === "categories")?.data;
-  const categoriesArr = Array.isArray(categoriesRaw) ? (categoriesRaw as Array<{ category: string; avg_score: number; favorability_pct: number }>) : [];
+  const categoriesArr = Array.isArray(categoriesRaw)
+    ? (categoriesRaw as Array<{ category: string; avg_score: number; favorability_pct: number }>)
+    : [];
 
   const userContent = `Datos de la encuesta de clima organizacional:
 
@@ -236,18 +269,38 @@ eNPS: ${enps ? Number(enps.avg_score) : "N/A"}
 ALERTAS: ${alertsArr.length} detectadas
 
 CATEGORÍAS:
-${categoriesArr.length > 0 ? categoriesArr.map((c) =>
-  `- ${CATEGORY_LABELS[c.category] ?? c.category}: ${c.avg_score.toFixed(2)} (${c.favorability_pct}% favorable)`
-).join("\n") : "N/A"}
+${
+  categoriesArr.length > 0
+    ? categoriesArr
+        .map(
+          (c) =>
+            `- ${CATEGORY_LABELS[c.category] ?? c.category}: ${c.avg_score.toFixed(2)} (${c.favorability_pct}% favorable)`
+        )
+        .join("\n")
+    : "N/A"
+}
 
 TOP 5 DIMENSIONES:
-${dimensions.slice(0, 5).map((d) => `- ${d.name} (${d.code}): ${d.avg.toFixed(2)} — ${d.fav}% favorable`).join("\n")}
+${dimensions
+  .slice(0, 5)
+  .map((d) => `- ${d.name} (${d.code}): ${d.avg.toFixed(2)} — ${d.fav}% favorable`)
+  .join("\n")}
 
 BOTTOM 5 DIMENSIONES:
-${dimensions.slice(-5).map((d) => `- ${d.name} (${d.code}): ${d.avg.toFixed(2)} — ${d.fav}% favorable`).join("\n")}
+${dimensions
+  .slice(-5)
+  .map((d) => `- ${d.name} (${d.code}): ${d.avg.toFixed(2)} — ${d.fav}% favorable`)
+  .join("\n")}
 
 ALERTAS PRINCIPALES:
-${alertsArr.length > 0 ? alertsArr.slice(0, 5).map((a) => `- [${a.severity}] ${a.message}`).join("\n") : "Ninguna"}`;
+${
+  alertsArr.length > 0
+    ? alertsArr
+        .slice(0, 5)
+        .map((a) => `- [${a.severity}] ${a.message}`)
+        .join("\n")
+    : "Ninguna"
+}`;
 
   const result = await callOllama(NARRATIVE_SYSTEM, userContent);
   if (!result.success) return result;
@@ -279,6 +332,9 @@ Reglas:
 - Usa español latinoamericano profesional`;
 
 export async function interpretDrivers(campaignId: string): Promise<ActionResult<DriverInsights>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
 
   const [driversRes, resultsRes] = await Promise.all([
@@ -338,6 +394,9 @@ Reglas:
 - Usa español latinoamericano profesional`;
 
 export async function contextualizeAlerts(campaignId: string): Promise<ActionResult<AlertContext>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("campaign_analytics")
@@ -346,7 +405,13 @@ export async function contextualizeAlerts(campaignId: string): Promise<ActionRes
     .eq("analysis_type", "alerts")
     .single();
 
-  const alerts = (data?.data ?? []) as Array<{ severity: string; message: string; type: string; value: number; threshold: number }>;
+  const alerts = (data?.data ?? []) as Array<{
+    severity: string;
+    message: string;
+    type: string;
+    value: number;
+    threshold: number;
+  }>;
   if (alerts.length === 0) {
     return { success: false, error: "No hay alertas" };
   }
@@ -382,6 +447,9 @@ Reglas:
 - Usa español latinoamericano profesional`;
 
 export async function profileSegments(campaignId: string): Promise<ActionResult<SegmentProfiles>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
 
   const [segRes, globalRes] = await Promise.all([
@@ -424,7 +492,8 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
     const [segType, segKey] = key.split("|");
     userContent += `SEGMENTO: ${segKey} (${segType})\n`;
     for (const r of rows) {
-      const dimName = (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
+      const dimName =
+        (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
       const global = globalScores.get(r.dimension_code!) ?? 0;
       const diff = Number(r.avg_score) - global;
       userContent += `  ${dimName} (${r.dimension_code}): ${Number(r.avg_score).toFixed(2)} (global: ${global.toFixed(2)}, delta: ${diff > 0 ? "+" : ""}${diff.toFixed(2)})\n`;
@@ -465,6 +534,9 @@ Reglas:
 export async function generateTrendsNarrative(
   organizationId: string
 ): Promise<ActionResult<TrendsNarrative>> {
+  const blocked = await checkAiRateLimit(5);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
 
   const { data: campaigns } = await supabase
@@ -490,7 +562,8 @@ export async function generateTrendsNarrative(
 
     userContent += `CAMPAÑA: ${c.name} (${c.ends_at ?? "sin fecha"})\n`;
     for (const r of results ?? []) {
-      const dimName = (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
+      const dimName =
+        (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
       userContent += `  ${dimName} (${r.dimension_code}): ${Number(r.avg_score).toFixed(2)}\n`;
     }
     userContent += "\n";
@@ -500,7 +573,8 @@ export async function generateTrendsNarrative(
   if (!result.success) return result;
 
   const parsed = extractJSON<TrendsNarrative>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió narrativa de tendencias válida" };
+  if (!parsed)
+    return { success: false, error: "El modelo no devolvió narrativa de tendencias válida" };
 
   return { success: true, data: parsed };
 }
@@ -508,16 +582,23 @@ export async function generateTrendsNarrative(
 // ---------------------------------------------------------------------------
 // Orchestrator — generate all AI insights for a campaign
 // ---------------------------------------------------------------------------
-export async function generateAllInsights(
-  campaignId: string
-): Promise<ActionResult<{
-  comment_analysis: boolean;
-  dashboard_narrative: boolean;
-  driver_insights: boolean;
-  alert_context: boolean;
-  segment_profiles: boolean;
-}>> {
+export async function generateAllInsights(campaignId: string): Promise<
+  ActionResult<{
+    comment_analysis: boolean;
+    dashboard_narrative: boolean;
+    driver_insights: boolean;
+    alert_context: boolean;
+    segment_profiles: boolean;
+  }>
+> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const rl = rateLimit(`ai-all:${user?.id ?? "anon"}`, { limit: 2, windowMs: 60_000 });
+  if (!rl.success) {
+    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
+  }
 
   // Get campaign org for trends
   const { data: campaign } = await supabase
@@ -540,14 +621,45 @@ export async function generateAllInsights(
   // Store successful results in campaign_analytics
   const inserts: Array<{ campaign_id: string; analysis_type: string; data: Json }> = [];
 
-  if (comments.success) inserts.push({ campaign_id: campaignId, analysis_type: "comment_analysis", data: comments.data as unknown as Json });
-  if (narrative.success) inserts.push({ campaign_id: campaignId, analysis_type: "dashboard_narrative", data: narrative.data as unknown as Json });
-  if (drivers.success) inserts.push({ campaign_id: campaignId, analysis_type: "driver_insights", data: drivers.data as unknown as Json });
-  if (alerts.success) inserts.push({ campaign_id: campaignId, analysis_type: "alert_context", data: alerts.data as unknown as Json });
-  if (segments.success) inserts.push({ campaign_id: campaignId, analysis_type: "segment_profiles", data: segments.data as unknown as Json });
+  if (comments.success)
+    inserts.push({
+      campaign_id: campaignId,
+      analysis_type: "comment_analysis",
+      data: comments.data as unknown as Json,
+    });
+  if (narrative.success)
+    inserts.push({
+      campaign_id: campaignId,
+      analysis_type: "dashboard_narrative",
+      data: narrative.data as unknown as Json,
+    });
+  if (drivers.success)
+    inserts.push({
+      campaign_id: campaignId,
+      analysis_type: "driver_insights",
+      data: drivers.data as unknown as Json,
+    });
+  if (alerts.success)
+    inserts.push({
+      campaign_id: campaignId,
+      analysis_type: "alert_context",
+      data: alerts.data as unknown as Json,
+    });
+  if (segments.success)
+    inserts.push({
+      campaign_id: campaignId,
+      analysis_type: "segment_profiles",
+      data: segments.data as unknown as Json,
+    });
 
   // Delete previous AI insights before inserting new ones
-  const aiTypes = ["comment_analysis", "dashboard_narrative", "driver_insights", "alert_context", "segment_profiles"];
+  const aiTypes = [
+    "comment_analysis",
+    "dashboard_narrative",
+    "driver_insights",
+    "alert_context",
+    "segment_profiles",
+  ];
   await supabase
     .from("campaign_analytics")
     .delete()
@@ -566,9 +678,11 @@ export async function generateAllInsights(
       .delete()
       .eq("campaign_id", campaignId)
       .eq("analysis_type", "trends_narrative");
-    await supabase
-      .from("campaign_analytics")
-      .insert({ campaign_id: campaignId, analysis_type: "trends_narrative", data: trendsResult.data as unknown as Json });
+    await supabase.from("campaign_analytics").insert({
+      campaign_id: campaignId,
+      analysis_type: "trends_narrative",
+      data: trendsResult.data as unknown as Json,
+    });
   }
 
   return {
@@ -586,7 +700,9 @@ export async function generateAllInsights(
 // ---------------------------------------------------------------------------
 // Retrieval functions — fetch stored AI insights
 // ---------------------------------------------------------------------------
-export async function getCommentAnalysis(campaignId: string): Promise<ActionResult<CommentAnalysis>> {
+export async function getCommentAnalysis(
+  campaignId: string
+): Promise<ActionResult<CommentAnalysis>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -599,7 +715,9 @@ export async function getCommentAnalysis(campaignId: string): Promise<ActionResu
   return { success: true, data: data.data as CommentAnalysis };
 }
 
-export async function getDashboardNarrative(campaignId: string): Promise<ActionResult<DashboardNarrative>> {
+export async function getDashboardNarrative(
+  campaignId: string
+): Promise<ActionResult<DashboardNarrative>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -638,7 +756,9 @@ export async function getAlertContext(campaignId: string): Promise<ActionResult<
   return { success: true, data: data.data as AlertContext };
 }
 
-export async function getSegmentProfiles(campaignId: string): Promise<ActionResult<SegmentProfiles>> {
+export async function getSegmentProfiles(
+  campaignId: string
+): Promise<ActionResult<SegmentProfiles>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")
@@ -651,7 +771,9 @@ export async function getSegmentProfiles(campaignId: string): Promise<ActionResu
   return { success: true, data: data.data as SegmentProfiles };
 }
 
-export async function getTrendsNarrative(campaignId: string): Promise<ActionResult<TrendsNarrative>> {
+export async function getTrendsNarrative(
+  campaignId: string
+): Promise<ActionResult<TrendsNarrative>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("campaign_analytics")

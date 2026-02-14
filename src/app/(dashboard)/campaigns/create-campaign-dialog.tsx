@@ -75,9 +75,7 @@ export function CreateCampaignDialog({
 
   function toggleDept(deptName: string) {
     setSelectedDepts((prev) =>
-      prev.includes(deptName)
-        ? prev.filter((d) => d !== deptName)
-        : [...prev, deptName]
+      prev.includes(deptName) ? prev.filter((d) => d !== deptName) : [...prev, deptName]
     );
   }
 
@@ -110,16 +108,11 @@ export function CreateCampaignDialog({
       instrument_id: instrumentId,
       starts_at: startsAt ? new Date(startsAt).toISOString() : undefined,
       ends_at: endsAt ? new Date(endsAt).toISOString() : undefined,
-      measurement_objective: objective
-        ? (objective as "initial_diagnosis")
-        : undefined,
+      measurement_objective: objective ? (objective as "initial_diagnosis") : undefined,
       objective_description:
-        objective === "other" && objectiveDescription
-          ? objectiveDescription
-          : undefined,
+        objective === "other" && objectiveDescription ? objectiveDescription : undefined,
       context_notes: contextNotes || undefined,
-      target_departments:
-        !allOrg && selectedDepts.length > 0 ? selectedDepts : undefined,
+      target_departments: !allOrg && selectedDepts.length > 0 ? selectedDepts : undefined,
       target_population: targetPop,
     });
 
@@ -145,9 +138,7 @@ export function CreateCampaignDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear campaña</DialogTitle>
-          <DialogDescription>
-            Configura una nueva ola de medición de clima.
-          </DialogDescription>
+          <DialogDescription>Configura una nueva ola de medición de clima.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -188,10 +179,7 @@ export function CreateCampaignDialog({
 
               <div className="space-y-2">
                 <Label>Instrumento *</Label>
-                <Select
-                  value={instrumentId}
-                  onValueChange={setInstrumentId}
-                >
+                <Select value={instrumentId} onValueChange={setInstrumentId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona instrumento" />
                   </SelectTrigger>
@@ -214,9 +202,7 @@ export function CreateCampaignDialog({
             <Label className="text-base font-medium">Ventana temporal</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-sm text-muted-foreground">
-                  Inicio
-                </Label>
+                <Label className="text-sm text-muted-foreground">Inicio</Label>
                 <input
                   type="datetime-local"
                   value={startsAt}
@@ -242,30 +228,24 @@ export function CreateCampaignDialog({
           <div className="space-y-4">
             <Label className="text-base font-medium">Contexto</Label>
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">
-                Objetivo de medición
-              </Label>
+              <Label className="text-sm text-muted-foreground">Objetivo de medición</Label>
               <Select value={objective} onValueChange={setObjective}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona objetivo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(MEASUREMENT_OBJECTIVES).map(
-                    ([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
+                  {Object.entries(MEASUREMENT_OBJECTIVES).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             {objective === "other" && (
               <div className="space-y-1">
-                <Label className="text-sm text-muted-foreground">
-                  Describe el objetivo
-                </Label>
+                <Label className="text-sm text-muted-foreground">Describe el objetivo</Label>
                 <textarea
                   value={objectiveDescription}
                   onChange={(e) => setObjectiveDescription(e.target.value)}
@@ -277,9 +257,7 @@ export function CreateCampaignDialog({
             )}
 
             <div className="space-y-1">
-              <Label className="text-sm text-muted-foreground">
-                Notas de contexto
-              </Label>
+              <Label className="text-sm text-muted-foreground">Notas de contexto</Label>
               <textarea
                 value={contextNotes}
                 onChange={(e) => setContextNotes(e.target.value)}
@@ -332,9 +310,7 @@ export function CreateCampaignDialog({
                             <span className="text-sm">{dept.name}</span>
                           </div>
                           {dept.headcount != null && (
-                            <span className="text-sm text-muted-foreground">
-                              {dept.headcount}
-                            </span>
+                            <span className="text-sm text-muted-foreground">{dept.headcount}</span>
                           )}
                         </label>
                       ))}
@@ -343,24 +319,16 @@ export function CreateCampaignDialog({
                 )}
 
                 <div className="space-y-1">
-                  <Label className="text-sm text-muted-foreground">
-                    Población objetivo
-                  </Label>
+                  <Label className="text-sm text-muted-foreground">Población objetivo</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
                       min={1}
-                      value={
-                        targetPopulationOverride || calculatedPopulation || ""
-                      }
-                      onChange={(e) =>
-                        setTargetPopulationOverride(e.target.value)
-                      }
+                      value={targetPopulationOverride || calculatedPopulation || ""}
+                      onChange={(e) => setTargetPopulationOverride(e.target.value)}
                       className="w-32"
                     />
-                    <span className="text-sm text-muted-foreground">
-                      personas
-                    </span>
+                    <span className="text-sm text-muted-foreground">personas</span>
                     {targetPopulationOverride && (
                       <button
                         type="button"
@@ -378,10 +346,7 @@ export function CreateCampaignDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={!name || !orgId || !instrumentId || loading}
-          >
+          <Button onClick={handleSubmit} disabled={!name || !orgId || !instrumentId || loading}>
             {loading ? "Creando..." : "Crear campaña"}
           </Button>
         </DialogFooter>

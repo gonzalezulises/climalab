@@ -18,28 +18,20 @@ function classifyFav(fav: number) {
   return { label: "Crisis", bg: "bg-red-100 text-red-800" };
 }
 
-export function AnalysisLevelCards({
-  categories,
-}: {
-  categories: CategoryScore[];
-}) {
+export function AnalysisLevelCards({ categories }: { categories: CategoryScore[] }) {
   const levels = Object.entries(ANALYSIS_LEVELS);
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {levels.map(([key, level]) => {
-        const levelCategories = categories.filter((c) =>
-          level.categories.includes(c.category)
-        );
+        const levelCategories = categories.filter((c) => level.categories.includes(c.category));
 
         if (levelCategories.length === 0) return null;
 
         const avgScore =
-          levelCategories.reduce((s, c) => s + c.avg_score, 0) /
-          levelCategories.length;
+          levelCategories.reduce((s, c) => s + c.avg_score, 0) / levelCategories.length;
         const avgFav =
-          levelCategories.reduce((s, c) => s + c.favorability_pct, 0) /
-          levelCategories.length;
+          levelCategories.reduce((s, c) => s + c.favorability_pct, 0) / levelCategories.length;
         const cls = classifyFav(avgFav);
 
         return (
@@ -48,17 +40,13 @@ export function AnalysisLevelCards({
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <p className="text-sm font-semibold">{level.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {level.description}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{level.description}</p>
                 </div>
                 <Badge className={cls.bg}>{cls.label}</Badge>
               </div>
               <p className="text-2xl font-bold">{avgScore.toFixed(2)}</p>
               <p className="text-xs text-muted-foreground">
-                {levelCategories
-                  .map((c) => CATEGORY_LABELS[c.category] ?? c.category)
-                  .join(", ")}
+                {levelCategories.map((c) => CATEGORY_LABELS[c.category] ?? c.category).join(", ")}
               </p>
             </CardContent>
           </Card>

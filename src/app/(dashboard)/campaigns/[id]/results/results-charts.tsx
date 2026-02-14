@@ -13,12 +13,7 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type DimensionData = {
   code: string;
@@ -88,11 +83,7 @@ export function ResultsCharts({
             <RadarChart data={radarData}>
               <PolarGrid />
               <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 12 }} />
-              <PolarRadiusAxis
-                angle={90}
-                domain={[0, 5]}
-                tick={{ fontSize: 10 }}
-              />
+              <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 10 }} />
               <Radar
                 name="Score"
                 dataKey="score"
@@ -100,9 +91,7 @@ export function ResultsCharts({
                 fill="#2563eb"
                 fillOpacity={0.3}
               />
-              <Tooltip
-                formatter={(value) => [Number(value).toFixed(2), "Score"]}
-              />
+              <Tooltip formatter={(value) => [Number(value).toFixed(2), "Score"]} />
             </RadarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -112,9 +101,7 @@ export function ResultsCharts({
       {profiles && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">
-              Perfiles de engagement
-            </CardTitle>
+            <CardTitle className="text-base">Perfiles de engagement</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={320}>
@@ -131,14 +118,8 @@ export function ResultsCharts({
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value) => [`${value}%`, ""]}
-                />
-                <Legend
-                  formatter={(value) => (
-                    <span className="text-sm">{value}</span>
-                  )}
-                />
+                <Tooltip formatter={(value) => [`${value}%`, ""]} />
+                <Legend formatter={(value) => <span className="text-sm">{value}</span>} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -149,9 +130,7 @@ export function ResultsCharts({
       {heatmapData && (
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">
-              Heatmap: Departamento × Dimensión
-            </CardTitle>
+            <CardTitle className="text-base">Heatmap: Departamento × Dimensión</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -169,9 +148,7 @@ export function ResultsCharts({
                 <tbody>
                   {heatmapData.departments.map((dept, deptIdx) => (
                     <tr key={dept}>
-                      <td className="py-2 pr-4 font-medium text-xs">
-                        {dept}
-                      </td>
+                      <td className="py-2 pr-4 font-medium text-xs">{dept}</td>
                       {heatmapData.values[deptIdx].map((score, dimIdx) => (
                         <td key={dimIdx} className="px-1 py-1">
                           <div

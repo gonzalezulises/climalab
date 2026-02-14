@@ -13,16 +13,16 @@ Plataforma SaaS multi-tenant para medición de clima organizacional en PYMEs (1�
 
 ClimaLab Core v2.0 — instrumento de 35 ítems + 2 attention checks, 8 dimensiones basadas en evidencia psicométrica:
 
-| Dimensión | Código | Base teórica | Ítems |
-|-----------|--------|-------------|-------|
-| Liderazgo y Supervisión | LID | LMX-7 (Graen & Uhl-Bien, 1995) | 5 |
-| Justicia Organizacional | JUS | Organizational Justice (Colquitt, 2001) | 5 |
-| Sentido de Pertenencia | PER | Org. Identification (Mael & Ashforth, 1992) | 4 |
-| Innovación y Cambio | INN | Psychological Safety (Edmondson, 1999) | 5 |
-| Bienestar y Equilibrio | BIE | JD-R Model (Bakker & Demerouti, 2007) | 4 |
-| Claridad y Desarrollo | CLA | Role Clarity (Rizzo, 1970) | 4 |
-| Comunicación y Participación | COM | Org. Communication (Roberts & O'Reilly, 1974) | 4 |
-| Engagement y Compromiso | ENG | UWES-9 (Schaufeli, 2006) | 4 |
+| Dimensión                    | Código | Base teórica                                  | Ítems |
+| ---------------------------- | ------ | --------------------------------------------- | ----- |
+| Liderazgo y Supervisión      | LID    | LMX-7 (Graen & Uhl-Bien, 1995)                | 5     |
+| Justicia Organizacional      | JUS    | Organizational Justice (Colquitt, 2001)       | 5     |
+| Sentido de Pertenencia       | PER    | Org. Identification (Mael & Ashforth, 1992)   | 4     |
+| Innovación y Cambio          | INN    | Psychological Safety (Edmondson, 1999)        | 5     |
+| Bienestar y Equilibrio       | BIE    | JD-R Model (Bakker & Demerouti, 2007)         | 4     |
+| Claridad y Desarrollo        | CLA    | Role Clarity (Rizzo, 1970)                    | 4     |
+| Comunicación y Participación | COM    | Org. Communication (Roberts & O'Reilly, 1974) | 4     |
+| Engagement y Compromiso      | ENG    | UWES-9 (Schaufeli, 2006)                      | 4     |
 
 Incluye instrumento de Pulso (1 anchor por dimensión = 8 ítems) para seguimiento frecuente.
 

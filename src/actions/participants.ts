@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendSurveyInvitation } from "@/lib/email";
+import { env } from "@/lib/env";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   addParticipantsSchema,
   updateParticipantSchema,
@@ -83,7 +85,10 @@ export async function addParticipants(
   }
 
   if (campaign.status !== "draft" && campaign.status !== "active") {
-    return { success: false, error: "Solo se pueden agregar participantes a campañas en borrador o activas" };
+    return {
+      success: false,
+      error: "Solo se pueden agregar participantes a campañas en borrador o activas",
+    };
   }
 
   // Fetch existing emails to deduplicate
@@ -94,9 +99,7 @@ export async function addParticipants(
 
   const existingEmails = new Set((existing ?? []).map((e) => e.email.toLowerCase()));
 
-  const newParticipants = participants.filter(
-    (p) => !existingEmails.has(p.email.toLowerCase())
-  );
+  const newParticipants = participants.filter((p) => !existingEmails.has(p.email.toLowerCase()));
 
   if (newParticipants.length === 0) {
     return {
@@ -128,9 +131,7 @@ export async function addParticipants(
     department: p.department ?? null,
   }));
 
-  const { error: partError } = await supabase
-    .from("participants")
-    .insert(participantRows);
+  const { error: partError } = await supabase.from("participants").insert(participantRows);
 
   if (partError) {
     return { success: false, error: partError.message };
@@ -190,6 +191,13 @@ export async function sendInvitations(
 
   const { campaign_id, participant_ids } = parsed.data;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const rl = rateLimit(`invite:${user?.id ?? "anon"}`, { limit: 10, windowMs: 60_000 });
+  if (!rl.success) {
+    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
+  }
 
   // Fetch campaign + org info
   const { data: campaign } = await supabase
@@ -203,7 +211,10 @@ export async function sendInvitations(
   }
 
   if (campaign.status !== "draft" && campaign.status !== "active") {
-    return { success: false, error: "Solo se pueden enviar invitaciones en campañas en borrador o activas" };
+    return {
+      success: false,
+      error: "Solo se pueden enviar invitaciones en campañas en borrador o activas",
+    };
   }
 
   const orgName = (campaign.organizations as unknown as { name: string })?.name ?? "";
@@ -219,7 +230,7 @@ export async function sendInvitations(
     return { success: false, error: "No se encontraron participantes" };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL;
   let sent = 0;
   let failed = 0;
 
@@ -300,7 +311,7 @@ export async function resendInvitation(
     return { success: false, error: "Token de respondente no encontrado" };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL;
   const surveyUrl = `${baseUrl}/survey/${resp.token}`;
 
   const result = await sendSurveyInvitation({
@@ -357,7 +368,10 @@ export async function removeParticipant(
   }
 
   if (campaign.status !== "draft") {
-    return { success: false, error: "Solo se pueden eliminar participantes en campañas en borrador" };
+    return {
+      success: false,
+      error: "Solo se pueden eliminar participantes en campañas en borrador",
+    };
   }
 
   // Get participant to find respondent_id

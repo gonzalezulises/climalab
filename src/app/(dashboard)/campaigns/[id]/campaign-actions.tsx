@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  updateCampaignStatus,
-  calculateResults,
-} from "@/actions/campaigns";
+import { updateCampaignStatus, calculateResults } from "@/actions/campaigns";
 import { Button } from "@/components/ui/button";
 import type { Campaign } from "@/types";
 import { Play, Lock, Calculator } from "lucide-react";
 
-export function CampaignActions({ campaign, participantCount }: { campaign: Campaign; participantCount: number }) {
+export function CampaignActions({
+  campaign,
+  participantCount,
+}: {
+  campaign: Campaign;
+  participantCount: number;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 

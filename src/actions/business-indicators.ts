@@ -79,9 +79,7 @@ export async function deleteBusinessIndicator(
 // ---------------------------------------------------------------------------
 // getBusinessIndicatorsTrend — indicators across all closed campaigns for an org
 // ---------------------------------------------------------------------------
-export async function getBusinessIndicatorsTrend(
-  organizationId: string
-): Promise<
+export async function getBusinessIndicatorsTrend(organizationId: string): Promise<
   ActionResult<
     Array<{
       campaign_id: string;

@@ -1,0 +1,33 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div className="flex flex-1 items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-destructive">Error en el panel</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            Ocurrio un error al cargar esta seccion. Por favor, intenta nuevamente.
+          </p>
+          {error.digest && (
+            <p className="text-muted-foreground mt-2 text-xs">Codigo: {error.digest}</p>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button onClick={reset}>Reintentar</Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}

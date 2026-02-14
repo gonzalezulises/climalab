@@ -58,20 +58,17 @@ export const ANALYSIS_LEVELS: Record<
 > = {
   individual: {
     label: "Sistema Individual",
-    description:
-      "Cómo percibe el colaborador su experiencia personal de trabajo",
+    description: "Cómo percibe el colaborador su experiencia personal de trabajo",
     categories: ["bienestar"],
   },
   interpersonal: {
     label: "Sistema Interpersonal",
-    description:
-      "Cómo percibe la relación con supervisores, pares y la dirección",
+    description: "Cómo percibe la relación con supervisores, pares y la dirección",
     categories: ["direccion"],
   },
   organizacional: {
     label: "Sistema Organizacional",
-    description:
-      "Cómo percibe las prácticas, políticas y cultura de la organización",
+    description: "Cómo percibe las prácticas, políticas y cultura de la organización",
     categories: ["compensacion", "cultura"],
   },
 };

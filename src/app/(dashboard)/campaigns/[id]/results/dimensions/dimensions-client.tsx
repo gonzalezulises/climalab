@@ -52,17 +52,24 @@ function DimensionCard({ dim, items }: { dim: DimensionResult; items: ItemResult
       <CardContent>
         <div className="flex items-baseline gap-2 mb-3">
           <span className="text-2xl font-bold">{dim.avg.toFixed(2)}</span>
-          <span className="text-xs text-muted-foreground">Fav: {dim.fav}% | n={dim.n}</span>
+          <span className="text-xs text-muted-foreground">
+            Fav: {dim.fav}% | n={dim.n}
+          </span>
         </div>
         <div className="space-y-1.5">
           {items.map((item) => (
             <div key={item.id} className="flex items-center gap-2">
               <div className="flex-1">
-                <p className="text-xs truncate" title={item.text}>{item.text}</p>
+                <p className="text-xs truncate" title={item.text}>
+                  {item.text}
+                </p>
               </div>
               <span className="text-xs font-medium w-10 text-right">{item.avg.toFixed(2)}</span>
               <div className="w-16 h-1.5 rounded-full bg-gray-200">
-                <div className="h-1.5 rounded-full bg-blue-600" style={{ width: `${(item.avg / 5) * 100}%` }} />
+                <div
+                  className="h-1.5 rounded-full bg-blue-600"
+                  style={{ width: `${(item.avg / 5) * 100}%` }}
+                />
               </div>
             </div>
           ))}
@@ -97,13 +104,15 @@ export function DimensionsClient({
   function renderDimGrid(dims: DimensionResult[]) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {dims.sort((a, b) => b.avg - a.avg).map((dim) => (
-          <DimensionCard
-            key={dim.code}
-            dim={dim}
-            items={itemResults.filter((i) => i.code === dim.code).sort((a, b) => b.avg - a.avg)}
-          />
-        ))}
+        {dims
+          .sort((a, b) => b.avg - a.avg)
+          .map((dim) => (
+            <DimensionCard
+              key={dim.code}
+              dim={dim}
+              items={itemResults.filter((i) => i.code === dim.code).sort((a, b) => b.avg - a.avg)}
+            />
+          ))}
       </div>
     );
   }
@@ -133,7 +142,9 @@ export function DimensionsClient({
           <TabsList>
             <TabsTrigger value="todas">Todas</TabsTrigger>
             {categoryKeys.map((cat) => (
-              <TabsTrigger key={cat} value={cat}>{CATEGORY_LABELS[cat]}</TabsTrigger>
+              <TabsTrigger key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </TabsTrigger>
             ))}
           </TabsList>
 
@@ -153,8 +164,8 @@ export function DimensionsClient({
 
           {levelKeys.map((level) => {
             const levelConfig = ANALYSIS_LEVELS[level];
-            const dims = dimensionResults.filter(
-              (d) => levelConfig.categories.includes(d.category)
+            const dims = dimensionResults.filter((d) =>
+              levelConfig.categories.includes(d.category)
             );
             if (dims.length === 0) return null;
             return (

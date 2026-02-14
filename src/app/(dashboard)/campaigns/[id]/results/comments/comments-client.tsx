@@ -12,8 +12,16 @@ import type { CommentAnalysis } from "@/actions/ai-insights";
 type Comment = { question_type: string; text: string };
 
 const typeConfig: Record<string, { label: string; color: string; border: string }> = {
-  strength: { label: "Fortalezas", color: "bg-green-100 text-green-800", border: "border-l-green-500" },
-  improvement: { label: "Áreas de mejora", color: "bg-yellow-100 text-yellow-800", border: "border-l-yellow-500" },
+  strength: {
+    label: "Fortalezas",
+    color: "bg-green-100 text-green-800",
+    border: "border-l-green-500",
+  },
+  improvement: {
+    label: "Áreas de mejora",
+    color: "bg-yellow-100 text-yellow-800",
+    border: "border-l-yellow-500",
+  },
   general: { label: "General", color: "bg-blue-100 text-blue-800", border: "border-l-blue-500" },
 };
 
@@ -105,7 +113,9 @@ export function CommentsClient({
                   <div className="mt-1 h-1.5 rounded-full bg-gray-200">
                     <div
                       className={`h-1.5 rounded-full ${s === "positive" ? "bg-green-500" : s === "negative" ? "bg-red-500" : "bg-gray-400"}`}
-                      style={{ width: `${comments.length > 0 ? (analysis.sentiment_distribution[s] / comments.length) * 100 : 0}%` }}
+                      style={{
+                        width: `${comments.length > 0 ? (analysis.sentiment_distribution[s] / comments.length) * 100 : 0}%`,
+                      }}
                     />
                   </div>
                 </CardContent>
@@ -148,7 +158,9 @@ export function CommentsClient({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Temas identificados</CardTitle>
-                <CardDescription>{analysis.themes.length} temas extraídos de los comentarios</CardDescription>
+                <CardDescription>
+                  {analysis.themes.length} temas extraídos de los comentarios
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -157,7 +169,9 @@ export function CommentsClient({
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-medium">{theme.theme}</p>
-                          <Badge variant="outline" className="text-xs">{theme.count} menciones</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {theme.count} menciones
+                          </Badge>
                           <Badge className={sentimentColors[theme.sentiment]}>
                             {sentimentLabels[theme.sentiment]}
                           </Badge>
@@ -165,7 +179,9 @@ export function CommentsClient({
                         {theme.examples.length > 0 && (
                           <div className="space-y-1 mt-2">
                             {theme.examples.map((ex, j) => (
-                              <p key={j} className="text-xs text-muted-foreground italic">&quot;{ex}&quot;</p>
+                              <p key={j} className="text-xs text-muted-foreground italic">
+                                &quot;{ex}&quot;
+                              </p>
                             ))}
                           </div>
                         )}

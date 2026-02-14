@@ -4,17 +4,14 @@ import { getOrganizations } from "@/actions/organizations";
 import { getInstruments } from "@/actions/instruments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Plus } from "lucide-react";
 import { CreateCampaignDialog } from "./create-campaign-dialog";
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_LABELS: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   draft: { label: "Borrador", variant: "secondary" },
   active: { label: "Activa", variant: "default" },
   closed: { label: "Cerrada", variant: "outline" },
@@ -45,19 +42,14 @@ export default async function CampaignsPage() {
             Gestiona las olas de medición de clima organizacional
           </p>
         </div>
-        <CreateCampaignDialog
-          organizations={organizations}
-          instruments={instruments}
-        />
+        <CreateCampaignDialog organizations={organizations} instruments={instruments} />
       </div>
 
       {campaigns.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              No hay campañas registradas
-            </p>
+            <p className="text-muted-foreground">No hay campañas registradas</p>
           </CardContent>
         </Card>
       ) : (
@@ -70,9 +62,7 @@ export default async function CampaignsPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                      <Badge variant={statusInfo.variant}>
-                        {statusInfo.label}
-                      </Badge>
+                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                     </div>
                     <CardDescription>
                       {orgMap.get(campaign.organization_id) ?? "—"} ·{" "}
@@ -83,15 +73,11 @@ export default async function CampaignsPage() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       {campaign.starts_at && (
                         <span>
-                          Inicio:{" "}
-                          {new Date(campaign.starts_at).toLocaleDateString("es-MX")}
+                          Inicio: {new Date(campaign.starts_at).toLocaleDateString("es-MX")}
                         </span>
                       )}
                       {campaign.ends_at && (
-                        <span>
-                          Fin:{" "}
-                          {new Date(campaign.ends_at).toLocaleDateString("es-MX")}
-                        </span>
+                        <span>Fin: {new Date(campaign.ends_at).toLocaleDateString("es-MX")}</span>
                       )}
                       {campaign.response_rate !== null && (
                         <span>Respuesta: {campaign.response_rate}%</span>

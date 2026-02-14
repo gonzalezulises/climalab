@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   BarChart3,
@@ -12,11 +12,11 @@ import {
   MessageSquare,
   FileText,
   Download,
-} from "lucide-react"
+} from "lucide-react";
 
 interface ResultsSidebarProps {
-  campaignId: string
-  currentPath: string
+  campaignId: string;
+  currentPath: string;
 }
 
 const NAV_ITEMS = [
@@ -29,18 +29,16 @@ const NAV_ITEMS = [
   { label: "Comentarios", href: "/comments", icon: MessageSquare },
   { label: "Tecnico", href: "/technical", icon: FileText },
   { label: "Exportar", href: "/export", icon: Download },
-]
+];
 
 export function ResultsSidebar({ campaignId, currentPath }: ResultsSidebarProps) {
-  const basePath = `/campaigns/${campaignId}/results`
+  const basePath = `/campaigns/${campaignId}/results`;
 
   return (
     <nav className="flex flex-col gap-1 py-2">
       {NAV_ITEMS.map((item) => {
-        const fullPath = `${basePath}${item.href}`
-        const isActive =
-          currentPath === fullPath ||
-          (item.href === "" && currentPath === basePath)
+        const fullPath = `${basePath}${item.href}`;
+        const isActive = currentPath === fullPath || (item.href === "" && currentPath === basePath);
 
         return (
           <Link
@@ -56,8 +54,8 @@ export function ResultsSidebar({ campaignId, currentPath }: ResultsSidebarProps)
             <item.icon className="h-4 w-4 shrink-0" />
             {item.label}
           </Link>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }

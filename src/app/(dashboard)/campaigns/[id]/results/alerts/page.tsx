@@ -16,11 +16,5 @@ export default async function AlertsPage({ params }: { params: Promise<{ id: str
   const alerts = alertsResult.success ? alertsResult.data : [];
   const context = contextResult.success ? contextResult.data : null;
 
-  return (
-    <AlertsClient
-      campaignId={id}
-      alerts={alerts}
-      initialContext={context}
-    />
-  );
+  return <AlertsClient campaignId={id} alerts={alerts} initialContext={context} />;
 }

@@ -2,10 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import {
-  updateItemSchema,
-  type UpdateItemInput,
-} from "@/lib/validations/instrument";
+import { updateItemSchema, type UpdateItemInput } from "@/lib/validations/instrument";
 import type { ActionResult, Instrument, InstrumentWithDimensions } from "@/types";
 
 export async function getInstruments(): Promise<ActionResult<Instrument[]>> {
@@ -60,9 +57,7 @@ export async function getInstrumentWithItems(
   };
 }
 
-export async function updateItem(
-  input: UpdateItemInput
-): Promise<ActionResult<void>> {
+export async function updateItem(input: UpdateItemInput): Promise<ActionResult<void>> {
   const parsed = updateItemSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -76,10 +71,7 @@ export async function updateItem(
 
   const { id, ...updates } = parsed.data;
 
-  const { error } = await supabase
-    .from("items")
-    .update(updates)
-    .eq("id", id);
+  const { error } = await supabase.from("items").update(updates).eq("id", id);
 
   if (error) {
     return { success: false, error: error.message };

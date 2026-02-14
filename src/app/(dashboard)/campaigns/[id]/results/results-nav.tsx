@@ -45,7 +45,8 @@ export function ResultsSidebar({
       <nav className="space-y-1">
         {navItems.map((item) => {
           const href = `${basePath}/${item.href}`;
-          const isActive = pathname === href || (item.href === "dashboard" && pathname === basePath);
+          const isActive =
+            pathname === href || (item.href === "dashboard" && pathname === basePath);
           return (
             <Link
               key={item.href}
