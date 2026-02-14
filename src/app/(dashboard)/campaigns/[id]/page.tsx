@@ -55,9 +55,13 @@ export default async function CampaignDetailPage({
 
   const orgResult = await getOrganization(campaign.organization_id);
   const orgName = orgResult.success ? orgResult.data.name : "—";
-  const orgDepartments = orgResult.success
+  const allOrgDepts = orgResult.success
     ? ((orgResult.data.departments as Department[] | null) ?? []).map((d) => d.name)
     : [];
+  const targetDepts = campaign.target_departments as string[] | null;
+  const departments = targetDepts && targetDepts.length > 0
+    ? allOrgDepts.filter((name) => targetDepts.includes(name))
+    : allOrgDepts;
 
   const statusInfo = STATUS_LABELS[campaign.status] ?? STATUS_LABELS.draft;
 
@@ -180,7 +184,7 @@ export default async function CampaignDetailPage({
                 campaignId={campaign.id}
                 campaignStatus={campaign.status}
                 participants={participants}
-                departments={orgDepartments}
+                departments={departments}
                 baseUrl={baseUrl}
               />
             </CardContent>

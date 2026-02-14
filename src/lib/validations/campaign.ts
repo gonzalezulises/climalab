@@ -56,6 +56,14 @@ export const sendInvitationsSchema = z.object({
   participant_ids: z.array(zUuid()).min(1, "Al menos un participante"),
 });
 
+export const updateParticipantSchema = z.object({
+  participant_id: zUuid(),
+  campaign_id: zUuid(),
+  name: z.string().min(1, "Nombre requerido").max(200),
+  email: z.string().email("Email inválido"),
+  department: z.string().max(200).optional(),
+});
+
 export const removeParticipantSchema = z.object({
   participant_id: zUuid(),
   campaign_id: zUuid(),
@@ -67,4 +75,5 @@ export type GenerateLinksInput = z.infer<typeof generateLinksSchema>;
 export type ParticipantInput = z.infer<typeof participantSchema>;
 export type AddParticipantsInput = z.infer<typeof addParticipantsSchema>;
 export type SendInvitationsInput = z.infer<typeof sendInvitationsSchema>;
+export type UpdateParticipantInput = z.infer<typeof updateParticipantSchema>;
 export type RemoveParticipantInput = z.infer<typeof removeParticipantSchema>;

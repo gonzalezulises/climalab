@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   addParticipants,
+  updateParticipant,
   removeParticipant,
   sendInvitations,
   resendInvitation,
@@ -45,6 +46,19 @@ export function ParticipantsPanel({
         }
         router.refresh();
         return result.data;
+      }}
+      onEdit={async (participantId, data) => {
+        const result = await updateParticipant({
+          participant_id: participantId,
+          campaign_id: campaignId,
+          ...data,
+        });
+        if (!result.success) {
+          toast.error(result.error);
+          return false;
+        }
+        router.refresh();
+        return true;
       }}
       onRemove={async (participantId) => {
         const result = await removeParticipant({

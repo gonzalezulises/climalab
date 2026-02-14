@@ -28,12 +28,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Check,
   ChevronDown,
   ChevronUp,
   Copy,
   Loader2,
   Mail,
   MailWarning,
+  Pencil,
   Plus,
   RefreshCw,
   Send,
@@ -55,6 +57,7 @@ type Props = {
   campaignStatus: string;
   baseUrl: string;
   onAdd: (entries: ParticipantEntry[]) => Promise<{ added: number; skipped: number } | null>;
+  onEdit: (participantId: string, data: ParticipantEntry) => Promise<boolean>;
   onRemove: (participantId: string) => Promise<boolean>;
   onSendInvitations: (participantIds: string[]) => Promise<{ sent: number; failed: number } | null>;
   onResend: (participantId: string) => Promise<boolean>;
@@ -102,6 +105,44 @@ const SURVEY_LABELS: Record<string, { label: string; variant: "default" | "secon
 };
 
 // ---------------------------------------------------------------------------
+// Department selector (reused in add row and edit row)
+// ---------------------------------------------------------------------------
+function DeptField({
+  value,
+  onChange,
+  departments,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  departments: string[];
+  className?: string;
+}) {
+  if (departments.length > 0) {
+    return (
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className={className}>
+          <SelectValue placeholder="Departamento" />
+        </SelectTrigger>
+        <SelectContent>
+          {departments.map((d) => (
+            <SelectItem key={d} value={d}>{d}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+  return (
+    <Input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Departamento"
+      className={className}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 export function ParticipantEditor({
@@ -110,6 +151,7 @@ export function ParticipantEditor({
   campaignStatus,
   baseUrl,
   onAdd,
+  onEdit,
   onRemove,
   onSendInvitations,
   onResend,
@@ -127,11 +169,52 @@ export function ParticipantEditor({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Inline edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editDept, setEditDept] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const isDraft = campaignStatus === "draft";
   const canEdit = isDraft || campaignStatus === "active";
 
   // ---------------------------------------------------------------------------
-  // Handlers
+  // Inline edit handlers
+  // ---------------------------------------------------------------------------
+  function startEdit(p: ParticipantWithStatus) {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditEmail(p.email);
+    setEditDept(p.department ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function saveEdit(participantId: string) {
+    const trimmedName = editName.trim();
+    const trimmedEmail = editEmail.trim().toLowerCase();
+    if (!trimmedName || !trimmedEmail || !trimmedEmail.includes("@")) {
+      toast.error("Nombre y email válido son requeridos");
+      return;
+    }
+    setSaving(true);
+    const ok = await onEdit(participantId, {
+      name: trimmedName,
+      email: trimmedEmail,
+      ...(editDept ? { department: editDept } : {}),
+    });
+    if (ok) {
+      toast.success("Participante actualizado");
+      setEditingId(null);
+    }
+    setSaving(false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Add / Import handlers
   // ---------------------------------------------------------------------------
   async function handleAddSingle() {
     const trimmedName = name.trim();
@@ -274,25 +357,7 @@ export function ParticipantEditor({
             type="email"
             className="flex-1"
           />
-          {departments.length > 0 ? (
-            <Select value={dept} onValueChange={setDept}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              value={dept}
-              onChange={(e) => setDept(e.target.value)}
-              placeholder="Departamento"
-              className="w-40"
-            />
-          )}
+          <DeptField value={dept} onChange={setDept} departments={departments} className="w-40" />
           <Button
             type="button"
             variant="outline"
@@ -469,7 +534,7 @@ export function ParticipantEditor({
                 <TableHead>Departamento</TableHead>
                 <TableHead>Invitación</TableHead>
                 <TableHead>Encuesta</TableHead>
-                <TableHead className="w-24">Acciones</TableHead>
+                <TableHead className="w-28">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -478,6 +543,74 @@ export function ParticipantEditor({
                 const surveyInfo = p.respondent_status
                   ? SURVEY_LABELS[p.respondent_status] ?? SURVEY_LABELS.pending
                   : null;
+                const isEditing = editingId === p.id;
+
+                if (isEditing) {
+                  return (
+                    <TableRow key={p.id} className="bg-muted/30">
+                      <TableCell>
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(p.id); } if (e.key === "Escape") cancelEdit(); }}
+                          className="h-8"
+                          autoFocus
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(p.id); } if (e.key === "Escape") cancelEdit(); }}
+                          type="email"
+                          className="h-8"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <DeptField value={editDept} onChange={setEditDept} departments={departments} className="h-8 w-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={invInfo.variant}>{invInfo.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {surveyInfo ? (
+                          <Badge variant={surveyInfo.variant}>{surveyInfo.label}</Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => saveEdit(p.id)}
+                                disabled={saving}
+                                className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                              >
+                                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Guardar</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="p-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Cancelar</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
 
                 return (
                   <TableRow key={p.id}>
@@ -501,6 +634,21 @@ export function ParticipantEditor({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Edit */}
+                        {canEdit && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => startEdit(p)}
+                                className="p-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                        )}
                         {/* Copy link */}
                         {p.respondent_token && (
                           <Tooltip>

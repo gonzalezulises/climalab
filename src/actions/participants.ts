@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { sendSurveyInvitation } from "@/lib/email";
 import {
   addParticipantsSchema,
+  updateParticipantSchema,
   sendInvitationsSchema,
   removeParticipantSchema,
   type AddParticipantsInput,
+  type UpdateParticipantInput,
   type SendInvitationsInput,
   type RemoveParticipantInput,
 } from "@/lib/validations/campaign";
@@ -139,6 +141,37 @@ export async function addParticipants(
     success: true,
     data: { added: newParticipants.length, skipped: participants.length - newParticipants.length },
   };
+}
+
+// ---------------------------------------------------------------------------
+// updateParticipant — edit name, email, department
+// ---------------------------------------------------------------------------
+export async function updateParticipant(
+  input: UpdateParticipantInput
+): Promise<ActionResult<void>> {
+  const parsed = updateParticipantSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((i) => i.message).join(", "),
+    };
+  }
+
+  const { participant_id, campaign_id, name, email, department } = parsed.data;
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("participants")
+    .update({ name, email, department: department ?? null })
+    .eq("id", participant_id)
+    .eq("campaign_id", campaign_id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/campaigns/${campaign_id}`);
+  return { success: true, data: undefined };
 }
 
 // ---------------------------------------------------------------------------
