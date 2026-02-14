@@ -16,8 +16,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { SIZE_CATEGORIES, COUNTRIES } from "@/lib/constants";
+import type { Department } from "@/types";
 
 export default async function OrganizationDetailPage({
   params,
@@ -35,6 +45,12 @@ export default async function OrganizationDetailPage({
   const countryName =
     COUNTRIES.find((c) => c.code === org.country)?.name || org.country;
 
+  const departments = (org.departments as unknown as Department[]) ?? [];
+  const totalHeadcount = departments.reduce(
+    (sum, d) => sum + (d.headcount ?? 0),
+    0
+  );
+
   const campaignsResult = await getCampaigns(id);
   const campaigns = campaignsResult.success ? campaignsResult.data : [];
 
@@ -47,6 +63,11 @@ export default async function OrganizationDetailPage({
             {SIZE_CATEGORIES[org.size_category]}
           </Badge>
         </div>
+        {(org as { commercial_name?: string | null }).commercial_name && (
+          <p className="text-lg text-muted-foreground">
+            {(org as { commercial_name?: string | null }).commercial_name}
+          </p>
+        )}
         <p className="text-muted-foreground">{org.slug}</p>
       </div>
 
@@ -89,6 +110,67 @@ export default async function OrganizationDetailPage({
                   <p>{SIZE_CATEGORIES[org.size_category]}</p>
                 </div>
               </div>
+
+              {/* Contact section */}
+              {((org as { contact_name?: string | null }).contact_name ||
+                (org as { contact_email?: string | null }).contact_email) && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Contacto principal
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {(org as { contact_name?: string | null })
+                        .contact_name && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Nombre
+                          </p>
+                          <p>
+                            {
+                              (org as { contact_name?: string | null })
+                                .contact_name
+                            }
+                          </p>
+                        </div>
+                      )}
+                      {(org as { contact_email?: string | null })
+                        .contact_email && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Email
+                          </p>
+                          <a
+                            href={`mailto:${(org as { contact_email?: string | null }).contact_email}`}
+                            className="text-primary hover:underline"
+                          >
+                            {
+                              (org as { contact_email?: string | null })
+                                .contact_email
+                            }
+                          </a>
+                        </div>
+                      )}
+                      {(org as { contact_role?: string | null })
+                        .contact_role && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Cargo
+                          </p>
+                          <p>
+                            {
+                              (org as { contact_role?: string | null })
+                                .contact_role
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Separator />
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <div>
@@ -108,22 +190,50 @@ export default async function OrganizationDetailPage({
             <CardHeader>
               <CardTitle>Departamentos</CardTitle>
               <CardDescription>
-                {org.departments.length} departamentos registrados
+                {departments.length} departamentos registrados
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {org.departments.length === 0 ? (
+              {departments.length === 0 ? (
                 <p className="text-muted-foreground">
                   No hay departamentos registrados
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {org.departments.map((dept) => (
-                    <Badge key={dept} variant="outline">
-                      {dept}
-                    </Badge>
-                  ))}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Departamento</TableHead>
+                      <TableHead className="text-right">Personas</TableHead>
+                      <TableHead className="text-right">% del Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departments.map((dept) => (
+                      <TableRow key={dept.name}>
+                        <TableCell>{dept.name}</TableCell>
+                        <TableCell className="text-right">
+                          {dept.headcount ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {dept.headcount != null && totalHeadcount > 0
+                            ? `${Math.round((dept.headcount / totalHeadcount) * 100)}%`
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-medium">Total</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {totalHeadcount}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {totalHeadcount > 0 ? "100%" : "—"}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
               )}
             </CardContent>
           </Card>

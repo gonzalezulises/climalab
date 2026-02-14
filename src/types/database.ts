@@ -127,54 +127,69 @@ export type Database = {
           allow_comments: boolean
           anonymous: boolean
           confidence_level: number | null
+          context_notes: string | null
           created_at: string
           ends_at: string | null
           id: string
           instrument_id: string
           margin_of_error: number | null
+          measurement_objective: string | null
           name: string
+          objective_description: string | null
           organization_id: string
           population_n: number | null
           response_rate: number | null
           sample_n: number | null
           starts_at: string | null
           status: Database["public"]["Enums"]["campaign_status"]
+          target_departments: string[] | null
+          target_population: number | null
           updated_at: string
         }
         Insert: {
           allow_comments?: boolean
           anonymous?: boolean
           confidence_level?: number | null
+          context_notes?: string | null
           created_at?: string
           ends_at?: string | null
           id?: string
           instrument_id: string
           margin_of_error?: number | null
+          measurement_objective?: string | null
           name: string
+          objective_description?: string | null
           organization_id: string
           population_n?: number | null
           response_rate?: number | null
           sample_n?: number | null
           starts_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          target_departments?: string[] | null
+          target_population?: number | null
           updated_at?: string
         }
         Update: {
           allow_comments?: boolean
           anonymous?: boolean
           confidence_level?: number | null
+          context_notes?: string | null
           created_at?: string
           ends_at?: string | null
           id?: string
           instrument_id?: string
           margin_of_error?: number | null
+          measurement_objective?: string | null
           name?: string
+          objective_description?: string | null
           organization_id?: string
           population_n?: number | null
           response_rate?: number | null
           sample_n?: number | null
           starts_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
+          target_departments?: string[] | null
+          target_population?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -365,9 +380,13 @@ export type Database = {
       }
       organizations: {
         Row: {
+          commercial_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_role: string | null
           country: string
           created_at: string
-          departments: string[]
+          departments: Json
           employee_count: number
           id: string
           industry: string | null
@@ -378,9 +397,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          commercial_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_role?: string | null
           country?: string
           created_at?: string
-          departments?: string[]
+          departments?: Json
           employee_count: number
           id?: string
           industry?: string | null
@@ -391,9 +414,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          commercial_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_role?: string | null
           country?: string
           created_at?: string
-          departments?: string[]
+          departments?: Json
           employee_count?: number
           id?: string
           industry?: string | null
@@ -544,7 +571,12 @@ export type Database = {
     }
     Functions: {
       generate_slug: { Args: { input: string }; Returns: string }
+      get_department_headcount: {
+        Args: { p_dept_name: string; p_org_id: string }
+        Returns: number
+      }
       get_org_department_counts: { Args: { org_id: string }; Returns: Json }
+      get_org_total_headcount: { Args: { p_org_id: string }; Returns: number }
       get_user_org_id: { Args: never; Returns: string }
       get_user_role: {
         Args: never
@@ -695,3 +727,4 @@ export const Constants = {
     },
   },
 } as const
+

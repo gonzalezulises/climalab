@@ -14,6 +14,19 @@ export const createCampaignSchema = z.object({
   allow_comments: z.boolean().default(true),
   starts_at: z.string().datetime().optional(),
   ends_at: z.string().datetime().optional(),
+  measurement_objective: z
+    .enum([
+      "initial_diagnosis",
+      "periodic_followup",
+      "post_intervention",
+      "specific_assessment",
+      "other",
+    ])
+    .optional(),
+  objective_description: z.string().max(500).optional(),
+  context_notes: z.string().max(2000).optional(),
+  target_departments: z.array(z.string()).optional(),
+  target_population: z.number().int().min(1).optional(),
 });
 
 export const updateCampaignStatusSchema = z.object({

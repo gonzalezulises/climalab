@@ -35,6 +35,9 @@ export type InstrumentWithDimensions = Instrument & {
   dimensions: (Dimension & { items: Item[] })[];
 };
 
+// Department type (for jsonb departments column)
+export type Department = { name: string; headcount: number | null };
+
 // Action result type
 export type ActionResult<T = void> =
   | { success: true; data: T }

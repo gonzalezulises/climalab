@@ -23,8 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { X, Plus, Check } from "lucide-react";
 
 function generateSlug(name: string): string {
   return name
@@ -37,38 +45,126 @@ function generateSlug(name: string): string {
     .trim();
 }
 
+type Department = { name: string; headcount: number | null };
+
+const STEPS = [
+  { number: 1, label: "Datos del Cliente" },
+  { number: 2, label: "Departamentos" },
+  { number: 3, label: "Contacto" },
+];
+
 export default function NewOrganizationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [departments, setDepartments] = useState<string[]>([]);
-  const [deptInput, setDeptInput] = useState("");
+
+  // Step 1
   const [name, setName] = useState("");
+  const [commercialName, setCommercialName] = useState("");
   const [slug, setSlug] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [country, setCountry] = useState("MX");
+  const [employeeCount, setEmployeeCount] = useState("");
+
+  // Step 2
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [deptName, setDeptName] = useState("");
+  const [deptHeadcount, setDeptHeadcount] = useState("");
+
+  // Step 3
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactRole, setContactRole] = useState("");
+
+  const totalHeadcount = departments.reduce(
+    (sum, d) => sum + (d.headcount ?? 0),
+    0
+  );
+  const empCount = Number(employeeCount) || 0;
+  const headcountMismatch =
+    departments.length > 0 && totalHeadcount > 0 && totalHeadcount !== empCount;
 
   function addDepartment() {
-    const trimmed = deptInput.trim();
-    if (trimmed && !departments.includes(trimmed)) {
-      setDepartments([...departments, trimmed]);
-      setDeptInput("");
+    const trimmedName = deptName.trim();
+    if (!trimmedName) return;
+    if (departments.some((d) => d.name === trimmedName)) return;
+
+    setDepartments([
+      ...departments,
+      {
+        name: trimmedName,
+        headcount: deptHeadcount ? Number(deptHeadcount) : null,
+      },
+    ]);
+    setDeptName("");
+    setDeptHeadcount("");
+  }
+
+  function removeDepartment(name: string) {
+    setDepartments(departments.filter((d) => d.name !== name));
+  }
+
+  function updateHeadcount(name: string, value: string) {
+    setDepartments(
+      departments.map((d) =>
+        d.name === name
+          ? { ...d, headcount: value ? Number(value) : null }
+          : d
+      )
+    );
+  }
+
+  function validateStep(): boolean {
+    const stepErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!name || name.length < 2)
+        stepErrors.name = "Mínimo 2 caracteres";
+      if (!slug || slug.length < 2)
+        stepErrors.slug = "Mínimo 2 caracteres";
+      else if (!/^[a-z0-9-]+$/.test(slug))
+        stepErrors.slug = "Solo letras minúsculas, números y guiones";
+      if (!country) stepErrors.country = "País requerido";
+      if (!employeeCount || empCount < 1)
+        stepErrors.employee_count = "Mínimo 1 empleado";
+      if (empCount > 500)
+        stepErrors.employee_count = "Máximo 500 empleados";
     }
+
+    if (step === 3) {
+      if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail))
+        stepErrors.contact_email = "Email inválido";
+    }
+
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
   }
 
-  function removeDepartment(dept: string) {
-    setDepartments(departments.filter((d) => d !== dept));
+  function handleNext() {
+    if (!validateStep()) return;
+    setStep((s) => Math.min(s + 1, 3) as 1 | 2 | 3);
   }
 
-  async function handleSubmit(formData: FormData) {
+  function handleBack() {
+    setStep((s) => Math.max(s - 1, 1) as 1 | 2 | 3);
+  }
+
+  async function handleSubmit() {
+    if (!validateStep()) return;
+
     setLoading(true);
-    setErrors({});
-
     const raw = {
-      name: formData.get("name") as string,
-      slug: formData.get("slug") as string,
-      industry: (formData.get("industry") as string) || undefined,
-      country: formData.get("country") as string,
-      employee_count: Number(formData.get("employee_count")),
+      name,
+      commercial_name: commercialName || undefined,
+      slug,
+      industry: industry || undefined,
+      country,
+      employee_count: empCount,
       departments,
+      contact_name: contactName || undefined,
+      contact_email: contactEmail || undefined,
+      contact_role: contactRole || undefined,
     };
 
     const parsed = createOrganizationSchema.safeParse(raw);
@@ -98,140 +194,325 @@ export default function NewOrganizationPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Stepper */}
+      <div className="flex items-center justify-center gap-4 mb-6">
+        {STEPS.map((s, i) => (
+          <div key={s.number} className="flex items-center gap-2">
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium border-2 ${
+                step > s.number
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : step === s.number
+                    ? "border-primary text-primary"
+                    : "border-muted-foreground/30 text-muted-foreground"
+              }`}
+            >
+              {step > s.number ? <Check className="h-4 w-4" /> : s.number}
+            </div>
+            <span
+              className={`text-sm hidden sm:inline ${
+                step === s.number
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {s.label}
+            </span>
+            {i < STEPS.length - 1 && (
+              <div
+                className={`w-8 h-0.5 ${
+                  step > s.number ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Nueva Organización</CardTitle>
+          <CardTitle>
+            {step === 1 && "Datos del Cliente"}
+            {step === 2 && "Departamentos"}
+            {step === 3 && "Contacto Principal"}
+          </CardTitle>
           <CardDescription>
-            Registra una nueva organización en la plataforma.
+            {step === 1 &&
+              "Información básica de la organización."}
+            {step === 2 &&
+              "Define los departamentos y su dotación."}
+            {step === 3 &&
+              "Persona de contacto para la medición."}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form action={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                name="name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setSlug(generateSlug(e.target.value));
-                }}
-                required
-              />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                name="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                required
-              />
-              {errors.slug && (
-                <p className="text-sm text-destructive">{errors.slug}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industria</Label>
-              <Input id="industry" name="industry" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="country">País</Label>
-              <Select name="country" defaultValue="MX">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.country && (
-                <p className="text-sm text-destructive">{errors.country}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="employee_count">Número de empleados</Label>
-              <Input
-                id="employee_count"
-                name="employee_count"
-                type="number"
-                min={1}
-                max={200}
-                required
-              />
-              {errors.employee_count && (
-                <p className="text-sm text-destructive">
-                  {errors.employee_count}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Departamentos</Label>
-              <div className="flex gap-2">
+        <CardContent className="space-y-4">
+          {/* Step 1: Client Data */}
+          {step === 1 && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Razón social *</Label>
                 <Input
-                  value={deptInput}
-                  onChange={(e) => setDeptInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addDepartment();
-                    }
+                  id="name"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setSlug(generateSlug(e.target.value));
                   }}
-                  placeholder="Nombre del departamento"
+                  placeholder="Empresa Demo S.A."
                 />
-                <Button type="button" variant="outline" onClick={addDepartment}>
-                  Agregar
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="commercial_name">Nombre comercial</Label>
+                <Input
+                  id="commercial_name"
+                  value={commercialName}
+                  onChange={(e) => setCommercialName(e.target.value)}
+                  placeholder="Demo Corp"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Input
+                  id="slug"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                />
+                {errors.slug && (
+                  <p className="text-sm text-destructive">{errors.slug}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Industria</Label>
+                  <Input
+                    id="industry"
+                    value={industry}
+                    onChange={(e) => setIndustry(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>País *</Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.country && (
+                    <p className="text-sm text-destructive">
+                      {errors.country}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="employee_count">
+                  Número total de empleados *
+                </Label>
+                <Input
+                  id="employee_count"
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={employeeCount}
+                  onChange={(e) => setEmployeeCount(e.target.value)}
+                />
+                {errors.employee_count && (
+                  <p className="text-sm text-destructive">
+                    {errors.employee_count}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Step 2: Departments */}
+          {step === 2 && (
+            <>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    value={deptName}
+                    onChange={(e) => setDeptName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addDepartment();
+                      }
+                    }}
+                    placeholder="Nombre del departamento"
+                  />
+                </div>
+                <div className="w-28">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={deptHeadcount}
+                    onChange={(e) => setDeptHeadcount(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addDepartment();
+                      }
+                    }}
+                    placeholder="Personas"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={addDepartment}
+                >
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              {departments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {departments.map((dept) => (
-                    <Badge
-                      key={dept}
-                      variant="secondary"
-                      className="gap-1 pr-1"
-                    >
-                      {dept}
-                      <button
-                        type="button"
-                        onClick={() => removeDepartment(dept)}
-                        className="ml-1 rounded-full hover:bg-muted p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Creando..." : "Crear Organización"}
+              {departments.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Departamento</TableHead>
+                      <TableHead className="w-28 text-right">
+                        Personas
+                      </TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departments.map((dept) => (
+                      <TableRow key={dept.name}>
+                        <TableCell>{dept.name}</TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={dept.headcount ?? ""}
+                            onChange={(e) =>
+                              updateHeadcount(dept.name, e.target.value)
+                            }
+                            className="h-8 w-20 text-right ml-auto"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            type="button"
+                            onClick={() => removeDepartment(dept.name)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-medium">Total</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {totalHeadcount}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  Agrega los departamentos de la organización.
+                </p>
+              )}
+
+              {headcountMismatch && (
+                <p className="text-sm text-amber-600">
+                  La suma de personas ({totalHeadcount}) no coincide con el
+                  total de empleados ({empCount}).
+                </p>
+              )}
+            </>
+          )}
+
+          {/* Step 3: Contact */}
+          {step === 3 && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Persona responsable de coordinar la medición de clima en la
+                organización.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Nombre</Label>
+                <Input
+                  id="contact_name"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="María González"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_email">Email</Label>
+                <Input
+                  id="contact_email"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="maria@empresa.com"
+                />
+                {errors.contact_email && (
+                  <p className="text-sm text-destructive">
+                    {errors.contact_email}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_role">Cargo</Label>
+                <Input
+                  id="contact_role"
+                  value={contactRole}
+                  onChange={(e) => setContactRole(e.target.value)}
+                  placeholder="Directora de Recursos Humanos"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={step === 1 ? () => router.back() : handleBack}
+            >
+              {step === 1 ? "Cancelar" : "Anterior"}
+            </Button>
+            {step < 3 ? (
+              <Button type="button" onClick={handleNext}>
+                Siguiente
               </Button>
+            ) : (
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => router.back()}
+                onClick={handleSubmit}
+                disabled={loading}
               >
-                Cancelar
+                {loading ? "Creando..." : "Crear Organización"}
               </Button>
-            </div>
-          </form>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

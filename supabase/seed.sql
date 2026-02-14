@@ -5,7 +5,7 @@
 -- ============================================================
 -- 1. Demo Organization (7 departments, 180 employees)
 -- ============================================================
-INSERT INTO organizations (id, name, slug, industry, country, employee_count, departments)
+INSERT INTO organizations (id, name, slug, industry, country, employee_count, departments, commercial_name, contact_name, contact_email, contact_role)
 VALUES (
   'a0000000-0000-0000-0000-000000000001',
   'Empresa Demo S.A.',
@@ -13,7 +13,19 @@ VALUES (
   'Tecnología',
   'PA',
   180,
-  ARRAY['Ingeniería', 'Marketing', 'Operaciones', 'Recursos Humanos', 'Finanzas', 'Ventas', 'Soporte']
+  '[
+    {"name": "Ingeniería", "headcount": 45},
+    {"name": "Marketing", "headcount": 20},
+    {"name": "Operaciones", "headcount": 35},
+    {"name": "Recursos Humanos", "headcount": 15},
+    {"name": "Finanzas", "headcount": 20},
+    {"name": "Ventas", "headcount": 30},
+    {"name": "Soporte", "headcount": 15}
+  ]'::jsonb,
+  'Demo Corp',
+  'María González',
+  'maria@empresa-demo.com',
+  'Directora de Recursos Humanos'
 );
 
 -- ============================================================
@@ -422,11 +434,13 @@ INSERT INTO items (id, dimension_id, text, is_reverse, is_anchor, is_attention_c
 -- ============================================================
 -- 8. Campaigns (2 cerradas para demo de tendencias)
 -- ============================================================
-INSERT INTO campaigns (id, organization_id, instrument_id, name, status, starts_at, ends_at, anonymous, allow_comments) VALUES
+INSERT INTO campaigns (id, organization_id, instrument_id, name, status, starts_at, ends_at, anonymous, allow_comments, measurement_objective, context_notes) VALUES
 ('f0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
- 'Clima Q3 2025', 'closed', '2025-07-01T00:00:00Z', '2025-07-31T23:59:59Z', true, true),
+ 'Clima Q3 2025', 'closed', '2025-07-01T00:00:00Z', '2025-07-31T23:59:59Z', true, true,
+ 'initial_diagnosis', 'Primera medición de clima organizacional tras la reestructuración del equipo directivo.'),
 ('f0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
- 'Clima Q1 2026', 'closed', '2026-01-15T00:00:00Z', '2026-02-10T23:59:59Z', true, true);
+ 'Clima Q1 2026', 'closed', '2026-01-15T00:00:00Z', '2026-02-10T23:59:59Z', true, true,
+ 'periodic_followup', 'Seguimiento post-implementación de plan de acción Q4 2025.');
 
 -- ============================================================
 -- 9. Demo respondents and responses

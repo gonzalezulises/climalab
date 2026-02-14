@@ -33,3 +33,11 @@ export const INSTRUMENT_MODES = {
   full: "Completo",
   pulse: "Pulso",
 } as const;
+
+export const MEASUREMENT_OBJECTIVES = {
+  initial_diagnosis: "Diagnóstico inicial",
+  periodic_followup: "Seguimiento periódico",
+  post_intervention: "Post-intervención",
+  specific_assessment: "Evaluación específica",
+  other: "Otro",
+} as const;

@@ -289,7 +289,7 @@ export async function calculateResults(
   // 1. Fetch campaign + organization
   const { data: campaign, error: campaignError } = await supabase
     .from("campaigns")
-    .select("*, organizations(employee_count)")
+    .select("*, organizations(employee_count, departments)")
     .eq("id", campaignId)
     .single();
 
@@ -697,8 +697,8 @@ export async function calculateResults(
   }
 
   // 11. Ficha técnica
-  const org = campaign.organizations as unknown as { employee_count: number } | null;
-  const populationN = org?.employee_count ?? 0;
+  const org = campaign.organizations as unknown as { employee_count: number; departments: unknown } | null;
+  const populationN = (campaign as { target_population?: number | null }).target_population ?? org?.employee_count ?? 0;
   const sampleN = validRespondentIds.size;
   const responseRate = populationN > 0 ? Math.round((sampleN / populationN) * 10000) / 100 : 0;
 

@@ -71,8 +71,15 @@ async function getSurveyData(token: string) {
   const org = campaign.organizations as unknown as {
     name: string;
     logo_url: string | null;
-    departments: string[];
+    departments: Array<{ name: string; headcount: number | null }>;
   } | null;
+
+  // Extract department names, filtering by target_departments if set
+  const targetDepts = (campaign as { target_departments?: string[] | null }).target_departments;
+  const allDeptNames = (org?.departments ?? []).map((d) => d.name);
+  const filteredDeptNames = targetDepts && targetDepts.length > 0
+    ? allDeptNames.filter((name) => targetDepts.includes(name))
+    : allDeptNames;
 
   return {
     respondent,
@@ -80,6 +87,7 @@ async function getSurveyData(token: string) {
     dimensions,
     existingResponses,
     organization: org,
+    filteredDeptNames,
   };
 }
 
@@ -128,7 +136,7 @@ export default async function SurveyPage({
       campaignId={data.campaign.id}
       organizationName={data.organization?.name ?? ""}
       logoUrl={data.organization?.logo_url ?? null}
-      departments={data.organization?.departments ?? []}
+      departments={data.filteredDeptNames}
       allowComments={data.campaign.allow_comments}
       dimensions={data.dimensions.map((d) => ({
         id: d.id,

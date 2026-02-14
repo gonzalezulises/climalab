@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                       <Users className="h-4 w-4" />
                       <span>{org.employee_count} empleados</span>
                     </div>
-                    <span>{org.departments.length} departamentos</span>
+                    <span>{Array.isArray(org.departments) ? org.departments.length : 0} departamentos</span>
                   </div>
                 </CardContent>
               </Card>
