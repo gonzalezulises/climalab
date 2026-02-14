@@ -39,7 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, Plus, X } from "lucide-react";
+import { DepartmentEditor } from "@/components/department-editor";
+import { Pencil } from "lucide-react";
 import { SIZE_CATEGORIES, COUNTRIES } from "@/lib/constants";
 import type { Organization, Campaign, Department } from "@/types";
 
@@ -80,17 +81,10 @@ export function OrganizationDetail({
     (org.departments as unknown as Department[]) ?? []
   );
 
-  // Department add inputs
-  const [deptName, setDeptName] = useState("");
-  const [deptHeadcount, setDeptHeadcount] = useState("");
-
   const totalHeadcount = departments.reduce(
     (sum, d) => sum + (d.headcount ?? 0),
     0
   );
-  const empCount = Number(employeeCount) || 0;
-  const headcountMismatch =
-    departments.length > 0 && totalHeadcount > 0 && totalHeadcount !== empCount;
 
   const countryName =
     COUNTRIES.find((c) => c.code === (editing ? country : org.country))?.name ||
@@ -115,31 +109,6 @@ export function OrganizationDetail({
     setEditing(false);
   }
 
-  function addDepartment() {
-    const trimmed = deptName.trim();
-    if (!trimmed || departments.some((d) => d.name === trimmed)) return;
-    setDepartments([
-      ...departments,
-      { name: trimmed, headcount: deptHeadcount ? Number(deptHeadcount) : null },
-    ]);
-    setDeptName("");
-    setDeptHeadcount("");
-  }
-
-  function removeDepartment(dName: string) {
-    setDepartments(departments.filter((d) => d.name !== dName));
-  }
-
-  function updateHeadcount(dName: string, value: string) {
-    setDepartments(
-      departments.map((d) =>
-        d.name === dName
-          ? { ...d, headcount: value ? Number(value) : null }
-          : d
-      )
-    );
-  }
-
   async function handleSave() {
     setSaving(true);
     const result = await updateOrganization(org.id, {
@@ -148,7 +117,7 @@ export function OrganizationDetail({
       slug,
       industry: industry || undefined,
       country,
-      employee_count: empCount,
+      employee_count: Number(employeeCount) || 0,
       departments,
       contact_name: contactName || undefined,
       contact_email: contactEmail || undefined,
@@ -396,48 +365,13 @@ export function OrganizationDetail({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {editing && (
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Input
-                      value={deptName}
-                      onChange={(e) => setDeptName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addDepartment();
-                        }
-                      }}
-                      placeholder="Nombre del departamento"
-                    />
-                  </div>
-                  <div className="w-28">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={deptHeadcount}
-                      onChange={(e) => setDeptHeadcount(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addDepartment();
-                        }
-                      }}
-                      placeholder="Personas"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={addDepartment}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-              {departments.length === 0 ? (
+              {editing ? (
+                <DepartmentEditor
+                  departments={departments}
+                  onChange={setDepartments}
+                  employeeCount={Number(employeeCount) || undefined}
+                />
+              ) : departments.length === 0 ? (
                 <p className="text-muted-foreground">
                   No hay departamentos registrados
                 </p>
@@ -448,7 +382,6 @@ export function OrganizationDetail({
                       <TableHead>Departamento</TableHead>
                       <TableHead className="text-right">Personas</TableHead>
                       <TableHead className="text-right">% del Total</TableHead>
-                      {editing && <TableHead className="w-10" />}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -456,36 +389,13 @@ export function OrganizationDetail({
                       <TableRow key={dept.name}>
                         <TableCell>{dept.name}</TableCell>
                         <TableCell className="text-right">
-                          {editing ? (
-                            <Input
-                              type="number"
-                              min={0}
-                              value={dept.headcount ?? ""}
-                              onChange={(e) =>
-                                updateHeadcount(dept.name, e.target.value)
-                              }
-                              className="h-8 w-20 text-right ml-auto"
-                            />
-                          ) : (
-                            (dept.headcount ?? "—")
-                          )}
+                          {dept.headcount ?? "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {dept.headcount != null && totalHeadcount > 0
                             ? `${Math.round((dept.headcount / totalHeadcount) * 100)}%`
                             : "—"}
                         </TableCell>
-                        {editing && (
-                          <TableCell>
-                            <button
-                              type="button"
-                              onClick={() => removeDepartment(dept.name)}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </TableCell>
-                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -498,17 +408,9 @@ export function OrganizationDetail({
                       <TableCell className="text-right font-medium">
                         {totalHeadcount > 0 ? "100%" : "—"}
                       </TableCell>
-                      {editing && <TableCell />}
                     </TableRow>
                   </TableFooter>
                 </Table>
-              )}
-
-              {editing && headcountMismatch && (
-                <p className="text-sm text-amber-600">
-                  La suma de personas ({totalHeadcount}) no coincide con el
-                  total de empleados ({empCount}).
-                </p>
               )}
             </CardContent>
           </Card>

@@ -23,16 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { X, Plus, Check } from "lucide-react";
+import { DepartmentEditor } from "@/components/department-editor";
+import { Check } from "lucide-react";
 
 function generateSlug(name: string): string {
   return name
@@ -69,51 +61,13 @@ export default function NewOrganizationPage() {
 
   // Step 2
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [deptName, setDeptName] = useState("");
-  const [deptHeadcount, setDeptHeadcount] = useState("");
 
   // Step 3
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactRole, setContactRole] = useState("");
 
-  const totalHeadcount = departments.reduce(
-    (sum, d) => sum + (d.headcount ?? 0),
-    0
-  );
   const empCount = Number(employeeCount) || 0;
-  const headcountMismatch =
-    departments.length > 0 && totalHeadcount > 0 && totalHeadcount !== empCount;
-
-  function addDepartment() {
-    const trimmedName = deptName.trim();
-    if (!trimmedName) return;
-    if (departments.some((d) => d.name === trimmedName)) return;
-
-    setDepartments([
-      ...departments,
-      {
-        name: trimmedName,
-        headcount: deptHeadcount ? Number(deptHeadcount) : null,
-      },
-    ]);
-    setDeptName("");
-    setDeptHeadcount("");
-  }
-
-  function removeDepartment(name: string) {
-    setDepartments(departments.filter((d) => d.name !== name));
-  }
-
-  function updateHeadcount(name: string, value: string) {
-    setDepartments(
-      departments.map((d) =>
-        d.name === name
-          ? { ...d, headcount: value ? Number(value) : null }
-          : d
-      )
-    );
-  }
 
   function validateStep(): boolean {
     const stepErrors: Record<string, string> = {};
@@ -341,107 +295,11 @@ export default function NewOrganizationPage() {
 
           {/* Step 2: Departments */}
           {step === 2 && (
-            <>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    value={deptName}
-                    onChange={(e) => setDeptName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addDepartment();
-                      }
-                    }}
-                    placeholder="Nombre del departamento"
-                  />
-                </div>
-                <div className="w-28">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={deptHeadcount}
-                    onChange={(e) => setDeptHeadcount(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addDepartment();
-                      }
-                    }}
-                    placeholder="Personas"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={addDepartment}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {departments.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Departamento</TableHead>
-                      <TableHead className="w-28 text-right">
-                        Personas
-                      </TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {departments.map((dept) => (
-                      <TableRow key={dept.name}>
-                        <TableCell>{dept.name}</TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={dept.headcount ?? ""}
-                            onChange={(e) =>
-                              updateHeadcount(dept.name, e.target.value)
-                            }
-                            className="h-8 w-20 text-right ml-auto"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <button
-                            type="button"
-                            onClick={() => removeDepartment(dept.name)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow>
-                      <TableCell className="font-medium">Total</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {totalHeadcount}
-                      </TableCell>
-                      <TableCell />
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  Agrega los departamentos de la organización.
-                </p>
-              )}
-
-              {headcountMismatch && (
-                <p className="text-sm text-amber-600">
-                  La suma de personas ({totalHeadcount}) no coincide con el
-                  total de empleados ({empCount}).
-                </p>
-              )}
-            </>
+            <DepartmentEditor
+              departments={departments}
+              onChange={setDepartments}
+              employeeCount={empCount}
+            />
           )}
 
           {/* Step 3: Contact */}
