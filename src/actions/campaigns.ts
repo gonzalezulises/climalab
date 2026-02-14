@@ -738,6 +738,211 @@ export async function calculateResults(
     }
   }
 
+  // =========================================================================
+  // 14. Advanced analytics → campaign_analytics table
+  // =========================================================================
+
+  // Delete previous analytics
+  await supabase.from("campaign_analytics").delete().eq("campaign_id", campaignId);
+
+  const analytics: Array<{ campaign_id: string; analysis_type: string; data: Json }> = [];
+
+  // --- 14a. Pearson correlations between dimensions ---
+  // Build per-respondent dimension averages
+  const respondentDimAvgs = new Map<string, Map<string, number>>();
+  for (const [rid, rd] of respondentData) {
+    const dimAvgs = new Map<string, number>();
+    for (const [code, scores] of rd.dimensionScores) {
+      if (scores.length > 0) dimAvgs.set(code, mean(scores));
+    }
+    respondentDimAvgs.set(rid, dimAvgs);
+  }
+
+  function pearson(xArr: number[], yArr: number[]): { r: number; pValue: number; n: number } {
+    const n = xArr.length;
+    if (n < 10) return { r: 0, pValue: 1, n };
+    const mx = mean(xArr);
+    const my = mean(yArr);
+    let sumXY = 0, sumX2 = 0, sumY2 = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = xArr[i] - mx;
+      const dy = yArr[i] - my;
+      sumXY += dx * dy;
+      sumX2 += dx * dx;
+      sumY2 += dy * dy;
+    }
+    const denom = Math.sqrt(sumX2 * sumY2);
+    if (denom === 0) return { r: 0, pValue: 1, n };
+    const r = sumXY / denom;
+    // t-test for significance
+    const t = r * Math.sqrt((n - 2) / (1 - r * r + 1e-10));
+    // Approximate p-value using t-distribution (two-tailed, rough)
+    const df = n - 2;
+    const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - 0.416 * t * t / df) : 1;
+    return { r: Math.round(r * 1000) / 1000, pValue: Math.round(pValue * 10000) / 10000, n };
+  }
+
+  // Correlation matrix
+  const corrMatrix: Record<string, Record<string, { r: number; pValue: number; n: number }>> = {};
+  for (const codeA of dimensionCodes) {
+    corrMatrix[codeA] = {};
+    for (const codeB of dimensionCodes) {
+      if (codeA === codeB) {
+        corrMatrix[codeA][codeB] = { r: 1, pValue: 0, n: respondentData.size };
+        continue;
+      }
+      const xArr: number[] = [];
+      const yArr: number[] = [];
+      for (const [, dimAvgs] of respondentDimAvgs) {
+        const x = dimAvgs.get(codeA);
+        const y = dimAvgs.get(codeB);
+        if (x !== undefined && y !== undefined) {
+          xArr.push(x);
+          yArr.push(y);
+        }
+      }
+      corrMatrix[codeA][codeB] = pearson(xArr, yArr);
+    }
+  }
+
+  analytics.push({
+    campaign_id: campaignId,
+    analysis_type: "correlation_matrix",
+    data: corrMatrix as unknown as Json,
+  });
+
+  // Engagement drivers: correlation of each dimension with ENG
+  const engDrivers: Array<{ code: string; name: string; r: number; pValue: number; n: number }> = [];
+  for (const code of dimensionCodes) {
+    if (code === "ENG") continue;
+    const corr = corrMatrix[code]?.["ENG"];
+    if (corr) {
+      engDrivers.push({
+        code,
+        name: dimensionNameMap.get(code) ?? code,
+        ...corr,
+      });
+    }
+  }
+  engDrivers.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
+  analytics.push({
+    campaign_id: campaignId,
+    analysis_type: "engagement_drivers",
+    data: engDrivers as unknown as Json,
+  });
+
+  // --- 14b. Automatic alerts ---
+  const alerts: Array<{
+    severity: string;
+    type: string;
+    dimension_code?: string;
+    item_id?: string;
+    item_text?: string;
+    segment_key?: string;
+    value: number;
+    threshold: number;
+    message: string;
+  }> = [];
+
+  // Check item favorability
+  for (const [itemId, data] of itemScoresGlobal) {
+    const itemInfo = itemMap.get(itemId);
+    if (!itemInfo) continue;
+    const fav = favorability(data.scores);
+    if (fav < 60) {
+      alerts.push({
+        severity: "crisis",
+        type: "low_favorability",
+        dimension_code: itemInfo.dimension_code,
+        item_id: itemId,
+        item_text: itemTextMap.get(itemId) ?? "",
+        value: Math.round(fav * 10) / 10,
+        threshold: 60,
+        message: `Ítem con favorabilidad crítica (${Math.round(fav)}%) en ${dimensionNameMap.get(itemInfo.dimension_code) ?? itemInfo.dimension_code}`,
+      });
+    } else if (fav < 70) {
+      alerts.push({
+        severity: "attention",
+        type: "low_favorability",
+        dimension_code: itemInfo.dimension_code,
+        item_id: itemId,
+        item_text: itemTextMap.get(itemId) ?? "",
+        value: Math.round(fav * 10) / 10,
+        threshold: 70,
+        message: `Ítem requiere atención (${Math.round(fav)}%) en ${dimensionNameMap.get(itemInfo.dimension_code) ?? itemInfo.dimension_code}`,
+      });
+    }
+  }
+
+  // Check segment engagement < 3.5
+  for (const result of results) {
+    if (result.result_type === "dimension" && result.dimension_code === "ENG" && result.segment_type !== "global") {
+      if (result.avg_score < 3.5) {
+        alerts.push({
+          severity: "risk_group",
+          type: "low_engagement_segment",
+          segment_key: result.segment_key,
+          dimension_code: "ENG",
+          value: result.avg_score,
+          threshold: 3.5,
+          message: `Segmento "${result.segment_key}" con engagement bajo (${result.avg_score})`,
+        });
+      }
+    }
+  }
+
+  alerts.sort((a, b) => {
+    const sev = { crisis: 0, risk_group: 1, decline: 2, attention: 3 };
+    return (sev[a.severity as keyof typeof sev] ?? 4) - (sev[b.severity as keyof typeof sev] ?? 4);
+  });
+
+  analytics.push({
+    campaign_id: campaignId,
+    analysis_type: "alerts",
+    data: alerts as unknown as Json,
+  });
+
+  // --- 14c. Category scores ---
+  const categoryMap: Record<string, string[]> = {};
+  for (const dim of dimensions) {
+    const cat = (dim as { category?: string }).category;
+    if (!cat) continue;
+    if (!categoryMap[cat]) categoryMap[cat] = [];
+    categoryMap[cat].push(dim.code);
+  }
+
+  const categoryScores: Array<{ category: string; avg_score: number; favorability_pct: number; dimension_count: number }> = [];
+  for (const [cat, codes] of Object.entries(categoryMap)) {
+    const allScores: number[] = [];
+    for (const code of codes) {
+      for (const [, rd] of respondentData) {
+        const scores = rd.dimensionScores.get(code);
+        if (scores) allScores.push(...scores);
+      }
+    }
+    if (allScores.length > 0) {
+      categoryScores.push({
+        category: cat,
+        avg_score: Math.round(mean(allScores) * 100) / 100,
+        favorability_pct: Math.round(favorability(allScores) * 10) / 10,
+        dimension_count: codes.length,
+      });
+    }
+  }
+
+  analytics.push({
+    campaign_id: campaignId,
+    analysis_type: "categories",
+    data: categoryScores as unknown as Json,
+  });
+
+  // Insert analytics in batches
+  for (let i = 0; i < analytics.length; i += 10) {
+    const batch = analytics.slice(i, i + 10);
+    await supabase.from("campaign_analytics").insert(batch);
+  }
+
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath(`/campaigns/${campaignId}/results`);
 

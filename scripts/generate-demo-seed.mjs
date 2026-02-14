@@ -1,281 +1,241 @@
 #!/usr/bin/env node
 /**
- * Generate demo campaign seed SQL with 32 respondents and realistic responses.
- * Run: node scripts/generate-demo-seed.mjs > /tmp/demo-seed.sql
+ * ClimaLab v3.0 — Demo Data Generator
+ * Generates respondent + response SQL for 2 campaigns (Q3 2025 + Q1 2026).
+ * Usage: node scripts/generate-demo-seed.mjs >> supabase/seed.sql
  */
 
-// Item definitions: [itemId suffix, dimensionCode, isReverse, isAttentionCheck]
-const items = [
-  // LID - Liderazgo (5 items, 1 reverse)
-  ["001", "LID", false, false],
-  ["002", "LID", false, false],
-  ["003", "LID", false, false],
-  ["004", "LID", false, false],
-  ["005", "LID", true, false],
-  // JUS - Justicia (5 items, 1 reverse)
-  ["006", "JUS", false, false],
-  ["007", "JUS", false, false],
-  ["008", "JUS", false, false],
-  ["009", "JUS", false, false],
-  ["010", "JUS", true, false],
-  // PER - Pertenencia (4 items, 1 reverse)
-  ["011", "PER", false, false],
-  ["012", "PER", false, false],
-  ["013", "PER", false, false],
-  ["014", "PER", true, false],
-  // Attention check 1
-  ["015", null, false, true],
-  // INN - Innovación (5 items, 1 reverse)
-  ["016", "INN", false, false],
-  ["017", "INN", false, false],
-  ["018", "INN", false, false],
-  ["019", "INN", false, false],
-  ["020", "INN", true, false],
-  // BIE - Bienestar (4 items, 1 reverse)
-  ["021", "BIE", false, false],
-  ["022", "BIE", false, false],
-  ["023", "BIE", false, false],
-  ["024", "BIE", true, false],
-  // CLA - Claridad (4 items, 1 reverse)
-  ["025", "CLA", false, false],
-  ["026", "CLA", false, false],
-  ["027", "CLA", false, false],
-  ["028", "CLA", true, false],
-  // Attention check 2
-  ["029", null, false, true],
-  // COM - Comunicación (4 items, 1 reverse)
-  ["030", "COM", false, false],
-  ["031", "COM", false, false],
-  ["032", "COM", false, false],
-  ["033", "COM", true, false],
-  // ENG - Engagement (4 items, 1 reverse)
-  ["034", "ENG", false, false],
-  ["035", "ENG", false, false],
-  ["036", "ENG", false, false],
-  ["037", "ENG", true, false],
-];
-
-// Target adjusted averages per dimension
-const targetAvg = {
-  LID: 4.38,
-  PER: 4.35,
-  BIE: 3.62,
-  JUS: 3.70,
-  INN: 4.05,
-  CLA: 4.10,
-  COM: 3.95,
-  ENG: 4.12,
-};
-
-// Respondent definitions
-const respondents = [
-  // Ingeniería (10)
-  { idx: 1, dept: "Ingeniería", tenure: "1-3", gender: "male", enps: 9 },
-  { idx: 2, dept: "Ingeniería", tenure: "3-5", gender: "female", enps: 8 },
-  { idx: 3, dept: "Ingeniería", tenure: "<1", gender: "male", enps: 7 },
-  { idx: 4, dept: "Ingeniería", tenure: "5-10", gender: "male", enps: 10 },
-  { idx: 5, dept: "Ingeniería", tenure: "1-3", gender: "female", enps: 5 },
-  { idx: 6, dept: "Ingeniería", tenure: "3-5", gender: "male", enps: 8 },
-  { idx: 7, dept: "Ingeniería", tenure: "<1", gender: "non_binary", enps: 7 },
-  { idx: 8, dept: "Ingeniería", tenure: "1-3", gender: "male", enps: 7 },
-  { idx: 9, dept: "Ingeniería", tenure: "5-10", gender: "female", enps: 9 },
-  { idx: 10, dept: "Ingeniería", tenure: "3-5", gender: "male", enps: 4 },
-  // Marketing (5)
-  { idx: 11, dept: "Marketing", tenure: "1-3", gender: "female", enps: 8 },
-  { idx: 12, dept: "Marketing", tenure: "<1", gender: "male", enps: 7 },
-  { idx: 13, dept: "Marketing", tenure: "3-5", gender: "female", enps: 10 },
-  { idx: 14, dept: "Marketing", tenure: "1-3", gender: "female", enps: 3 },
-  { idx: 15, dept: "Marketing", tenure: "5-10", gender: "male", enps: 8 },
-  // Operaciones (8)
-  { idx: 16, dept: "Operaciones", tenure: "1-3", gender: "male", enps: 6 },
-  { idx: 17, dept: "Operaciones", tenure: "3-5", gender: "female", enps: 7 },
-  { idx: 18, dept: "Operaciones", tenure: "<1", gender: "male", enps: 5 },
-  { idx: 19, dept: "Operaciones", tenure: "10+", gender: "male", enps: 9 },
-  { idx: 20, dept: "Operaciones", tenure: "1-3", gender: "female", enps: 8 },
-  { idx: 21, dept: "Operaciones", tenure: "5-10", gender: "male", enps: 2 },
-  { idx: 22, dept: "Operaciones", tenure: "3-5", gender: "female", enps: 7 },
-  { idx: 23, dept: "Operaciones", tenure: "<1", gender: "male", enps: 6 },
-  // Recursos Humanos (4)
-  { idx: 24, dept: "Recursos Humanos", tenure: "3-5", gender: "female", enps: 9 },
-  { idx: 25, dept: "Recursos Humanos", tenure: "1-3", gender: "female", enps: 8 },
-  { idx: 26, dept: "Recursos Humanos", tenure: "5-10", gender: "male", enps: 10 },
-  { idx: 27, dept: "Recursos Humanos", tenure: "10+", gender: "female", enps: 7 },
-  // Finanzas (5)
-  { idx: 28, dept: "Finanzas", tenure: "1-3", gender: "male", enps: 4 },
-  { idx: 29, dept: "Finanzas", tenure: "3-5", gender: "female", enps: 7 },
-  { idx: 30, dept: "Finanzas", tenure: "<1", gender: "male", enps: 9 },
-  { idx: 31, dept: "Finanzas", tenure: "5-10", gender: "female", enps: 8 },
-  { idx: 32, dept: "Finanzas", tenure: "1-3", gender: "male", enps: 3 },
-];
-
-// Simple seeded PRNG (mulberry32)
-function mulberry32(seed) {
+// Seeded PRNG (mulberry32)
+function mulberry32(a) {
   return function () {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
 const rng = mulberry32(42);
 
-/**
- * Generate a score for a respondent+item that targets the dimension average.
- * For forward items: score targets the avg directly.
- * For reverse items: raw score targets (6 - avg) so adjusted = avg.
- */
-function generateScore(dimCode, isReverse, respondentIdx) {
-  const avg = targetAvg[dimCode];
-  // Target raw score
-  const rawTarget = isReverse ? 6 - avg : avg;
+// Clamp to Likert 1-5
+function clamp(v) { return Math.max(1, Math.min(5, Math.round(v))); }
 
-  // Add per-respondent personality bias (-0.5 to +0.5)
-  const personalityBias = (((respondentIdx * 7 + 3) % 11) / 11 - 0.5) * 0.8;
+// UUID helpers
+function respondentUUID(campaignIdx, n) {
+  const prefix = campaignIdx === 0 ? 'aa' : 'ab';
+  return `${prefix}000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+}
+function responseUUID(campaignIdx, n) {
+  const prefix = campaignIdx === 0 ? 'ba' : 'bb';
+  return `${prefix}000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+}
+function openResponseUUID(campaignIdx, n) {
+  const prefix = campaignIdx === 0 ? 'ca' : 'cb';
+  return `${prefix}000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+}
 
-  // Random noise
+// Campaigns
+const campaigns = [
+  { id: 'f0000000-0000-0000-0000-000000000001', idx: 0, respondentCount: 80, date: '2025-07-15' },
+  { id: 'f0000000-0000-0000-0000-000000000002', idx: 1, respondentCount: 120, date: '2026-01-25' },
+];
+
+// 18 dimension codes and their item IDs
+const dimensions = [
+  { code: 'ORG', items: [1,2,3,4], reverseItems: [4] },
+  { code: 'PRO', items: [5,6,7,8], reverseItems: [8] },
+  { code: 'SEG', items: [9,10,11,12], reverseItems: [12] },
+  { code: 'BAL', items: [13,14,15,16], reverseItems: [16] },
+  { code: 'CUI', items: [17,18,19,20], reverseItems: [20] },
+  { code: 'LID', items: [21,22,23,24,25], reverseItems: [25] },
+  { code: 'AUT', items: [26,27,28,29], reverseItems: [29] },
+  { code: 'COM', items: [30,31,32,33], reverseItems: [33] },
+  { code: 'CON', items: [34,35,36,37], reverseItems: [37] },
+  { code: 'CMP', items: [38,39,40,41], reverseItems: [41] },
+  { code: 'REC', items: [42,43,44,45], reverseItems: [45] },
+  { code: 'BEN', items: [46,47,48,49], reverseItems: [49] },
+  { code: 'EQA', items: [50,51,52,53,54,55,56,57,58], reverseItems: [53] },
+  { code: 'COH', items: [59,60,61,62], reverseItems: [62] },
+  { code: 'INN', items: [63,64,65,66,67], reverseItems: [67] },
+  { code: 'RES', items: [68,69,70,71], reverseItems: [71] },
+  { code: 'DES', items: [72,73,74,75], reverseItems: [75] },
+  { code: 'ENG', items: [76,77,78,79], reverseItems: [79] },
+];
+
+// Attention checks: item 80 → expected 4, item 81 → expected 2
+const attentionChecks = [
+  { itemNum: 80, expected: 4 },
+  { itemNum: 81, expected: 2 },
+];
+
+function itemUUID(n) {
+  return `e3000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+}
+
+// Target dimension averages per campaign
+// Q3 2025: baseline, LID/ORG strong, DES/CMP weak
+// Q1 2026: overall improvement, some stagnant
+const targetAvg = {
+  0: { // Q3 2025
+    ORG: 4.30, PRO: 4.25, SEG: 3.90, BAL: 3.70, CUI: 4.00,
+    LID: 4.35, AUT: 4.10, COM: 3.80, CON: 3.75, CMP: 3.50,
+    REC: 3.65, BEN: 3.55, EQA: 3.60, COH: 4.15, INN: 3.85,
+    RES: 4.05, DES: 3.55, ENG: 3.95,
+  },
+  1: { // Q1 2026
+    ORG: 4.40, PRO: 4.35, SEG: 4.05, BAL: 3.85, CUI: 4.15,
+    LID: 4.45, AUT: 4.20, COM: 3.95, CON: 3.90, CMP: 3.60,
+    REC: 3.80, BEN: 3.65, EQA: 3.70, COH: 4.25, INN: 4.00,
+    RES: 4.15, DES: 3.70, ENG: 4.10,
+  },
+};
+
+// Departments distribution
+const departments = ['Ingeniería', 'Marketing', 'Operaciones', 'Recursos Humanos', 'Finanzas', 'Ventas', 'Soporte'];
+const deptWeights = [0.22, 0.14, 0.18, 0.10, 0.10, 0.16, 0.10];
+
+// Tenure distribution
+const tenures = ['<1', '1-3', '3-5', '5-10', '10+'];
+const tenureWeights = [0.15, 0.25, 0.25, 0.20, 0.15];
+
+// Gender distribution
+const genders = ['Masculino', 'Femenino', 'No binario', 'Prefiero no decir'];
+const genderWeights = [0.48, 0.44, 0.04, 0.04];
+
+function weightedPick(options, weights) {
+  const r = rng();
+  let acc = 0;
+  for (let i = 0; i < options.length; i++) {
+    acc += weights[i];
+    if (r < acc) return options[i];
+  }
+  return options[options.length - 1];
+}
+
+// eNPS distribution: ~25% promoters (9-10), ~45% passives (7-8), ~30% detractors (0-6)
+function generateENPS() {
+  const r = rng();
+  if (r < 0.25) return 9 + Math.floor(rng() * 2); // 9 or 10
+  if (r < 0.70) return 7 + Math.floor(rng() * 2); // 7 or 8
+  return Math.floor(rng() * 7); // 0-6
+}
+
+// Generate a score given a target average
+function generateScore(target, personality) {
   const noise = (rng() - 0.5) * 2.0;
-
-  const raw = rawTarget + personalityBias + noise;
-  return Math.max(1, Math.min(5, Math.round(raw)));
+  return clamp(target + personality + noise);
 }
 
-function pad(n, len = 3) {
-  return String(n).padStart(len, "0");
-}
-
-function respondentUuid(idx) {
-  return `f0000000-0000-0000-0000-${pad(idx, 12).replace(/^0{6}/, "000000")}`;
-}
-
-function formatUuid(prefix, idx) {
-  return `${prefix}-0000-0000-0000-${String(idx).padStart(12, "0")}`;
-}
-
-// --- Generate SQL ---
+// SQL output
 const lines = [];
+function emit(sql) { lines.push(sql); }
 
-lines.push(`
--- ============================================================
--- Seed: Demo Campaign with simulated responses
--- ============================================================
+for (const campaign of campaigns) {
+  const { id: campaignId, idx, respondentCount, date } = campaign;
+  const avgs = targetAvg[idx];
 
--- Create a demo campaign (closed, ready for calculateResults)
-INSERT INTO campaigns (id, organization_id, instrument_id, name, status, starts_at, ends_at, population_n, sample_n, response_rate, margin_of_error, confidence_level)
-VALUES (
-  'e0000000-0000-0000-0000-000000000001',
-  'a0000000-0000-0000-0000-000000000001',
-  'b0000000-0000-0000-0000-000000000001',
-  'Clima Q1 2026 - Demo',
-  'closed',
-  '2026-01-15T00:00:00Z',
-  '2026-01-31T23:59:59Z',
-  85, 32, 37.65, 14.23, 95.0
-);
+  emit(`\n-- Campaign ${idx + 1}: ${respondentCount} respondentes`);
 
--- ============================================================
--- 32 Respondents with demographic data
--- ============================================================
-INSERT INTO respondents (id, campaign_id, token, department, tenure, gender, status, enps_score, started_at, completed_at) VALUES`);
+  // ~10% failure rate on attention checks
+  const failSet = new Set();
+  for (let i = 1; i <= respondentCount; i++) {
+    if (rng() < 0.10) failSet.add(i);
+  }
 
-const respondentLines = respondents.map((r, i) => {
-  const uuid = `f0000000-0000-0000-0000-${String(r.idx).padStart(12, "0")}`;
-  const token = `demo${String(r.idx).padStart(4, "0")}`;
-  const startH = 8 + (r.idx % 10);
-  const startM = (r.idx * 7) % 60;
-  const durationMin = 12 + (r.idx % 15);
-  const started = `2026-01-${String(15 + (r.idx % 14)).padStart(2, "0")}T${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}:00Z`;
-  const endH = startH + Math.floor((startM + durationMin) / 60);
-  const endM = (startM + durationMin) % 60;
-  const completed = `2026-01-${String(15 + (r.idx % 14)).padStart(2, "0")}T${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00Z`;
-  const comma = i < respondents.length - 1 ? "," : ";";
-  return `  ('${uuid}', 'e0000000-0000-0000-0000-000000000001', '${token}', '${r.dept}', '${r.tenure}', '${r.gender}', 'completed', ${r.enps}, '${started}', '${completed}')${comma}`;
-});
-lines.push(respondentLines.join("\n"));
+  // Generate respondents
+  const respondentRows = [];
+  for (let i = 1; i <= respondentCount; i++) {
+    const uuid = respondentUUID(idx, i);
+    const dept = weightedPick(departments, deptWeights);
+    const tenure = weightedPick(tenures, tenureWeights);
+    const gender = weightedPick(genders, genderWeights);
+    const status = failSet.has(i) ? 'disqualified' : 'completed';
+    const enps = generateENPS();
+    const token = `demo${idx + 1}${String(i).padStart(4, '0')}`;
+    const minute = String(15 + (i % 45)).padStart(2, '0');
 
-// Generate responses
-lines.push(`
--- ============================================================
--- Responses: 32 respondents × 37 items = 1,184 responses
--- ============================================================
-INSERT INTO responses (respondent_id, item_id, score, answered_at) VALUES`);
+    respondentRows.push(
+      `('${uuid}', '${campaignId}', '${token}', '${dept}', '${tenure}', '${gender}', '${status}', '${date}T09:00:00Z', '${date}T09:${minute}:00Z', ${enps})`
+    );
+  }
 
-const responseLines = [];
-let responseCount = 0;
+  // Batch insert respondents
+  for (let i = 0; i < respondentRows.length; i += 50) {
+    const batch = respondentRows.slice(i, i + 50);
+    emit(`INSERT INTO respondents (id, campaign_id, token, department, tenure, gender, status, started_at, completed_at, enps_score) VALUES`);
+    emit(batch.join(',\n') + ';');
+  }
 
-for (const r of respondents) {
-  const respondentUuid = `f0000000-0000-0000-0000-${String(r.idx).padStart(12, "0")}`;
-  const day = 15 + (r.idx % 14);
+  // Generate responses
+  let responseNum = 0;
+  const responseRows = [];
 
-  for (const [itemSuffix, dimCode, isReverse, isAttnCheck] of items) {
-    const itemUuid = `c1000002-0000-0000-0000-${String(parseInt(itemSuffix)).padStart(12, "0")}`;
+  for (let i = 1; i <= respondentCount; i++) {
+    const rUUID = respondentUUID(idx, i);
+    const personality = (rng() - 0.5) * 0.8;
+    const minute = String(15 + (i % 45)).padStart(2, '0');
 
-    let score;
-    if (isAttnCheck) {
-      // Attention check 1 (item 015): "De acuerdo" = 4
-      // Attention check 2 (item 029): "En desacuerdo" = 2
-      score = itemSuffix === "015" ? 4 : 2;
-    } else {
-      score = generateScore(dimCode, isReverse, r.idx);
+    for (const dim of dimensions) {
+      const dimAvg = avgs[dim.code];
+      for (const itemNum of dim.items) {
+        responseNum++;
+        const isReverse = dim.reverseItems.includes(itemNum);
+        const targetForItem = isReverse ? (6 - dimAvg) : dimAvg;
+        const score = generateScore(targetForItem, personality);
+        responseRows.push(
+          `('${responseUUID(idx, responseNum)}', '${rUUID}', '${itemUUID(itemNum)}', ${score}, '${date}T09:${minute}:00Z')`
+        );
+      }
     }
 
-    const minute = (parseInt(itemSuffix) * 2 + r.idx) % 60;
-    const hour = 8 + Math.floor((parseInt(itemSuffix) * 2 + r.idx) / 60);
-    const answeredAt = `2026-01-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`;
-
-    responseLines.push(`  ('${respondentUuid}', '${itemUuid}', ${score}, '${answeredAt}')`);
-    responseCount++;
+    // Attention checks
+    for (const ac of attentionChecks) {
+      responseNum++;
+      const score = failSet.has(i) ? (ac.expected === 4 ? 2 : 4) : ac.expected;
+      responseRows.push(
+        `('${responseUUID(idx, responseNum)}', '${rUUID}', '${itemUUID(ac.itemNum)}', ${score}, '${date}T09:${minute}:00Z')`
+      );
+    }
   }
-}
 
-// Join with commas and end with semicolon
-lines.push(responseLines.join(",\n") + ";");
-
-// Open responses
-lines.push(`
--- ============================================================
--- Open responses (10 varied comments)
--- ============================================================
-INSERT INTO open_responses (respondent_id, question_type, text) VALUES
-  ('f0000000-0000-0000-0000-000000000001', 'strength', 'El liderazgo de mi supervisor es excelente. Siempre está disponible para apoyarme y me da retroalimentación constructiva.'),
-  ('f0000000-0000-0000-0000-000000000003', 'improvement', 'Sería bueno tener más flexibilidad en los horarios. A veces la carga de trabajo no permite un buen equilibrio.'),
-  ('f0000000-0000-0000-0000-000000000005', 'general', 'Me gusta trabajar aquí pero creo que la comunicación entre departamentos podría mejorar bastante.'),
-  ('f0000000-0000-0000-0000-000000000011', 'strength', 'El ambiente de trabajo y la relación con mis compañeros es lo mejor de esta empresa.'),
-  ('f0000000-0000-0000-0000-000000000013', 'improvement', 'Los procesos de promoción no son transparentes. No queda claro qué criterios se usan para ascensos.'),
-  ('f0000000-0000-0000-0000-000000000016', 'general', 'Necesitamos mejores herramientas tecnológicas. Algunas de las que usamos están desactualizadas.'),
-  ('f0000000-0000-0000-0000-000000000019', 'strength', 'Llevo muchos años aquí y sigo comprometido. La estabilidad y el buen trato son clave.'),
-  ('f0000000-0000-0000-0000-000000000024', 'improvement', 'La carga de trabajo ha aumentado mucho y no se han contratado más personas. Esto genera estrés.'),
-  ('f0000000-0000-0000-0000-000000000028', 'general', 'Estaría bien tener más oportunidades de capacitación y desarrollo profesional.'),
-  ('f0000000-0000-0000-0000-000000000031', 'strength', 'Me siento orgullosa de ser parte de esta organización. Los valores se viven día a día.');
-`);
-
-console.log(lines.join("\n"));
-
-// Summary stats to stderr
-const dimScores = {};
-for (const r of respondents) {
-  for (const [itemSuffix, dimCode, isReverse, isAttnCheck] of items) {
-    if (isAttnCheck) continue;
-    const score = generateScore(dimCode, isReverse, r.idx);
-    const adjusted = isReverse ? 6 - score : score;
-    if (!dimScores[dimCode]) dimScores[dimCode] = [];
-    dimScores[dimCode].push(adjusted);
+  // Batch insert responses (100 per INSERT)
+  for (let i = 0; i < responseRows.length; i += 100) {
+    const batch = responseRows.slice(i, i + 100);
+    emit(`INSERT INTO responses (id, respondent_id, item_id, score, answered_at) VALUES`);
+    emit(batch.join(',\n') + ';');
   }
-}
-// Re-seed the PRNG to get same scores
-const rng2 = mulberry32(42);
-// We need to re-run the same generation to get actual scores
-// Actually let's just count from the generated data
-process.stderr.write("\nDimension averages (approximate - re-generation may differ slightly):\n");
-for (const [dim, target] of Object.entries(targetAvg)) {
-  process.stderr.write(`  ${dim}: target=${target}\n`);
-}
-process.stderr.write(`\nTotal responses: ${responseCount}\n`);
 
-// eNPS stats
-const promoters = respondents.filter((r) => r.enps >= 9).length;
-const passives = respondents.filter((r) => r.enps >= 7 && r.enps <= 8).length;
-const detractors = respondents.filter((r) => r.enps <= 6).length;
-const enps = Math.round(((promoters - detractors) / respondents.length) * 100);
-process.stderr.write(`eNPS: promoters=${promoters}, passives=${passives}, detractors=${detractors}, eNPS=${enps}\n`);
+  // Open responses (15 per campaign)
+  const openComments = [
+    { type: 'strength', text: 'El liderazgo de mi supervisor es excepcional, siempre está disponible para apoyarnos.' },
+    { type: 'strength', text: 'Me siento muy orgulloso de trabajar aquí, es una empresa con valores sólidos.' },
+    { type: 'strength', text: 'La colaboración entre equipos es una de las mayores fortalezas de la organización.' },
+    { type: 'strength', text: 'Valoro mucho la autonomía que me dan para realizar mi trabajo.' },
+    { type: 'strength', text: 'El ambiente laboral es muy positivo y los compañeros son solidarios.' },
+    { type: 'improvement', text: 'La compensación debería ser más competitiva respecto al mercado.' },
+    { type: 'improvement', text: 'Necesitamos más oportunidades de desarrollo y capacitación.' },
+    { type: 'improvement', text: 'La comunicación interna podría mejorar, a veces nos enteramos tarde de cambios importantes.' },
+    { type: 'improvement', text: 'Los procesos de promoción no siempre son transparentes.' },
+    { type: 'improvement', text: 'Sería bueno tener más flexibilidad para el balance vida-trabajo.' },
+    { type: 'general', text: 'En general estoy satisfecho con mi experiencia en la empresa.' },
+    { type: 'general', text: 'Creo que vamos por buen camino pero hay áreas claras de mejora.' },
+    { type: 'general', text: 'Me gustaría que se implementaran más iniciativas de bienestar.' },
+    { type: 'general', text: 'La empresa ha mejorado mucho en el último año.' },
+    { type: 'general', text: 'Espero que los resultados de esta encuesta se traduzcan en acciones concretas.' },
+  ];
+
+  const openRows = [];
+  for (let j = 0; j < openComments.length; j++) {
+    const c = openComments[j];
+    // Pick a completed respondent
+    let respIdx;
+    do { respIdx = Math.floor(rng() * respondentCount) + 1; } while (failSet.has(respIdx));
+    openRows.push(
+      `('${openResponseUUID(idx, j + 1)}', '${respondentUUID(idx, respIdx)}', '${c.type}', '${c.text.replace(/'/g, "''")}')`
+    );
+  }
+
+  emit(`INSERT INTO open_responses (id, respondent_id, question_type, text) VALUES`);
+  emit(openRows.join(',\n') + ';');
+}
+
+console.log(lines.join('\n'));

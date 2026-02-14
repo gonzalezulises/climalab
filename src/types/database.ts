@@ -34,6 +34,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_analytics: {
+        Row: {
+          analysis_type: string
+          campaign_id: string
+          created_at: string
+          data: Json
+          id: string
+        }
+        Insert: {
+          analysis_type: string
+          campaign_id: string
+          created_at?: string
+          data: Json
+          id?: string
+        }
+        Update: {
+          analysis_type?: string
+          campaign_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_analytics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_results: {
         Row: {
           avg_score: number | null
@@ -164,6 +196,7 @@ export type Database = {
       }
       dimensions: {
         Row: {
+          category: string | null
           code: string
           created_at: string
           description: string | null
@@ -171,8 +204,10 @@ export type Database = {
           instrument_id: string
           name: string
           sort_order: number
+          theoretical_basis: string | null
         }
         Insert: {
+          category?: string | null
           code: string
           created_at?: string
           description?: string | null
@@ -180,8 +215,10 @@ export type Database = {
           instrument_id: string
           name: string
           sort_order?: number
+          theoretical_basis?: string | null
         }
         Update: {
+          category?: string | null
           code?: string
           created_at?: string
           description?: string | null
@@ -189,6 +226,7 @@ export type Database = {
           instrument_id?: string
           name?: string
           sort_order?: number
+          theoretical_basis?: string | null
         }
         Relationships: [
           {
@@ -657,4 +695,3 @@ export const Constants = {
     },
   },
 } as const
-

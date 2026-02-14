@@ -21,6 +21,7 @@ export type Respondent = Database["public"]["Tables"]["respondents"]["Row"];
 export type Response = Database["public"]["Tables"]["responses"]["Row"];
 export type OpenResponse = Database["public"]["Tables"]["open_responses"]["Row"];
 export type CampaignResult = Database["public"]["Tables"]["campaign_results"]["Row"];
+export type CampaignAnalytics = Database["public"]["Tables"]["campaign_analytics"]["Row"];
 
 // Enum types
 export type SizeCategory = Database["public"]["Enums"]["size_category"];

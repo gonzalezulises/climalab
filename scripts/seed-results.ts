@@ -1,5 +1,5 @@
 /**
- * Post-seed script: calcula resultados de la campaña demo.
+ * Post-seed script: calcula resultados para todas las campañas demo.
  * Ejecutar después de `supabase db reset`:
  *   npm run seed:results
  */
@@ -8,39 +8,54 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
 
-async function main() {
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
+const std = (a: number[]) => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1)); };
+const fav = (a: number[]) => (a.filter((v) => v >= 4).length / a.length) * 100;
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const r1 = (n: number) => Math.round(n * 10) / 10;
 
-  const campaignId = "e0000000-0000-0000-0000-000000000001";
+function pearson(xArr: number[], yArr: number[]) {
+  const n = xArr.length;
+  if (n < 10) return { r: 0, pValue: 1, n };
+  const mx = mean(xArr), my = mean(yArr);
+  let sxy = 0, sx2 = 0, sy2 = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xArr[i] - mx, dy = yArr[i] - my;
+    sxy += dx * dy; sx2 += dx * dx; sy2 += dy * dy;
+  }
+  const denom = Math.sqrt(sx2 * sy2);
+  if (denom === 0) return { r: 0, pValue: 1, n };
+  const rVal = sxy / denom;
+  const t = rVal * Math.sqrt((n - 2) / (1 - rVal * rVal + 1e-10));
+  const df = n - 2;
+  const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - 0.416 * t * t / df) : 1;
+  return { r: r2(rVal * 10) / 10, pValue: Math.round(pValue * 10000) / 10000, n };
+}
 
-  // Fetch campaign
+async function processOneCampaign(supabase: ReturnType<typeof createClient>, campaignId: string) {
+  console.log(`\n--- Processing campaign: ${campaignId} ---`);
+
   const { data: campaign } = await supabase
     .from("campaigns")
     .select("*, organizations(employee_count)")
     .eq("id", campaignId)
     .single();
 
-  if (!campaign) {
-    console.error("Demo campaign not found");
-    process.exit(1);
-  }
+  if (!campaign) { console.error("Campaign not found:", campaignId); return; }
 
-  // Fetch dimensions + items
   const { data: dimensions } = await supabase
     .from("dimensions")
     .select("*, items(*)")
     .eq("instrument_id", campaign.instrument_id)
     .order("sort_order");
 
-  if (!dimensions) {
-    console.error("Dimensions not found");
-    process.exit(1);
-  }
+  if (!dimensions) { console.error("Dimensions not found"); return; }
 
   // Build maps
   const itemMap = new Map<string, { dimension_code: string; dimension_name: string; is_reverse: boolean; is_attention_check: boolean }>();
   const attentionChecks: { id: string; expected: number }[] = [];
   const dimensionNameMap = new Map<string, string>();
+  const itemTextMap = new Map<string, string>();
 
   for (const dim of dimensions) {
     dimensionNameMap.set(dim.code, dim.name);
@@ -58,33 +73,41 @@ async function main() {
         } else if (text.includes("en desacuerdo")) {
           attentionChecks.push({ id: item.id, expected: 2 });
         }
+      } else {
+        itemTextMap.set(item.id, item.text);
       }
     }
   }
 
-  // Fetch respondents + responses
+  // Fetch respondents
   const { data: respondents } = await supabase
     .from("respondents")
     .select("*")
     .eq("campaign_id", campaignId)
     .eq("status", "completed");
 
-  const respondentIds = respondents!.map((r) => r.id);
-  const { data: allResponses } = await supabase
-    .from("responses")
-    .select("*")
-    .in("respondent_id", respondentIds);
+  if (!respondents?.length) { console.error("No completed respondents"); return; }
 
-  // Group responses by respondent
+  const respondentIds = respondents.map((r) => r.id);
+
+  // Fetch responses (in batches if needed)
+  let allResponses: { respondent_id: string; item_id: string; score: number }[] = [];
+  for (let i = 0; i < respondentIds.length; i += 50) {
+    const batch = respondentIds.slice(i, i + 50);
+    const { data } = await supabase.from("responses").select("respondent_id, item_id, score").in("respondent_id", batch);
+    if (data) allResponses = allResponses.concat(data);
+  }
+
+  // Group responses
   const respMap = new Map<string, Map<string, number>>();
-  for (const resp of allResponses!) {
+  for (const resp of allResponses) {
     if (!respMap.has(resp.respondent_id)) respMap.set(resp.respondent_id, new Map());
-    respMap.get(resp.respondent_id)!.set(resp.item_id, resp.score!);
+    respMap.get(resp.respondent_id)!.set(resp.item_id, resp.score);
   }
 
   // Validate attention checks
   const validIds = new Set<string>();
-  for (const r of respondents!) {
+  for (const r of respondents) {
     const responses = respMap.get(r.id);
     if (!responses) continue;
     let pass = true;
@@ -92,18 +115,16 @@ async function main() {
       if (responses.get(check.id) !== check.expected) { pass = false; break; }
     }
     if (pass) validIds.add(r.id);
-    else {
-      await supabase.from("respondents").update({ status: "disqualified" }).eq("id", r.id);
-    }
+    else await supabase.from("respondents").update({ status: "disqualified" }).eq("id", r.id);
   }
 
-  console.log(`Valid respondents: ${validIds.size} / ${respondents!.length}`);
+  console.log(`Valid respondents: ${validIds.size} / ${respondents.length}`);
 
-  // Build dimension scores per respondent
+  // Build per-respondent dimension scores
   type RD = { department: string | null; tenure: string | null; gender: string | null; dimScores: Map<string, number[]>; allScores: number[] };
   const respondentData = new Map<string, RD>();
 
-  for (const r of respondents!) {
+  for (const r of respondents) {
     if (!validIds.has(r.id)) continue;
     const responses = respMap.get(r.id)!;
     const rd: RD = { department: r.department, tenure: r.tenure, gender: r.gender, dimScores: new Map(), allScores: [] };
@@ -118,20 +139,13 @@ async function main() {
     respondentData.set(r.id, rd);
   }
 
-  const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
-  const std = (a: number[]) => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1)); };
-  const fav = (a: number[]) => (a.filter((v) => v >= 4).length / a.length) * 100;
-  const r2 = (n: number) => Math.round(n * 100) / 100;
-  const r1 = (n: number) => Math.round(n * 10) / 10;
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: any[] = [];
   const dimCodes = dimensions.filter((d) => d.items.some((i: { is_attention_check: boolean }) => !i.is_attention_check)).map((d) => d.code);
 
   // Global dimension results
   for (const code of dimCodes) {
-    const scores: number[] = [];
-    let rc = 0;
+    const scores: number[] = []; let rc = 0;
     for (const [, rd] of respondentData) {
       const s = rd.dimScores.get(code);
       if (s?.length) { scores.push(...s); rc++; }
@@ -172,8 +186,6 @@ async function main() {
       const e = itemScores.get(itemId)!; e.scores.push(adj); e.rc++;
     }
   }
-  const itemTextMap = new Map<string, string>();
-  for (const dim of dimensions) for (const item of dim.items) if (!item.is_attention_check) itemTextMap.set(item.id, item.text);
 
   for (const [itemId, { scores, rc }] of itemScores) {
     const info = itemMap.get(itemId)!;
@@ -220,8 +232,126 @@ async function main() {
     const { error } = await supabase.from("campaign_results").insert(results.slice(i, i + 50));
     if (error) { console.error("Insert error:", error); process.exit(1); }
   }
+  console.log(`Inserted ${results.length} campaign_results`);
 
-  console.log(`Inserted ${results.length} results. Done.`);
+  // =========================================================================
+  // Advanced analytics → campaign_analytics
+  // =========================================================================
+  await supabase.from("campaign_analytics").delete().eq("campaign_id", campaignId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const analytics: any[] = [];
+
+  // Per-respondent dimension averages
+  const respondentDimAvgs = new Map<string, Map<string, number>>();
+  for (const [rid, rd] of respondentData) {
+    const avgs = new Map<string, number>();
+    for (const [code, scores] of rd.dimScores) {
+      if (scores.length > 0) avgs.set(code, mean(scores));
+    }
+    respondentDimAvgs.set(rid, avgs);
+  }
+
+  // Correlation matrix
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const corrMatrix: any = {};
+  for (const codeA of dimCodes) {
+    corrMatrix[codeA] = {};
+    for (const codeB of dimCodes) {
+      if (codeA === codeB) { corrMatrix[codeA][codeB] = { r: 1, pValue: 0, n: respondentData.size }; continue; }
+      const xArr: number[] = [], yArr: number[] = [];
+      for (const [, avgs] of respondentDimAvgs) {
+        const x = avgs.get(codeA), y = avgs.get(codeB);
+        if (x !== undefined && y !== undefined) { xArr.push(x); yArr.push(y); }
+      }
+      corrMatrix[codeA][codeB] = pearson(xArr, yArr);
+    }
+  }
+  analytics.push({ campaign_id: campaignId, analysis_type: "correlation_matrix", data: corrMatrix });
+
+  // Engagement drivers
+  const engDrivers = dimCodes
+    .filter((c) => c !== "ENG")
+    .map((code) => ({ code, name: dimensionNameMap.get(code) ?? code, ...corrMatrix[code]?.["ENG"] }))
+    .sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  analytics.push({ campaign_id: campaignId, analysis_type: "engagement_drivers", data: engDrivers });
+
+  // Alerts
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const alerts: any[] = [];
+  for (const [itemId, data] of itemScores) {
+    const info = itemMap.get(itemId); if (!info) continue;
+    const f = fav(data.scores);
+    if (f < 60) {
+      alerts.push({ severity: "crisis", type: "low_favorability", dimension_code: info.dimension_code, item_id: itemId, item_text: itemTextMap.get(itemId), value: r1(f), threshold: 60, message: `Ítem con favorabilidad crítica (${Math.round(f)}%) en ${info.dimension_name}` });
+    } else if (f < 70) {
+      alerts.push({ severity: "attention", type: "low_favorability", dimension_code: info.dimension_code, item_id: itemId, item_text: itemTextMap.get(itemId), value: r1(f), threshold: 70, message: `Ítem requiere atención (${Math.round(f)}%) en ${info.dimension_name}` });
+    }
+  }
+
+  // Risk groups
+  for (const result of results) {
+    if (result.result_type === "dimension" && result.dimension_code === "ENG" && result.segment_type !== "global") {
+      if (result.avg_score < 3.5) {
+        alerts.push({ severity: "risk_group", type: "low_engagement_segment", segment_key: result.segment_key, dimension_code: "ENG", value: result.avg_score, threshold: 3.5, message: `Segmento "${result.segment_key}" con engagement bajo (${result.avg_score})` });
+      }
+    }
+  }
+  alerts.sort((a: { severity: string }, b: { severity: string }) => {
+    const sev: Record<string, number> = { crisis: 0, risk_group: 1, decline: 2, attention: 3 };
+    return (sev[a.severity] ?? 4) - (sev[b.severity] ?? 4);
+  });
+  analytics.push({ campaign_id: campaignId, analysis_type: "alerts", data: alerts });
+
+  // Category scores
+  const categoryMap: Record<string, string[]> = {};
+  for (const dim of dimensions) {
+    const cat = dim.category as string | null;
+    if (!cat) continue;
+    if (!categoryMap[cat]) categoryMap[cat] = [];
+    categoryMap[cat].push(dim.code);
+  }
+  const categoryScores = Object.entries(categoryMap).map(([cat, codes]) => {
+    const allScores: number[] = [];
+    for (const code of codes) {
+      for (const [, rd] of respondentData) {
+        const s = rd.dimScores.get(code);
+        if (s) allScores.push(...s);
+      }
+    }
+    return { category: cat, avg_score: r2(mean(allScores)), favorability_pct: r1(fav(allScores)), dimension_count: codes.length };
+  });
+  analytics.push({ campaign_id: campaignId, analysis_type: "categories", data: categoryScores });
+
+  // Insert analytics
+  for (const a of analytics) {
+    const { error } = await supabase.from("campaign_analytics").insert(a);
+    if (error) { console.error("Analytics insert error:", error); }
+  }
+  console.log(`Inserted ${analytics.length} analytics records`);
+}
+
+async function main() {
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Find all closed campaigns
+  const { data: campaigns } = await supabase
+    .from("campaigns")
+    .select("id")
+    .in("status", ["closed", "archived"])
+    .order("created_at");
+
+  if (!campaigns?.length) {
+    console.error("No closed campaigns found");
+    process.exit(1);
+  }
+
+  console.log(`Found ${campaigns.length} campaigns to process`);
+
+  for (const campaign of campaigns) {
+    await processOneCampaign(supabase, campaign.id);
+  }
+
+  console.log("\nAll done!");
 }
 
 main().catch(console.error);
