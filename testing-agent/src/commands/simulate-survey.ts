@@ -1,6 +1,7 @@
 import ora from "ora";
 import chalk from "chalk";
 import crypto from "crypto";
+import { faker } from "@faker-js/faker/locale/es";
 import { getSupabase } from "../lib/supabase.js";
 import { generateEmployees } from "../data/generate-employees.js";
 import { generateResponses, generateENPS, type ItemInfo } from "../data/generate-responses.js";
@@ -74,7 +75,7 @@ export async function simulateSurveyCommand(opts: {
   // Determine who fails attention checks
   const failSet = new Set<number>();
   for (let i = 0; i < opts.respondents; i++) {
-    if (Math.random() < opts.failRate) failSet.add(i);
+    if (faker.number.float({ min: 0, max: 1 }) < opts.failRate) failSet.add(i);
   }
 
   spinner.text = `Creating ${opts.respondents} respondents + participants...`;
@@ -145,8 +146,8 @@ export async function simulateSurveyCommand(opts: {
       }
 
       // Open responses (15-25% of respondents)
-      if (Math.random() < 0.2 && !shouldFail) {
-        const count = Math.floor(Math.random() * 3) + 1;
+      if (faker.number.float({ min: 0, max: 1 }) < 0.2 && !shouldFail) {
+        const count = Math.floor(faker.number.float({ min: 0, max: 1 }) * 3) + 1;
         const openResps = generateOpenResponses(count);
         const openRows = openResps.map((o) => ({
           respondent_id: respondentId,

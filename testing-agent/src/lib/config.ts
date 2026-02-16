@@ -17,7 +17,6 @@ const DEFAULT_URL = "http://127.0.0.1:54321";
 
 /**
  * Tries to get the service_role key from `supabase status --output json`.
- * Falls back to legacy HS256 demo key if unavailable.
  */
 function getServiceKeyFromCLI(): string | null {
   try {
@@ -35,13 +34,21 @@ function getServiceKeyFromCLI(): string | null {
   }
 }
 
+// CLI overrides (set before getConfig is called)
+let cliOverrides: { url?: string; key?: string } = {};
+
+export function setCliOverrides(overrides: { url?: string; key?: string }) {
+  cliOverrides = overrides;
+  cachedConfig = null; // Reset cache
+}
+
 let cachedConfig: { supabaseUrl: string; supabaseServiceKey: string } | null = null;
 
 export function getConfig() {
   if (cachedConfig) return cachedConfig;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
-  let supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const supabaseUrl = cliOverrides.url || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
+  let supabaseServiceKey = cliOverrides.key || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
   if (!supabaseServiceKey) {
     const cliKey = getServiceKeyFromCLI();

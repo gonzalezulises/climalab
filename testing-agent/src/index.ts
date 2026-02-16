@@ -5,6 +5,8 @@
  */
 
 import { Command } from "commander";
+import { setCliOverrides } from "./lib/config.js";
+import { resetClient } from "./lib/supabase.js";
 import { runFullCommand } from "./commands/run-full.js";
 import { createOrgCommand } from "./commands/create-org.js";
 import { createCampaignCommand } from "./commands/create-campaign.js";
@@ -16,7 +18,16 @@ import { cleanupCommand } from "./commands/cleanup.js";
 const program = new Command()
   .name("climalab-test")
   .description("ClimaLab Testing Agent — end-to-end pipeline testing")
-  .version("1.0.0");
+  .version("1.0.0")
+  .option("--supabase-url <url>", "Supabase project URL (overrides env)")
+  .option("--supabase-key <key>", "Supabase service_role key (overrides env)")
+  .hook("preAction", (thisCommand) => {
+    const globalOpts = thisCommand.opts();
+    if (globalOpts.supabaseUrl || globalOpts.supabaseKey) {
+      setCliOverrides({ url: globalOpts.supabaseUrl, key: globalOpts.supabaseKey });
+      resetClient();
+    }
+  });
 
 // run-full
 program
@@ -29,6 +40,7 @@ program
   .option("--seed <n>", "Fixed seed for reproducibility")
   .option("--skip-verify", "Skip verification", false)
   .option("--skip-cleanup", "Keep test data after run", false)
+  .option("--user-email <email>", "Link test org to this user (must have logged in first)")
   .action(async (opts) => {
     await runFullCommand({
       respondents: parseInt(opts.respondents),
@@ -38,6 +50,7 @@ program
       seed: opts.seed ? parseInt(opts.seed) : undefined,
       skipVerify: opts.skipVerify,
       skipCleanup: opts.skipCleanup,
+      userEmail: opts.userEmail,
     });
   });
 
@@ -48,11 +61,13 @@ program
   .option("--name <name>", "Organization name")
   .option("--employees <n>", "Employee count", "100")
   .option("--departments <n>", "Number of departments", "6")
+  .option("--user-email <email>", "Link org to this user")
   .action(async (opts) => {
     const result = await createOrgCommand({
       name: opts.name,
       employees: parseInt(opts.employees),
       departments: parseInt(opts.departments),
+      userEmail: opts.userEmail,
     });
     console.log(`\nOrg ID: ${result.orgId}`);
   });

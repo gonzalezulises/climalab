@@ -13,3 +13,7 @@ export function getSupabase(): SupabaseClient {
   }
   return client;
 }
+
+export function resetClient() {
+  client = null;
+}

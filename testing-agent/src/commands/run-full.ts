@@ -16,6 +16,7 @@ export interface RunFullOptions {
   seed?: number;
   skipVerify: boolean;
   skipCleanup: boolean;
+  userEmail?: string;
 }
 
 export async function runFullCommand(opts: RunFullOptions) {
@@ -48,6 +49,7 @@ export async function runFullCommand(opts: RunFullOptions) {
     console.log(chalk.bold("\n[1/6] Create Organization"));
     const orgResult = await createOrgCommand({
       employees: Math.max(opts.respondents, 50),
+      userEmail: opts.userEmail,
     });
     orgId = orgResult.orgId;
 
