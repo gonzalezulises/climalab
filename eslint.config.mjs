@@ -14,6 +14,13 @@ const eslintConfig = defineConfig([
       "react-hooks/purity": "warn",
     },
   },
+  // Testing agent: relax rules for untyped Supabase responses
+  {
+    files: ["testing-agent/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
