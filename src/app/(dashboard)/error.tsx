@@ -20,8 +20,13 @@ export default function DashboardError({
           <p className="text-muted-foreground text-sm">
             Ocurrio un error al cargar esta seccion. Por favor, intenta nuevamente.
           </p>
+          {error.message && (
+            <p className="text-muted-foreground mt-2 text-xs font-mono break-all">
+              {error.message}
+            </p>
+          )}
           {error.digest && (
-            <p className="text-muted-foreground mt-2 text-xs">Codigo: {error.digest}</p>
+            <p className="text-muted-foreground mt-1 text-xs">Codigo: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter>

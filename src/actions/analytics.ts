@@ -54,12 +54,16 @@ export async function getCorrelationMatrix(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "correlation_matrix")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: true, data: {} };
   return {
     success: true,
-    data: data.data as Record<string, Record<string, { r: number; pValue: number; n: number }>>,
+    data: (data.data ?? {}) as Record<
+      string,
+      Record<string, { r: number; pValue: number; n: number }>
+    >,
   };
 }
 
@@ -77,12 +81,19 @@ export async function getEngagementDrivers(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "engagement_drivers")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: true, data: [] };
   return {
     success: true,
-    data: data.data as Array<{ code: string; name: string; r: number; pValue: number; n: number }>,
+    data: (data.data ?? []) as Array<{
+      code: string;
+      name: string;
+      r: number;
+      pValue: number;
+      n: number;
+    }>,
   };
 }
 
@@ -110,12 +121,13 @@ export async function getAlerts(campaignId: string): Promise<
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "alerts")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: true, data: [] };
   return {
     success: true,
-    data: data.data as Array<{
+    data: (data.data ?? []) as Array<{
       severity: string;
       type: string;
       dimension_code?: string;
@@ -148,12 +160,13 @@ export async function getCategoryScores(campaignId: string): Promise<
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "categories")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: true, data: [] };
   return {
     success: true,
-    data: data.data as Array<{
+    data: (data.data ?? []) as Array<{
       category: string;
       avg_score: number;
       favorability_pct: number;
@@ -182,12 +195,13 @@ export async function getReliabilityData(campaignId: string): Promise<
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "reliability")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: true, data: [] };
   return {
     success: true,
-    data: data.data as Array<{
+    data: (data.data ?? []) as Array<{
       dimension_code: string;
       dimension_name: string;
       alpha: number | null;

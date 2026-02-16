@@ -709,9 +709,10 @@ export async function getCommentAnalysis(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "comment_analysis")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No comment analysis found" };
   return { success: true, data: data.data as CommentAnalysis };
 }
 
@@ -724,9 +725,10 @@ export async function getDashboardNarrative(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "dashboard_narrative")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No dashboard narrative found" };
   return { success: true, data: data.data as DashboardNarrative };
 }
 
@@ -737,9 +739,10 @@ export async function getDriverInsights(campaignId: string): Promise<ActionResul
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "driver_insights")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No driver insights found" };
   return { success: true, data: data.data as DriverInsights };
 }
 
@@ -750,9 +753,10 @@ export async function getAlertContext(campaignId: string): Promise<ActionResult<
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "alert_context")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No alert context found" };
   return { success: true, data: data.data as AlertContext };
 }
 
@@ -765,9 +769,10 @@ export async function getSegmentProfiles(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "segment_profiles")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No segment profiles found" };
   return { success: true, data: data.data as SegmentProfiles };
 }
 
@@ -780,8 +785,9 @@ export async function getTrendsNarrative(
     .select("data")
     .eq("campaign_id", campaignId)
     .eq("analysis_type", "trends_narrative")
-    .single();
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
+  if (!data) return { success: false, error: "No trends narrative found" };
   return { success: true, data: data.data as TrendsNarrative };
 }

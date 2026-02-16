@@ -70,16 +70,14 @@ export default async function DashboardPage({
   const engResult = results.find((r) => r.result_type === "engagement");
   const engScore = engResult ? Number(engResult.avg_score) : 0;
   const profiles = engResult
-    ? (
-        engResult.metadata as {
-          profiles: {
+    ? (((engResult.metadata as Record<string, unknown>)?.profiles as
+        | {
             ambassadors: { count: number; pct: number };
             committed: { count: number; pct: number };
             neutral: { count: number; pct: number };
             disengaged: { count: number; pct: number };
-          };
-        }
-      ).profiles
+          }
+        | undefined) ?? null)
     : null;
 
   const enpsResult = results.find((r) => r.result_type === "enps");

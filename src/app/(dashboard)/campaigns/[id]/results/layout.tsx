@@ -41,7 +41,7 @@ export default async function ResultsLayout({
       <div className="flex-1 flex flex-col overflow-auto">
         {hasSegments && (
           <div className="px-6 pt-4">
-            <Suspense>
+            <Suspense fallback={null}>
               <SegmentFilterBar availableSegments={availableSegments} />
             </Suspense>
           </div>
