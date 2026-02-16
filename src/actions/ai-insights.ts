@@ -10,20 +10,85 @@ import type { Database } from "@/types/database";
 type Json = Database["public"]["Tables"]["campaign_analytics"]["Insert"]["data"];
 
 // ---------------------------------------------------------------------------
-// Ollama helper — reusable across all AI generation functions
+// AI helper — supports OpenAI-compatible endpoint (DGX) and legacy Ollama
+// Priority: AI_LOCAL_ENDPOINT (OpenAI-compatible) → OLLAMA_BASE_URL (native)
 // ---------------------------------------------------------------------------
-async function callOllama(
+async function callAI(
   systemPrompt: string,
   userContent: string,
   opts?: { maxTokens?: number; temperature?: number; timeout?: number }
 ): Promise<ActionResult<string>> {
-  const baseUrl = env.OLLAMA_BASE_URL;
-  const model = env.OLLAMA_MODEL;
+  const localEndpoint = env.AI_LOCAL_ENDPOINT;
+  const ollamaUrl = env.OLLAMA_BASE_URL;
 
-  if (!baseUrl) {
-    return { success: false, error: "OLLAMA_BASE_URL no configurado" };
+  if (localEndpoint) {
+    return callOpenAICompatible(
+      localEndpoint,
+      env.AI_LOCAL_MODEL,
+      env.AI_LOCAL_API_KEY ?? "",
+      systemPrompt,
+      userContent,
+      opts
+    );
   }
 
+  if (ollamaUrl) {
+    return callOllamaNative(ollamaUrl, env.OLLAMA_MODEL, systemPrompt, userContent, opts);
+  }
+
+  return {
+    success: false,
+    error: "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
+  };
+}
+
+async function callOpenAICompatible(
+  endpoint: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  userContent: string,
+  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
+): Promise<ActionResult<string>> {
+  try {
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: opts?.temperature ?? 0.3,
+        max_tokens: opts?.maxTokens ?? 4096,
+      }),
+      signal: AbortSignal.timeout(opts?.timeout ?? 120_000),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `Error del modelo (${response.status})` };
+    }
+
+    const data = await response.json();
+    const content: string = data?.choices?.[0]?.message?.content ?? "";
+    return { success: true, data: content };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error de conexión con el modelo";
+    return { success: false, error: message };
+  }
+}
+
+async function callOllamaNative(
+  baseUrl: string,
+  model: string,
+  systemPrompt: string,
+  userContent: string,
+  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
+): Promise<ActionResult<string>> {
   try {
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: "POST",
@@ -191,7 +256,7 @@ ${grouped.improvement.map((t, i) => `${i + 1}. ${t}`).join("\n")}
 GENERAL (${grouped.general.length} comentarios):
 ${grouped.general.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 
-  const result = await callOllama(COMMENTS_SYSTEM, userContent);
+  const result = await callAI(COMMENTS_SYSTEM, userContent);
   if (!result.success) return result;
 
   const parsed = extractJSON<CommentAnalysis>(result.data);
@@ -302,7 +367,7 @@ ${
     : "Ninguna"
 }`;
 
-  const result = await callOllama(NARRATIVE_SYSTEM, userContent);
+  const result = await callAI(NARRATIVE_SYSTEM, userContent);
   if (!result.success) return result;
 
   const parsed = extractJSON<DashboardNarrative>(result.data);
@@ -369,7 +434,7 @@ Score de engagement global: ${(dimScores.get("ENG") ?? 0).toFixed(2)} de 5.0
 
 Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
 
-  const result = await callOllama(DRIVERS_SYSTEM, userContent);
+  const result = await callAI(DRIVERS_SYSTEM, userContent);
   if (!result.success) return result;
 
   const parsed = extractJSON<DriverInsights>(result.data);
@@ -421,7 +486,7 @@ ${alerts.map((a, i) => `${i}. [${a.severity}] ${a.message} (valor: ${a.value}, u
 
 Para cada alerta, genera una hipótesis de causa raíz y una recomendación concreta.`;
 
-  const result = await callOllama(ALERTS_SYSTEM, userContent);
+  const result = await callAI(ALERTS_SYSTEM, userContent);
   if (!result.success) return result;
 
   const parsed = extractJSON<AlertContext>(result.data);
@@ -501,7 +566,7 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
     userContent += "\n";
   }
 
-  const result = await callOllama(SEGMENTS_SYSTEM, userContent, { maxTokens: 6144 });
+  const result = await callAI(SEGMENTS_SYSTEM, userContent, { maxTokens: 6144 });
   if (!result.success) return result;
 
   const parsed = extractJSON<SegmentProfiles>(result.data);
@@ -534,11 +599,10 @@ Reglas:
 export async function generateTrendsNarrative(
   organizationId: string
 ): Promise<ActionResult<TrendsNarrative>> {
-  if (!env.OLLAMA_BASE_URL) {
+  if (!env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
     return {
       success: false,
-      error:
-        "Motor de IA no configurado. Configure OLLAMA_BASE_URL para habilitar análisis de tendencias.",
+      error: "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
     };
   }
   const blocked = await checkAiRateLimit(5);
@@ -576,7 +640,7 @@ export async function generateTrendsNarrative(
     userContent += "\n";
   }
 
-  const result = await callOllama(TRENDS_SYSTEM, userContent);
+  const result = await callAI(TRENDS_SYSTEM, userContent);
   if (!result.success) return result;
 
   const parsed = extractJSON<TrendsNarrative>(result.data);
@@ -599,11 +663,11 @@ export async function generateAllInsights(campaignId: string): Promise<
   }>
 > {
   // Fail fast if no AI backend configured
-  if (!env.OLLAMA_BASE_URL) {
+  if (!env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
     return {
       success: false,
       error:
-        "Motor de IA no configurado. Configure OLLAMA_BASE_URL en las variables de entorno para habilitar insights con IA.",
+        "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL en las variables de entorno.",
     };
   }
 
