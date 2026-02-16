@@ -44,6 +44,7 @@ export function SegmentsClient({
 }) {
   const [profiles, setProfiles] = useState<SegmentProfiles | null>(initialProfiles);
   const [isPending, startTransition] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
   const segmentTypes = ["department", "tenure", "gender"];
   const segLabels: Record<string, string> = {
     department: "Departamento",
@@ -218,12 +219,14 @@ export function SegmentsClient({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() =>
+                onClick={() => {
+                  setAiError(null);
                   startTransition(async () => {
                     const result = await profileSegments(campaignId);
                     if (result.success) setProfiles(result.data);
-                  })
-                }
+                    else setAiError(result.error);
+                  });
+                }}
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -283,6 +286,12 @@ export function SegmentsClient({
           )}
           Generar perfiles con IA
         </Button>
+      )}
+
+      {aiError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {aiError}
+        </div>
       )}
     </div>
   );

@@ -108,6 +108,7 @@ export function DashboardClient({
   >(null);
   const [narrative, setNarrative] = useState<DashboardNarrative | null>(initialNarrative);
   const [isGenerating, startGeneration] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedPrevId) {
@@ -252,8 +253,10 @@ export function DashboardClient({
                 variant="ghost"
                 onClick={() =>
                   startGeneration(async () => {
+                    setAiError(null);
                     const result = await generateAllInsights(campaignId);
                     if (result.success) window.location.reload();
+                    else setAiError(result.error);
                   })
                 }
                 disabled={isGenerating}
@@ -298,28 +301,33 @@ export function DashboardClient({
         </Card>
       ) : (
         <Card className="border-dashed">
-          <CardContent className="pt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Genera insights con IA para obtener un resumen ejecutivo, análisis de comentarios y
-              más.
-            </p>
-            <Button
-              size="sm"
-              onClick={() =>
-                startGeneration(async () => {
-                  const result = await generateAllInsights(campaignId);
-                  if (result.success) window.location.reload();
-                })
-              }
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              Generar insights IA
-            </Button>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Genera insights con IA para obtener un resumen ejecutivo, análisis de comentarios y
+                más.
+              </p>
+              <Button
+                size="sm"
+                onClick={() =>
+                  startGeneration(async () => {
+                    setAiError(null);
+                    const result = await generateAllInsights(campaignId);
+                    if (result.success) window.location.reload();
+                    else setAiError(result.error);
+                  })
+                }
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generar insights IA
+              </Button>
+            </div>
+            {aiError && <p className="text-sm text-destructive">{aiError}</p>}
           </CardContent>
         </Card>
       )}

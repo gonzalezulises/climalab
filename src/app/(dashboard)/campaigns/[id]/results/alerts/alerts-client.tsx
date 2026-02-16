@@ -43,6 +43,7 @@ export function AlertsClient({
 }) {
   const [context, setContext] = useState<AlertContext | null>(initialContext);
   const [isPending, startTransition] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const crisisCount = alerts.filter((a) => a.severity === "crisis").length;
   const attentionCount = alerts.filter((a) => a.severity === "attention").length;
@@ -85,9 +86,11 @@ export function AlertsClient({
               size="sm"
               variant={context ? "outline" : "default"}
               onClick={() => {
+                setAiError(null);
                 startTransition(async () => {
                   const result = await contextualizeAlerts(campaignId);
                   if (result.success) setContext(result.data);
+                  else setAiError(result.error);
                 });
               }}
               disabled={isPending}
@@ -102,6 +105,12 @@ export function AlertsClient({
           )}
         </div>
       </div>
+
+      {aiError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {aiError}
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-4">

@@ -534,6 +534,13 @@ Reglas:
 export async function generateTrendsNarrative(
   organizationId: string
 ): Promise<ActionResult<TrendsNarrative>> {
+  if (!env.OLLAMA_BASE_URL) {
+    return {
+      success: false,
+      error:
+        "Motor de IA no configurado. Configure OLLAMA_BASE_URL para habilitar análisis de tendencias.",
+    };
+  }
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
@@ -591,6 +598,15 @@ export async function generateAllInsights(campaignId: string): Promise<
     segment_profiles: boolean;
   }>
 > {
+  // Fail fast if no AI backend configured
+  if (!env.OLLAMA_BASE_URL) {
+    return {
+      success: false,
+      error:
+        "Motor de IA no configurado. Configure OLLAMA_BASE_URL en las variables de entorno para habilitar insights con IA.",
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

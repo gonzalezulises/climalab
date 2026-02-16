@@ -47,6 +47,7 @@ export function DriversClient({
 }) {
   const [insights, setInsights] = useState<DriverInsights | null>(initialInsights);
   const [isPending, startTransition] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Build insight
   const topDriver = drivers[0];
@@ -120,12 +121,14 @@ export function DriversClient({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() =>
+                onClick={() => {
+                  setAiError(null);
                   startTransition(async () => {
                     const result = await interpretDrivers(campaignId);
                     if (result.success) setInsights(result.data);
-                  })
-                }
+                    else setAiError(result.error);
+                  });
+                }}
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -186,6 +189,12 @@ export function DriversClient({
           )}
           Interpretar con IA
         </Button>
+      )}
+
+      {aiError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {aiError}
+        </div>
       )}
 
       {/* Driver bars */}

@@ -58,6 +58,7 @@ export function TrendsClient({
   const [selected, setSelected] = useState<string[]>(["ENG"]);
   const [narrative, setNarrative] = useState<TrendsNarrative | null>(initialNarrative);
   const [isPending, startTransition] = useTransition();
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const toggleDim = (code: string) => {
     setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
@@ -203,12 +204,14 @@ export function TrendsClient({
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() =>
+                onClick={() => {
+                  setAiError(null);
                   startTransition(async () => {
                     const result = await generateTrendsNarrative(organizationId);
                     if (result.success) setNarrative(result.data);
-                  })
-                }
+                    else setAiError(result.error);
+                  });
+                }}
                 disabled={isPending}
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
@@ -273,12 +276,14 @@ export function TrendsClient({
         <Button
           size="sm"
           variant="outline"
-          onClick={() =>
+          onClick={() => {
+            setAiError(null);
             startTransition(async () => {
               const result = await generateTrendsNarrative(organizationId);
               if (result.success) setNarrative(result.data);
-            })
-          }
+              else setAiError(result.error);
+            });
+          }}
           disabled={isPending}
         >
           {isPending ? (
@@ -288,6 +293,12 @@ export function TrendsClient({
           )}
           Analizar tendencias con IA
         </Button>
+      )}
+
+      {aiError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {aiError}
+        </div>
       )}
     </div>
   );
