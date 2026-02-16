@@ -54,9 +54,9 @@ export function SegmentFilterBar({ availableSegments }: Props) {
       <span className="text-sm text-muted-foreground shrink-0">Filtrar por:</span>
 
       <Select
-        value={currentSegmentType ?? ""}
+        value={currentSegmentType ?? "__all__"}
         onValueChange={(val) => {
-          if (val === "") {
+          if (val === "__all__") {
             updateParams(null, null);
           } else {
             const keys = availableSegments[val as keyof typeof availableSegments] ?? [];
@@ -68,7 +68,7 @@ export function SegmentFilterBar({ availableSegments }: Props) {
           <SelectValue placeholder="Todos" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="__all__">Todos</SelectItem>
           {segmentTypeOptions.map(([type]) => (
             <SelectItem key={type} value={type}>
               {SEGMENT_TYPE_LABELS[type] ?? type}
