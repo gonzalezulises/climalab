@@ -13,7 +13,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **i18n**: next-intl (Spanish only)
 - **Email**: Resend (transactional branded emails)
 - **ONA**: Python (igraph + matplotlib), invoked via `uv run`
-- **AI**: Ollama (Qwen 2.5 72B) for qualitative insights
+- **AI**: Dual backend — DGX (OpenAI-compatible via Cloudflare Tunnel) with Ollama native fallback. Default model: Qwen 2.5 72B
 - **Export**: @react-pdf/renderer (PDF), exceljs (Excel)
 
 ## Project Structure
@@ -47,6 +47,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
 - `.github/workflows/ci.yml` — CI/CD pipeline
 - `vitest.config.ts` — Test configuration
+- `testing-agent/` — Standalone CLI tool for end-to-end pipeline testing (own package.json, tsx runner)
 
 ## Database Schema
 
@@ -155,9 +156,14 @@ Objective business metrics tracked per campaign in `business_indicators` table. 
 - **Organizacional**: Compensación + Cultura dimensions
 - **ENG** shown separately as transversal variable
 
-## AI Insights (Ollama Integration)
+## AI Insights (Dual Backend)
 
-AI-powered analysis across 6 result pages, using Ollama (Qwen 2.5 72B) via `OLLAMA_BASE_URL` env var. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
+AI-powered analysis across 6 result pages. Dual backend architecture with automatic fallback:
+
+1. **DGX (priority)**: OpenAI-compatible endpoint via `AI_LOCAL_ENDPOINT` (e.g., `https://ollama.rizo.ma/v1` → Cloudflare Tunnel → NVIDIA DGX Spark running Qwen 2.5 72B)
+2. **Ollama native (fallback)**: Direct Ollama API via `OLLAMA_BASE_URL` (e.g., `http://localhost:11434`)
+
+If neither is configured, AI buttons show a clear error message in Spanish. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
 
 | analysis_type         | Page      | What it generates                                                   |
 | --------------------- | --------- | ------------------------------------------------------------------- |
@@ -168,7 +174,7 @@ AI-powered analysis across 6 result pages, using Ollama (Qwen 2.5 72B) via `OLLA
 | `segment_profiles`    | Segments  | Per-segment narrative with strengths/risks                          |
 | `trends_narrative`    | Trends    | Trajectory, improving/declining/stable dims, inflection points      |
 
-**Architecture**: `src/actions/ai-insights.ts` contains 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel and stores results. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights.
+**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (dual backend dispatcher), `callOpenAICompatible` (DGX/OpenAI endpoint), `callOllamaNative` (legacy Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights.
 
 ## Psychometric Reporting
 
@@ -292,6 +298,9 @@ Required for production:
 - `RESEND_API_KEY` — Resend API key for transactional emails
 - `RESEND_FROM_EMAIL` — Sender email (e.g., "ClimaLab <noreply@climalab.app>")
 
-Optional:
+Optional (AI — at least one required for AI insights):
 
-- `OLLAMA_BASE_URL` — Ollama server URL for AI insights
+- `AI_LOCAL_ENDPOINT` — OpenAI-compatible endpoint URL (e.g., `https://ollama.rizo.ma/v1` for DGX via Cloudflare Tunnel). **Priority provider**.
+- `AI_LOCAL_MODEL` — Model name for local endpoint (default: `qwen2.5:72b`)
+- `AI_LOCAL_API_KEY` — API key for local endpoint (if required)
+- `OLLAMA_BASE_URL` — Native Ollama server URL (fallback provider, e.g., `http://localhost:11434`)

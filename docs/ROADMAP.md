@@ -1,6 +1,6 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.5
+## Estado Actual: v4.6
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento desde v4.0
 
@@ -18,6 +18,9 @@
 | Tests + CI/CD + Error boundaries               | Implementado                 | d817d19           |
 | Branding per-org + emails + recordatorios      | Implementado                 | 97554e3           |
 | ONA igraph migration (Leiden + NMI stability)  | Implementado                 | 463477e           |
+| AI dual backend (DGX + Ollama fallback)        | Implementado                 | 3f8f5d5           |
+| AI error handling (fail-fast + UI feedback)    | Implementado                 | ea569e4           |
+| Testing agent (E2E pipeline, 20 checks)        | Implementado                 | 56c6898           |
 | Pulsos automatizados                           | Pendiente                    | —                 |
 | Reportes PDF con marca blanca                  | Implementado (branding v4.4) | 97554e3           |
 | CFA / Invariancia                              | Horizonte 2                  | —                 |
@@ -55,6 +58,14 @@
 - Imagen de grafo generada server-side (matplotlib + Fruchterman-Reingold)
 - Edge betweenness para aristas críticas inter-comunidad
 - Corrección de colores DEFAULT_BRAND_CONFIG (secondary=#4a90d9, accent=#22c55e)
+
+### Completado (v4.6)
+
+- Backend dual de IA: DGX (OpenAI-compatible vía Cloudflare Tunnel `ollama.rizo.ma`) con fallback a Ollama nativo
+- Fail-fast: si ningún proveedor IA configurado, retorna error inmediato con mensaje claro en español
+- UI feedback: los 5 clientes de resultados ahora muestran errores de IA en vez de fallar silenciosamente
+- Testing agent standalone (`testing-agent/`): genera orgs, empleados, encuestas; calcula resultados; verifica con 20 assertions
+- Fix crash Select.Item (Radix UI requiere value no vacío en segment filter bar)
 
 ### Pendiente
 

@@ -11,7 +11,7 @@ Plataforma SaaS multi-tenant para medición de clima organizacional en PYMEs (1�
 - **i18n**: next-intl (español)
 - **Email**: Resend (emails transaccionales con marca de organización)
 - **ONA**: Python (igraph + matplotlib), invocado vía `uv run`
-- **IA**: Ollama (Qwen 2.5 72B) para insights cualitativos
+- **IA**: Backend dual — DGX (OpenAI-compatible vía Cloudflare Tunnel) con fallback a Ollama nativo. Modelo: Qwen 2.5 72B
 - **Exportación**: @react-pdf/renderer (PDF), exceljs (Excel)
 
 ## Instrumento
@@ -67,6 +67,9 @@ scripts/
 ├── generate-demo-seed.mjs  # Generador PRNG determinista (mulberry32)
 ├── seed-results.ts          # Cálculo offline de resultados para datos demo
 └── ona-analysis.py          # ONA perceptual (igraph, Leiden, NMI stability, graph image)
+
+testing-agent/              # CLI standalone para testing E2E del pipeline
+└── src/                    # Genera orgs, empleados, respuestas; calcula resultados; verifica
 ```
 
 ## Setup local
@@ -101,7 +104,7 @@ npm run dev
 6. **Monitorear** — panel en vivo con auto-refresh cada 30s
 7. **Cerrar y calcular** — motor estadístico computa resultados (base + módulos) + ONA perceptual
 8. **Resultados** — 11 sub-páginas: dashboard, dimensiones, tendencias, segmentos, benchmarks, drivers, alertas, comentarios, red ONA, ficha técnica, exportar
-9. **Insights IA** — análisis cualitativos generados por Ollama (narrativas, drivers, alertas, segmentos, tendencias)
+9. **Insights IA** — análisis cualitativos generados por IA (DGX vía Cloudflare Tunnel o Ollama local): narrativas, drivers, alertas, segmentos, tendencias
 10. **Exportar** — PDF ejecutivo con branding, Excel completo, CSV, reporte IA
 
 ## Motor estadístico
@@ -138,6 +141,40 @@ Sistema de identidad visual per-org aplicado en todos los touchpoints:
 - **Resultados**: logo de la org en sidebar
 - **Configuración**: pestaña "Identidad visual" en detalle de organización (color pickers, upload de logo, textos personalizados)
 
+## Infraestructura IA
+
+Backend dual con fallback automático para insights cualitativos en 6 páginas de resultados:
+
+```
+                    ┌─────────────────────────┐
+                    │   callAI() dispatcher    │
+                    └────────┬────────────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+   AI_LOCAL_ENDPOINT                 OLLAMA_BASE_URL
+   (OpenAI-compatible)               (Ollama nativo)
+              │                             │
+   /v1/chat/completions              /api/chat
+              │                             │
+   ┌──────────┴──────────┐      ┌──────────┴──────────┐
+   │  Cloudflare Tunnel  │      │   Ollama local       │
+   │  ollama.rizo.ma/v1  │      │   localhost:11434    │
+   └──────────┬──────────┘      └─────────────────────┘
+              │
+   ┌──────────┴──────────┐
+   │  NVIDIA DGX Spark   │
+   │  Qwen 2.5 72B       │
+   │  128GB unified mem   │
+   └─────────────────────┘
+```
+
+- **Prioridad**: `AI_LOCAL_ENDPOINT` → `OLLAMA_BASE_URL` → error con mensaje claro
+- **Fail-fast**: si ningún proveedor configurado, retorna error inmediatamente (no falla silenciosamente)
+- **6 tipos de análisis**: dashboard_narrative, comment_analysis, driver_insights, alert_context, segment_profiles, trends_narrative
+- **Orquestador**: `generateAllInsights()` ejecuta 5 análisis en paralelo; dashboard tiene botón "Generar insights IA"
+- **Almacenamiento**: `campaign_analytics` con `analysis_type` dedicado por tipo de insight
+
 ## Multi-instrumento
 
 Las campañas soportan un instrumento base (Core o Pulso) + hasta 3 módulos opcionales. El esquema usa:
@@ -146,6 +183,36 @@ Las campañas soportan un instrumento base (Core o Pulso) + hasta 3 módulos opc
 - `campaigns.module_instrument_ids` — array `uuid[]` con IDs de módulos seleccionados
 
 Los módulos se cargan junto con el instrumento base en la encuesta, el cálculo de resultados y las páginas de dimensiones (pestaña "Módulos Opcionales").
+
+## Testing Agent
+
+CLI standalone para testing end-to-end del pipeline completo. Genera datos realistas, ejecuta el motor estadístico y verifica los resultados con 20 assertions.
+
+```bash
+cd testing-agent && npm install
+npx tsx src/index.ts run-full --respondents 75 --seed 42
+npx tsx src/index.ts run-full --respondents 100 --modules CAM,DIG --climate excellent --skip-cleanup
+```
+
+**Pipeline**: crear org → crear campaña → agregar participantes → activar → simular encuestas → cerrar → calcular resultados → verificar (20 checks) → cleanup
+
+**Subcomandos**: `create-org`, `create-campaign`, `simulate-survey`, `calculate`, `verify`, `cleanup`, `run-full`
+
+## Variables de entorno
+
+Requeridas (producción):
+
+- `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto Supabase
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Clave anon de Supabase
+- `RESEND_API_KEY` — Clave API de Resend para emails transaccionales
+- `RESEND_FROM_EMAIL` — Email remitente (e.g., `ClimaLab <noreply@climalab.app>`)
+
+Opcionales (IA — al menos una requerida para insights):
+
+- `AI_LOCAL_ENDPOINT` — URL del endpoint OpenAI-compatible (e.g., `https://ollama.rizo.ma/v1`). **Proveedor prioritario**.
+- `AI_LOCAL_MODEL` — Nombre del modelo (default: `qwen2.5:72b`)
+- `AI_LOCAL_API_KEY` — Clave API para el endpoint local (si aplica)
+- `OLLAMA_BASE_URL` — URL de Ollama nativo (proveedor fallback, e.g., `http://localhost:11434`)
 
 ## Licencia
 
