@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,13 +35,22 @@ type CategoryScore = {
 };
 
 function DimensionCard({ dim, items }: { dim: DimensionResult; items: ItemResult[] }) {
+  const [expanded, setExpanded] = useState(false);
   const cls = classifyFavorability(dim.fav);
   return (
-    <Card>
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
+      onClick={() => setExpanded((v) => !v)}
+    >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{dim.name}</CardTitle>
-          <Badge className={cls.bg}>{cls.label}</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge className={cls.bg}>{cls.label}</Badge>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -52,20 +62,44 @@ function DimensionCard({ dim, items }: { dim: DimensionResult; items: ItemResult
         </div>
         <div className="space-y-1.5">
           {items.map((item) => (
-            <div key={item.id} className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs truncate" title={item.text}>
-                  {item.text}
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground w-8 text-right">{item.fav}%</span>
-              <span className="text-xs font-medium w-10 text-right">{item.avg.toFixed(2)}</span>
-              <div className="w-16 h-1.5 rounded-full bg-gray-200">
-                <div
-                  className="h-1.5 rounded-full"
-                  style={{ width: `${(item.avg / 5) * 100}%`, backgroundColor: favToHex(item.fav) }}
-                />
-              </div>
+            <div key={item.id}>
+              {expanded ? (
+                <div className="space-y-1">
+                  <p className="text-xs">{item.text}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-xs text-muted-foreground">{item.fav}%</span>
+                    <span className="text-xs font-medium">{item.avg.toFixed(2)}</span>
+                    <div className="w-16 h-1.5 rounded-full bg-gray-200">
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{
+                          width: `${(item.avg / 5) * 100}%`,
+                          backgroundColor: favToHex(item.fav),
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs truncate" title={item.text}>
+                      {item.text}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground w-8 text-right">{item.fav}%</span>
+                  <span className="text-xs font-medium w-10 text-right">{item.avg.toFixed(2)}</span>
+                  <div className="w-16 h-1.5 rounded-full bg-gray-200">
+                    <div
+                      className="h-1.5 rounded-full"
+                      style={{
+                        width: `${(item.avg / 5) * 100}%`,
+                        backgroundColor: favToHex(item.fav),
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -189,21 +223,19 @@ export function DimensionsClient({
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {items.map((item, idx) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
+                    <div key={item.id} className="flex items-start gap-2">
+                      <span className="text-xs text-muted-foreground w-5 pt-0.5">{idx + 1}.</span>
+                      <Badge variant="outline" className="text-[10px] shrink-0 mt-0.5">
                         {item.code}
                       </Badge>
-                      <p className="text-xs flex-1 min-w-0 truncate" title={item.text}>
-                        {item.text}
-                      </p>
-                      <span className="text-xs text-muted-foreground w-8 text-right">
+                      <p className="text-xs flex-1 min-w-0">{item.text}</p>
+                      <span className="text-xs text-muted-foreground w-8 text-right shrink-0 pt-0.5">
                         {item.fav}%
                       </span>
-                      <span className="text-xs font-bold w-10 text-right">
+                      <span className="text-xs font-bold w-10 text-right shrink-0 pt-0.5">
                         {item.avg.toFixed(2)}
                       </span>
-                      <div className="w-14 h-1.5 rounded-full bg-gray-200 shrink-0">
+                      <div className="w-14 h-1.5 rounded-full bg-gray-200 shrink-0 mt-1.5">
                         <div
                           className="h-1.5 rounded-full"
                           style={{

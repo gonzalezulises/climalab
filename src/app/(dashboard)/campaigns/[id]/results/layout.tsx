@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { ResultsSidebar } from "./results-nav";
 import { SegmentFilterBar } from "@/components/results/segment-filter-bar";
 
+export const maxDuration = 300; // 5 minutes — AI insights with 72B model need long timeouts
+
 export default async function ResultsLayout({
   children,
   params,
