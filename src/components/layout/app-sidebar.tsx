@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, ClipboardList, BarChart3 } from "lucide-react";
@@ -32,9 +33,7 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-            CL
-          </div>
+          <Image src="/logo.png" alt="ClimaLab" width={32} height={32} className="rounded-lg" />
           <span className="text-lg font-semibold font-serif">ClimaLab</span>
         </div>
       </SidebarHeader>
