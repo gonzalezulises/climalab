@@ -60,11 +60,15 @@ export function CommentsClient({
   function handleGenerate() {
     setError(null);
     startTransition(async () => {
-      const result = await analyzeComments(campaignId);
-      if (result.success) {
-        setAnalysis(result.data);
-      } else {
-        setError(result.error);
+      try {
+        const result = await analyzeComments(campaignId);
+        if (result.success) {
+          setAnalysis(result.data);
+        } else {
+          setError(result.error);
+        }
+      } catch {
+        setError("Error de conexión. Intente nuevamente.");
       }
     });
   }

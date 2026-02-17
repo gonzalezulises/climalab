@@ -10,16 +10,21 @@ import type { Database } from "@/types/database";
 type Json = Database["public"]["Tables"]["campaign_analytics"]["Insert"]["data"];
 
 // ---------------------------------------------------------------------------
-// AI helper — supports OpenAI-compatible endpoint (DGX) and legacy Ollama
-// Priority: AI_LOCAL_ENDPOINT (OpenAI-compatible) → OLLAMA_BASE_URL (native)
+// AI helper — supports Anthropic API, OpenAI-compatible endpoint (DGX), and legacy Ollama
+// Priority: ANTHROPIC_API_KEY → AI_LOCAL_ENDPOINT (OpenAI-compatible) → OLLAMA_BASE_URL (native)
 // ---------------------------------------------------------------------------
 async function callAI(
   systemPrompt: string,
   userContent: string,
   opts?: { maxTokens?: number; temperature?: number; timeout?: number }
 ): Promise<ActionResult<string>> {
+  const anthropicKey = env.ANTHROPIC_API_KEY;
   const localEndpoint = env.AI_LOCAL_ENDPOINT;
   const ollamaUrl = env.OLLAMA_BASE_URL;
+
+  if (anthropicKey) {
+    return callAnthropic(anthropicKey, env.ANTHROPIC_MODEL, systemPrompt, userContent, opts);
+  }
 
   if (localEndpoint) {
     return callOpenAICompatible(
@@ -38,8 +43,51 @@ async function callAI(
 
   return {
     success: false,
-    error: "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
+    error:
+      "Motor de IA no configurado. Configure ANTHROPIC_API_KEY, AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
   };
+}
+
+async function callAnthropic(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  userContent: string,
+  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
+): Promise<ActionResult<string>> {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: opts?.maxTokens ?? 4096,
+        temperature: opts?.temperature ?? 0.3,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userContent }],
+      }),
+      signal: AbortSignal.timeout(opts?.timeout ?? 60_000),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      return {
+        success: false,
+        error: `Error de Anthropic (${response.status}): ${body.slice(0, 200)}`,
+      };
+    }
+
+    const data = await response.json();
+    const content: string = data?.content?.[0]?.text ?? "";
+    return { success: true, data: content };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error de conexión con Anthropic";
+    return { success: false, error: message };
+  }
 }
 
 async function callOpenAICompatible(
@@ -599,10 +647,11 @@ Reglas:
 export async function generateTrendsNarrative(
   organizationId: string
 ): Promise<ActionResult<TrendsNarrative>> {
-  if (!env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
+  if (!env.ANTHROPIC_API_KEY && !env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
     return {
       success: false,
-      error: "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
+      error:
+        "Motor de IA no configurado. Configure ANTHROPIC_API_KEY, AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL.",
     };
   }
   const blocked = await checkAiRateLimit(5);
@@ -663,11 +712,11 @@ export async function generateAllInsights(campaignId: string): Promise<
   }>
 > {
   // Fail fast if no AI backend configured
-  if (!env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
+  if (!env.ANTHROPIC_API_KEY && !env.AI_LOCAL_ENDPOINT && !env.OLLAMA_BASE_URL) {
     return {
       success: false,
       error:
-        "Motor de IA no configurado. Configure AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL en las variables de entorno.",
+        "Motor de IA no configurado. Configure ANTHROPIC_API_KEY, AI_LOCAL_ENDPOINT o OLLAMA_BASE_URL en las variables de entorno.",
     };
   }
 

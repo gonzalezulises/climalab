@@ -88,9 +88,13 @@ export function AlertsClient({
               onClick={() => {
                 setAiError(null);
                 startTransition(async () => {
-                  const result = await contextualizeAlerts(campaignId);
-                  if (result.success) setContext(result.data);
-                  else setAiError(result.error);
+                  try {
+                    const result = await contextualizeAlerts(campaignId);
+                    if (result.success) setContext(result.data);
+                    else setAiError(result.error);
+                  } catch {
+                    setAiError("Error de conexión. Intente nuevamente.");
+                  }
                 });
               }}
               disabled={isPending}

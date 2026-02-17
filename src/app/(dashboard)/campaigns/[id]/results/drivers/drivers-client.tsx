@@ -129,9 +129,13 @@ export function DriversClient({
                 onClick={() => {
                   setAiError(null);
                   startTransition(async () => {
-                    const result = await interpretDrivers(campaignId);
-                    if (result.success) setInsights(result.data);
-                    else setAiError(result.error);
+                    try {
+                      const result = await interpretDrivers(campaignId);
+                      if (result.success) setInsights(result.data);
+                      else setAiError(result.error);
+                    } catch {
+                      setAiError("Error de conexión. Intente nuevamente.");
+                    }
                   });
                 }}
                 disabled={isPending}
@@ -179,12 +183,18 @@ export function DriversClient({
         <Button
           size="sm"
           variant="outline"
-          onClick={() =>
+          onClick={() => {
+            setAiError(null);
             startTransition(async () => {
-              const result = await interpretDrivers(campaignId);
-              if (result.success) setInsights(result.data);
-            })
-          }
+              try {
+                const result = await interpretDrivers(campaignId);
+                if (result.success) setInsights(result.data);
+                else setAiError(result.error);
+              } catch {
+                setAiError("Error de conexión. Intente nuevamente.");
+              }
+            });
+          }}
           disabled={isPending}
         >
           {isPending ? (

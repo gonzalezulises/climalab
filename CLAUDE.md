@@ -13,7 +13,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **i18n**: next-intl (Spanish only)
 - **Email**: Resend (transactional branded emails)
 - **ONA**: Python (igraph + matplotlib), invoked via `uv run`
-- **AI**: Dual backend — DGX (OpenAI-compatible via Cloudflare Tunnel) with Ollama native fallback. Default model: Qwen 2.5 72B
+- **AI**: Triple backend — Anthropic API (Claude Haiku 4.5, priority) → DGX (OpenAI-compatible via Cloudflare Tunnel) → Ollama native fallback
 - **Export**: @react-pdf/renderer (PDF), exceljs (Excel)
 
 ## Project Structure
@@ -161,14 +161,15 @@ Objective business metrics tracked per campaign in `business_indicators` table. 
 - **Organizacional**: Compensación + Cultura dimensions
 - **ENG** shown separately as transversal variable
 
-## AI Insights (Dual Backend)
+## AI Insights (Triple Backend)
 
-AI-powered analysis across 6 result pages. Dual backend architecture with automatic fallback:
+AI-powered analysis across 6 result pages. Triple backend architecture with automatic fallback:
 
-1. **DGX (priority)**: OpenAI-compatible endpoint via `AI_LOCAL_ENDPOINT` (e.g., `https://ollama.rizo.ma/v1` → Cloudflare Tunnel → NVIDIA DGX Spark running Qwen 2.5 72B)
-2. **Ollama native (fallback)**: Direct Ollama API via `OLLAMA_BASE_URL` (e.g., `http://localhost:11434`)
+1. **Anthropic API (priority)**: Claude Haiku 4.5 via `ANTHROPIC_API_KEY` (~2-5s per call, ~$0.03 per full generation)
+2. **DGX (fallback)**: OpenAI-compatible endpoint via `AI_LOCAL_ENDPOINT` (e.g., `https://ollama.rizo.ma/v1` → Cloudflare Tunnel → NVIDIA DGX Spark running Qwen 2.5 72B)
+3. **Ollama native (fallback)**: Direct Ollama API via `OLLAMA_BASE_URL` (e.g., `http://localhost:11434`)
 
-If neither is configured, AI buttons show a clear error message in Spanish. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
+If none is configured, AI buttons show a clear error message in Spanish. All insights are stored in `campaign_analytics` with dedicated `analysis_type` values and retrieved on page load (SSR). Each page has a "Regenerar" button for on-demand refresh.
 
 | analysis_type         | Page      | What it generates                                                   |
 | --------------------- | --------- | ------------------------------------------------------------------- |
@@ -179,7 +180,7 @@ If neither is configured, AI buttons show a clear error message in Spanish. All 
 | `segment_profiles`    | Segments  | Per-segment narrative with strengths/risks                          |
 | `trends_narrative`    | Trends    | Trajectory, improving/declining/stable dims, inflection points      |
 
-**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (dual backend dispatcher), `callOpenAICompatible` (DGX/OpenAI endpoint), `callOllamaNative` (legacy Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights. Results layout exports `maxDuration = 300` for Vercel serverless timeout (72B model needs 30-120s per analysis).
+**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (triple backend dispatcher), `callAnthropic` (Anthropic Messages API), `callOpenAICompatible` (DGX/OpenAI endpoint), `callOllamaNative` (legacy Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights. Results layout exports `maxDuration = 300` for Vercel serverless timeout (72B model needs 30-120s per analysis).
 
 ## Psychometric Reporting
 
@@ -305,7 +306,9 @@ Required for production:
 
 Optional (AI — at least one required for AI insights):
 
-- `AI_LOCAL_ENDPOINT` — OpenAI-compatible endpoint URL (e.g., `https://ollama.rizo.ma/v1` for DGX via Cloudflare Tunnel). **Priority provider**.
+- `ANTHROPIC_API_KEY` — Anthropic API key for Claude Haiku 4.5. **Priority provider** (~2-5s, cheapest).
+- `ANTHROPIC_MODEL` — Anthropic model name (default: `claude-haiku-4-5-20251001`)
+- `AI_LOCAL_ENDPOINT` — OpenAI-compatible endpoint URL (e.g., `https://ollama.rizo.ma/v1` for DGX via Cloudflare Tunnel). **Secondary provider**.
 - `AI_LOCAL_MODEL` — Model name for local endpoint (default: `qwen2.5:72b`)
 - `AI_LOCAL_API_KEY` — API key for local endpoint (if required)
-- `OLLAMA_BASE_URL` — Native Ollama server URL (fallback provider, e.g., `http://localhost:11434`)
+- `OLLAMA_BASE_URL` — Native Ollama server URL (tertiary/local dev provider, e.g., `http://localhost:11434`)

@@ -222,9 +222,13 @@ export function SegmentsClient({
                 onClick={() => {
                   setAiError(null);
                   startTransition(async () => {
-                    const result = await profileSegments(campaignId);
-                    if (result.success) setProfiles(result.data);
-                    else setAiError(result.error);
+                    try {
+                      const result = await profileSegments(campaignId);
+                      if (result.success) setProfiles(result.data);
+                      else setAiError(result.error);
+                    } catch {
+                      setAiError("Error de conexión. Intente nuevamente.");
+                    }
                   });
                 }}
                 disabled={isPending}
@@ -271,12 +275,18 @@ export function SegmentsClient({
         <Button
           size="sm"
           variant="outline"
-          onClick={() =>
+          onClick={() => {
+            setAiError(null);
             startTransition(async () => {
-              const result = await profileSegments(campaignId);
-              if (result.success) setProfiles(result.data);
-            })
-          }
+              try {
+                const result = await profileSegments(campaignId);
+                if (result.success) setProfiles(result.data);
+                else setAiError(result.error);
+              } catch {
+                setAiError("Error de conexión. Intente nuevamente.");
+              }
+            });
+          }}
           disabled={isPending}
         >
           {isPending ? (

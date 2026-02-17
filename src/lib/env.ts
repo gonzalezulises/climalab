@@ -11,6 +11,8 @@ const envSchema = z.object({
   AI_LOCAL_ENDPOINT: z.string().url().optional(),
   AI_LOCAL_MODEL: z.string().default("qwen2.5:72b"),
   AI_LOCAL_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5-20251001"),
 });
 
 export const env = envSchema.parse(process.env);

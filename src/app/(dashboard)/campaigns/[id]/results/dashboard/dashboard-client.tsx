@@ -265,9 +265,13 @@ export function DashboardClient({
                 onClick={() =>
                   startGeneration(async () => {
                     setAiError(null);
-                    const result = await generateAllInsights(campaignId);
-                    if (result.success) window.location.reload();
-                    else setAiError(result.error);
+                    try {
+                      const result = await generateAllInsights(campaignId);
+                      if (result.success) window.location.reload();
+                      else setAiError(result.error);
+                    } catch {
+                      setAiError("Error de conexión. Intente nuevamente.");
+                    }
                   })
                 }
                 disabled={isGenerating}
@@ -323,9 +327,13 @@ export function DashboardClient({
                 onClick={() =>
                   startGeneration(async () => {
                     setAiError(null);
-                    const result = await generateAllInsights(campaignId);
-                    if (result.success) window.location.reload();
-                    else setAiError(result.error);
+                    try {
+                      const result = await generateAllInsights(campaignId);
+                      if (result.success) window.location.reload();
+                      else setAiError(result.error);
+                    } catch {
+                      setAiError("Error de conexión. Intente nuevamente.");
+                    }
                   })
                 }
                 disabled={isGenerating}

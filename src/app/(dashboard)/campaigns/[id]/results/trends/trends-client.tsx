@@ -207,9 +207,13 @@ export function TrendsClient({
                 onClick={() => {
                   setAiError(null);
                   startTransition(async () => {
-                    const result = await generateTrendsNarrative(organizationId);
-                    if (result.success) setNarrative(result.data);
-                    else setAiError(result.error);
+                    try {
+                      const result = await generateTrendsNarrative(organizationId);
+                      if (result.success) setNarrative(result.data);
+                      else setAiError(result.error);
+                    } catch {
+                      setAiError("Error de conexión. Intente nuevamente.");
+                    }
                   });
                 }}
                 disabled={isPending}
@@ -279,9 +283,13 @@ export function TrendsClient({
           onClick={() => {
             setAiError(null);
             startTransition(async () => {
-              const result = await generateTrendsNarrative(organizationId);
-              if (result.success) setNarrative(result.data);
-              else setAiError(result.error);
+              try {
+                const result = await generateTrendsNarrative(organizationId);
+                if (result.success) setNarrative(result.data);
+                else setAiError(result.error);
+              } catch {
+                setAiError("Error de conexión. Intente nuevamente.");
+              }
             });
           }}
           disabled={isPending}
