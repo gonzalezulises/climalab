@@ -12,7 +12,14 @@ import {
   getHeatmapData,
   getBenchmarkData,
 } from "@/actions/analytics";
-import { getDashboardNarrative, getCommentAnalysis } from "@/actions/ai-insights";
+import {
+  getDashboardNarrative,
+  getCommentAnalysis,
+  getDriverInsights,
+  getAlertContext,
+  getSegmentProfiles,
+  getTrendsNarrative,
+} from "@/actions/ai-insights";
 import { getBusinessIndicators } from "@/actions/business-indicators";
 import { getONAResults } from "@/actions/ona";
 import { getOrganization } from "@/actions/organizations";
@@ -288,6 +295,10 @@ export async function generatePdfReport(
     benchmarkRes,
     narrativeRes,
     commentRes,
+    driverInsightsRes,
+    alertContextRes,
+    segmentProfilesRes,
+    trendsNarrativeRes,
     businessIndicatorsRes,
     onaRes,
   ] = await Promise.all([
@@ -300,6 +311,10 @@ export async function generatePdfReport(
     getBenchmarkData(campaignId),
     getDashboardNarrative(campaignId),
     getCommentAnalysis(campaignId),
+    getDriverInsights(campaignId),
+    getAlertContext(campaignId),
+    getSegmentProfiles(campaignId),
+    getTrendsNarrative(campaignId),
     getBusinessIndicators(campaignId),
     getONAResults(campaignId),
   ]);
@@ -317,6 +332,10 @@ export async function generatePdfReport(
   const benchmark = benchmarkRes.success ? benchmarkRes.data : null;
   const narrative = narrativeRes.success ? narrativeRes.data : null;
   const commentAnalysis = commentRes.success ? commentRes.data : null;
+  const driverInsights = driverInsightsRes.success ? driverInsightsRes.data : null;
+  const alertContext = alertContextRes.success ? alertContextRes.data : null;
+  const segmentProfiles = segmentProfilesRes.success ? segmentProfilesRes.data : null;
+  const trendsNarrative = trendsNarrativeRes.success ? trendsNarrativeRes.data : null;
   const businessIndicators = businessIndicatorsRes.success ? businessIndicatorsRes.data : [];
   const onaData = onaRes.success ? onaRes.data : null;
 
@@ -386,6 +405,10 @@ export async function generatePdfReport(
       : null,
     narrative,
     commentSummary: commentAnalysis?.summary ?? null,
+    driverInsights,
+    alertContext,
+    segmentProfiles,
+    trendsNarrative,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

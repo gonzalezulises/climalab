@@ -115,6 +115,30 @@ type PdfReportProps = {
     recommendation: string;
   } | null;
   commentSummary: { strengths: string; improvements: string; general: string } | null;
+  driverInsights?: {
+    narrative: string;
+    paradoxes: string[];
+    quick_wins: Array<{ dimension: string; action: string; impact: string }>;
+  } | null;
+  alertContext?: Array<{
+    alert_index: number;
+    root_cause: string;
+    recommendation: string;
+  }> | null;
+  segmentProfiles?: Array<{
+    segment: string;
+    segment_type: string;
+    narrative: string;
+    strengths: string[];
+    risks: string[];
+  }> | null;
+  trendsNarrative?: {
+    trajectory: string;
+    improving: string[];
+    declining: string[];
+    stable: string[];
+    inflection_points: string[];
+  } | null;
 };
 
 export function PdfReport({
@@ -139,6 +163,10 @@ export function PdfReport({
   onaSummary,
   narrative,
   commentSummary,
+  driverInsights,
+  alertContext,
+  segmentProfiles,
+  trendsNarrative,
 }: PdfReportProps) {
   const brand = { ...DEFAULT_BRAND_CONFIG, ...brandConfig };
   const styles = createStyles(brand.primary_color);
@@ -292,7 +320,7 @@ export function PdfReport({
         <Text style={styles.footer}>{footerText}</Text>
       </Page>
 
-      {/* Alerts + Drivers + Comments + Technical */}
+      {/* Alerts + Drivers */}
       <Page size="LETTER" style={styles.page}>
         {/* Alerts */}
         {alerts.length > 0 && (
@@ -305,16 +333,31 @@ export function PdfReport({
                 <Text style={[styles.cellBold, { width: "15%" }]}>Valor</Text>
                 <Text style={[styles.cellBold, { width: "15%" }]}>Umbral</Text>
               </View>
-              {alerts.slice(0, 15).map((a, i) => (
-                <View key={i} style={styles.alertRow}>
-                  <Text style={[styles.cell, { width: "15%" }]}>{a.severity}</Text>
-                  <Text style={[styles.cell, { width: "55%" }]}>{a.message}</Text>
-                  <Text style={[styles.cell, { width: "15%" }]}>
-                    {typeof a.value === "number" ? a.value.toFixed(1) : a.value}
-                  </Text>
-                  <Text style={[styles.cell, { width: "15%" }]}>{a.threshold}</Text>
-                </View>
-              ))}
+              {alerts.slice(0, 15).map((a, i) => {
+                const ctx = alertContext?.find((c) => c.alert_index === i);
+                return (
+                  <View key={i} wrap={false}>
+                    <View style={styles.alertRow}>
+                      <Text style={[styles.cell, { width: "15%" }]}>{a.severity}</Text>
+                      <Text style={[styles.cell, { width: "55%" }]}>{a.message}</Text>
+                      <Text style={[styles.cell, { width: "15%" }]}>
+                        {typeof a.value === "number" ? a.value.toFixed(1) : a.value}
+                      </Text>
+                      <Text style={[styles.cell, { width: "15%" }]}>{a.threshold}</Text>
+                    </View>
+                    {ctx && (
+                      <View style={{ paddingLeft: 20, paddingBottom: 4 }}>
+                        <Text style={{ fontSize: 8, color: "#7c3aed" }}>
+                          Causa probable: {ctx.root_cause}
+                        </Text>
+                        <Text style={{ fontSize: 8, color: "#2563eb" }}>
+                          Recomendacion: {ctx.recommendation}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </>
         )}
@@ -337,9 +380,40 @@ export function PdfReport({
                 </View>
               ))}
             </View>
+            {driverInsights && (
+              <>
+                <Text style={styles.subsectionTitle}>Interpretacion IA</Text>
+                <Text style={styles.text}>{driverInsights.narrative}</Text>
+                {driverInsights.quick_wins.length > 0 && (
+                  <>
+                    <Text style={styles.subsectionTitle}>Quick Wins</Text>
+                    {driverInsights.quick_wins.map((qw, i) => (
+                      <Text key={i} style={styles.text}>
+                        - {qw.dimension}: {qw.action} (Impacto: {qw.impact})
+                      </Text>
+                    ))}
+                  </>
+                )}
+                {driverInsights.paradoxes.length > 0 && (
+                  <>
+                    <Text style={styles.subsectionTitle}>Paradojas detectadas</Text>
+                    {driverInsights.paradoxes.map((p, i) => (
+                      <Text key={i} style={styles.text}>
+                        ? {p}
+                      </Text>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
 
+        <Text style={styles.footer}>{footerText}</Text>
+      </Page>
+
+      {/* Comments + Segments + Trends */}
+      <Page size="LETTER" style={styles.page}>
         {/* Comment summary */}
         {commentSummary && (
           <>
@@ -357,10 +431,74 @@ export function PdfReport({
           </>
         )}
 
+        {/* Segment profiles */}
+        {segmentProfiles && segmentProfiles.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>9. Perfiles de Segmento</Text>
+            {segmentProfiles.map((p, i) => (
+              <View key={i} wrap={false} style={{ marginBottom: 8 }}>
+                <Text style={styles.subsectionTitle}>
+                  {p.segment} ({p.segment_type})
+                </Text>
+                <Text style={styles.text}>{p.narrative}</Text>
+                {p.strengths.length > 0 && (
+                  <Text style={styles.text}>Fortalezas: {p.strengths.join(", ")}</Text>
+                )}
+                {p.risks.length > 0 && (
+                  <Text style={styles.text}>Riesgos: {p.risks.join(", ")}</Text>
+                )}
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* Trends narrative */}
+        {trendsNarrative && (
+          <>
+            <Text style={styles.sectionTitle}>10. Analisis de Tendencias</Text>
+            <Text style={styles.text}>{trendsNarrative.trajectory}</Text>
+            {trendsNarrative.improving.length > 0 && (
+              <>
+                <Text style={styles.subsectionTitle}>Mejorando</Text>
+                {trendsNarrative.improving.map((item, i) => (
+                  <Text key={i} style={styles.text}>
+                    + {item}
+                  </Text>
+                ))}
+              </>
+            )}
+            {trendsNarrative.declining.length > 0 && (
+              <>
+                <Text style={styles.subsectionTitle}>En declive</Text>
+                {trendsNarrative.declining.map((item, i) => (
+                  <Text key={i} style={styles.text}>
+                    - {item}
+                  </Text>
+                ))}
+              </>
+            )}
+            {trendsNarrative.inflection_points.length > 0 && (
+              <>
+                <Text style={styles.subsectionTitle}>Puntos de inflexion</Text>
+                {trendsNarrative.inflection_points.map((item, i) => (
+                  <Text key={i} style={styles.text}>
+                    {item}
+                  </Text>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        <Text style={styles.footer}>{footerText}</Text>
+      </Page>
+
+      {/* Business indicators + ONA */}
+      <Page size="LETTER" style={styles.page}>
         {/* Business indicators */}
         {businessIndicators && businessIndicators.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>9. Indicadores de Negocio</Text>
+            <Text style={styles.sectionTitle}>11. Indicadores de Negocio</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
                 <Text style={[styles.cellBold, { width: "50%" }]}>Indicador</Text>
@@ -381,7 +519,7 @@ export function PdfReport({
         {/* ONA summary */}
         {onaSummary && (
           <>
-            <Text style={styles.sectionTitle}>10. Red Perceptual (ONA)</Text>
+            <Text style={styles.sectionTitle}>12. Red Perceptual (ONA)</Text>
             <View style={styles.kpiRow}>
               <View style={styles.kpiBox}>
                 <Text style={styles.kpiValue}>{onaSummary.communities}</Text>
@@ -406,7 +544,7 @@ export function PdfReport({
 
       {/* Technical sheet */}
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.sectionTitle}>11. Ficha Tecnica</Text>
+        <Text style={styles.sectionTitle}>13. Ficha Tecnica</Text>
         <View style={styles.kpiRow}>
           <View style={styles.kpiBox}>
             <Text style={styles.kpiValue}>{populationN}</Text>

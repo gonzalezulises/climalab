@@ -277,10 +277,24 @@ export async function analyzeComments(campaignId: string): Promise<ActionResult<
 
   const supabase = await createClient();
 
+  // open_responses has no campaign_id — join through respondents
+  const { data: respondents } = await supabase
+    .from("respondents")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .in("status", ["completed"]);
+
+  if (!respondents || respondents.length === 0) {
+    return { success: false, error: "No hay comentarios para analizar" };
+  }
+
   const { data: comments } = await supabase
     .from("open_responses")
-    .select("question_type, text, respondent_id")
-    .eq("campaign_id", campaignId)
+    .select("question_type, text")
+    .in(
+      "respondent_id",
+      respondents.map((r) => r.id)
+    )
     .order("question_type");
 
   if (!comments || comments.length === 0) {
