@@ -81,10 +81,10 @@ export const SEGMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export const DEFAULT_BRAND_CONFIG = {
-  primary_color: "#1e3a5f",
-  secondary_color: "#4a90d9",
-  accent_color: "#22c55e",
-  text_color: "#18181b",
+  primary_color: "#289448",
+  secondary_color: "#1FACC0",
+  accent_color: "#1FACC0",
+  text_color: "#151414",
   background_color: "#ffffff",
   logo_position: "center" as const,
   show_powered_by: true,

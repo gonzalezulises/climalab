@@ -225,10 +225,10 @@ export function DriversClient({
               }));
 
               const QUADRANT_COLORS: Record<string, string> = {
-                priority: "#dc2626",
-                maintain: "#16a34a",
-                monitor: "#f59e0b",
-                leverage: "#2563eb",
+                priority: "#C32421",
+                maintain: "#289448",
+                monitor: "#FF8044",
+                leverage: "#2F5DFF",
               };
 
               function getQuadrant(x: number, y: number) {
@@ -353,7 +353,7 @@ export function DriversClient({
               />
               <Bar dataKey="r" radius={[0, 4, 4, 0]}>
                 {barData.map((d, i) => (
-                  <Cell key={i} fill={d.r >= 0 ? "#16a34a" : "#dc2626"} />
+                  <Cell key={i} fill={d.r >= 0 ? "#289448" : "#C32421"} />
                 ))}
               </Bar>
             </BarChart>

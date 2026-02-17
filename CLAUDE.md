@@ -31,6 +31,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels, DEFAULT_BRAND_CONFIG
+- `src/lib/score-utils.ts` — Centralized score classification (classifyFavorability, favToHex, SEVERITY_LABELS) with Rizoma-aligned colors
 - `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson)
 - `src/lib/email.ts` — Multi-type branded email sender (Resend)
 - `src/lib/env.ts` — Zod-validated environment variables
@@ -92,12 +93,14 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Participants PII separation**: name/email stored in separate `participants` table, never on survey page
 - **Multi-instrument**: campaigns have `instrument_id` (base) + `module_instrument_ids uuid[]` (up to 3 modules). Dimension loading uses `.in("instrument_id", [base, ...modules])` in calculateResults, survey page, and seed-results
 - **Module categories**: Module dimensions have `category = NULL` in DB, mapped to `"modulos"` pseudo-category in UI. Naturally excluded from category score aggregation
-- **ONA**: Python igraph script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB (includes base64 PNG graph image)
+- **ONA**: Python igraph script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB (includes base64 PNG graph image). Network nav link hidden via `hasONAData()` check in analytics.ts when no data exists
 - **Statistics extraction**: Pure functions in `src/lib/statistics.ts` shared between campaigns.ts and seed-results.ts
 - **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`. PDF uses dynamic `createStyles(primaryColor)` for per-org branding
 - **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), PDF report (dynamic `createStyles`), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab
 - **Email infrastructure**: Multi-type branded emails via `sendBrandedEmail()` in `src/lib/email.ts` (invitation, reminder, campaign_closed, results_ready). Shared HTML layout wrapper with dynamic logo/colors/footer. Legacy `sendSurveyInvitation` preserved as wrapper
 - **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. Updates `reminded_at` and `reminder_count` on participants. UI button in campaign detail page (active campaigns only) with confirmation dialog
+- **Rizoma branding**: ClimaLab uses the Rizo.ma design system — Inter (body) + Source Serif 4 (headings/brand), Rizoma Green (#289448) as primary, Cyan (#1FACC0) as secondary/accent, Red (#C32421) for destructive. Design tokens from `gonzalezulises/rizoma-ui`
+- **Results enhancements (v4.7)**: Strengths/weaknesses card on dashboard, action priority matrix (scatter quadrants) on drivers, score-utils centralized classification with Rizoma colors
 
 ## Statistical Methods (v4.1)
 
@@ -130,7 +133,7 @@ Per-organization visual identity applied consistently across all touchpoints:
 
 - **Data**: `organizations.brand_config` JSONB column + `organizations.logo_url`
 - **Type**: `BrandConfig` in `src/types/index.ts` (primary_color, secondary_color, accent_color, text_color, background_color, logo_position, show_powered_by, custom_welcome_text, custom_thankyou_text, custom_email_footer)
-- **Defaults**: `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts` (primary=#1e3a5f, secondary=#4a90d9, accent=#22c55e)
+- **Defaults**: `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts` (primary=#289448 Rizoma Green, secondary=#1FACC0 Cyan, accent=#1FACC0 Cyan)
 - **Storage**: `org-assets` Supabase Storage bucket for logo uploads (public read, 2MiB limit)
 - **Applied to**: Survey (inline styles on header/buttons/progress), Emails (HTML template with dynamic header/CTA/footer), PDF report (dynamic `createStyles(primaryColor)`), Results sidebar (org logo)
 - **Config UI**: "Identidad visual" tab in organization detail page with `LogoUpload` + `BrandConfigEditor` components (live preview)

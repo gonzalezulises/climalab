@@ -35,7 +35,7 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
             CL
           </div>
-          <span className="text-lg font-semibold">ClimaLab</span>
+          <span className="text-lg font-semibold font-serif">ClimaLab</span>
         </div>
       </SidebarHeader>
       <SidebarContent>

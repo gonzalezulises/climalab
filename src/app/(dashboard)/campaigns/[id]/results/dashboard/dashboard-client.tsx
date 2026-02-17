@@ -128,25 +128,25 @@ export function DashboardClient({
           name: "Embajadores",
           value: profiles.ambassadors.pct,
           count: profiles.ambassadors.count,
-          color: "#15803d",
+          color: "#289448",
         },
         {
           name: "Comprometidos",
           value: profiles.committed.pct,
           count: profiles.committed.count,
-          color: "#2563eb",
+          color: "#1FACC0",
         },
         {
           name: "Neutrales",
           value: profiles.neutral.pct,
           count: profiles.neutral.count,
-          color: "#eab308",
+          color: "#FF8044",
         },
         {
           name: "Desvinculados",
           value: profiles.disengaged.pct,
           count: profiles.disengaged.count,
-          color: "#dc2626",
+          color: "#C32421",
         },
       ]
     : [];
@@ -177,7 +177,7 @@ export function DashboardClient({
             <p className="text-3xl font-bold">{globalFav}%</p>
             <div className="mt-1 h-2 rounded-full bg-gray-200">
               <div
-                className="h-2 rounded-full bg-blue-600"
+                className="h-2 rounded-full bg-primary"
                 style={{ width: `${Math.min(globalFav, 100)}%` }}
               />
             </div>
