@@ -1143,15 +1143,15 @@ Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campa
 
 ### 11.4 Páginas con IA
 
-| Página    | Componente             | Funcionalidad IA                                                   |
-| --------- | ---------------------- | ------------------------------------------------------------------ |
-| Dashboard | `dashboard-client.tsx` | Resumen ejecutivo con highlights/concerns/recommendation           |
-| Comments  | `comments-client.tsx`  | Distribución de sentimiento, temas con ejemplos, resumen           |
-| Drivers   | `drivers-client.tsx`   | Interpretación narrativa, quick wins, paradojas                    |
-| Alerts    | `alerts-client.tsx`    | Causa raíz y recomendación inline por alerta                       |
-| Segments  | `segments-client.tsx`  | Perfiles narrativos por segmento con badges                        |
-| Trends    | `trends-client.tsx`    | Análisis de trayectoria con dims mejorando/declinando              |
-| Export    | `export-client.tsx`    | Reporte ejecutivo descargable (.txt) combinando todos los insights |
+| Página    | Componente             | Funcionalidad IA                                                         |
+| --------- | ---------------------- | ------------------------------------------------------------------------ |
+| Dashboard | `dashboard-client.tsx` | Resumen ejecutivo con highlights/concerns/recommendation                 |
+| Comments  | `comments-client.tsx`  | Distribución de sentimiento, temas con ejemplos, resumen                 |
+| Drivers   | `drivers-client.tsx`   | Interpretación narrativa, quick wins, paradojas                          |
+| Alerts    | `alerts-client.tsx`    | Causa raíz y recomendación inline por alerta                             |
+| Segments  | `segments-client.tsx`  | Perfiles narrativos por segmento con badges                              |
+| Trends    | `trends-client.tsx`    | Análisis de trayectoria con dims mejorando/declinando                    |
+| Export    | `export-client.tsx`    | Reporte ejecutivo descargable (.txt/.docx) combinando todos los insights |
 
 ### 11.5 Consideraciones
 
@@ -1285,35 +1285,37 @@ En tres puntos criticos, las dimensiones se cargan usando `.in("instrument_id", 
 
 ### 15.1 Formatos de Exportacion
 
-| Formato      | Descripcion                                                                                                                                   | Generacion                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Excel (XLSX) | 8 hojas: resumen, dimensiones, items, segmentos, drivers, alertas, comentarios, ficha tecnica                                                 | Server-side via exceljs             |
-| PDF          | Reporte ejecutivo con KPIs, categorias, dimensiones, departamentos, alertas, drivers, comentarios, indicadores de negocio, ONA, ficha tecnica | Server-side via @react-pdf/renderer |
-| CSV          | Scores por dimension                                                                                                                          | Client-side                         |
-| JSON         | Dump completo de datos analiticos                                                                                                             | Client-side                         |
-| TXT (IA)     | Reporte ejecutivo con narrativas AI (requiere Ollama)                                                                                         | Client-side con server actions      |
+| Formato      | Descripcion                                                                                                                                                                                                                         | Generacion                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Excel (XLSX) | 8 hojas: resumen, dimensiones, items, segmentos, drivers, alertas, comentarios, ficha tecnica                                                                                                                                       | Server-side via exceljs        |
+| DOCX (Word)  | Reporte ejecutivo editable con 14 secciones: portada, resumen ejecutivo, KPIs, categorias, dimensiones, departamentos, alertas (+IA), drivers (+IA), comentarios, segmentos, tendencias, indicadores de negocio, ONA, ficha tecnica | Server-side via docx           |
+| CSV          | Scores por dimension                                                                                                                                                                                                                | Client-side                    |
+| JSON         | Dump completo de datos analiticos                                                                                                                                                                                                   | Client-side                    |
+| TXT (IA)     | Reporte ejecutivo con narrativas AI (requiere Ollama)                                                                                                                                                                               | Client-side con server actions |
 
 ### 15.2 Arquitectura
 
-- **Server action**: `src/actions/export.ts` — `generateExcelReport()` y `generatePdfReport()`
-- **PDF component**: `src/components/reports/pdf-report.tsx` — componente React-PDF con 11 secciones
+- **Server action**: `src/actions/export.ts` — `generateExcelReport()` y `generateDocxReport()`
+- **DOCX builder**: Generacion completa en server action usando `docx` (Document → Section → Paragraph/Table/ImageRun → Packer.toBuffer())
 - **Client**: `src/app/(dashboard)/campaigns/[id]/results/export/export-client.tsx` — interfaz de descarga
 - Los reportes se generan on-demand (no pre-calculados) y se envian como base64 al cliente para descarga
 
-### 15.3 Contenido del PDF
+### 15.3 Contenido del DOCX
 
-1. Portada (campana, organizacion, fecha)
-2. Resumen ejecutivo (AI, si disponible)
+1. Portada (logo org, titulo, campana, organizacion, fecha)
+2. Resumen ejecutivo (AI: highlights, concerns, recommendation)
 3. Indicadores clave (engagement, favorabilidad, eNPS, tasa de respuesta)
-4. Scores por categoria
+4. Scores por categoria (tabla)
 5. Ranking de dimensiones (codigo, nombre, score, fav%, rwg)
-6. Resumen por departamento
-7. Alertas principales
-8. Top drivers de engagement
-9. Resumen de comentarios (AI, si disponible)
-10. Indicadores de negocio (si existen)
-11. Red perceptual ONA (si existe)
-12. Ficha tecnica (poblacion, muestra, tasa, margen de error, Cronbach alpha)
+6. Resumen por departamento (tabla)
+7. Alertas principales (tabla + AI causa raiz/recomendacion por alerta)
+8. Top drivers de engagement (tabla + AI narrativa, quick wins, paradojas)
+9. Resumen de comentarios (AI: fortalezas, areas de mejora, general)
+10. Perfiles de segmento (AI: narrativa, fortalezas, riesgos por segmento)
+11. Analisis de tendencias (AI: trayectoria, mejorando, declinando, puntos de inflexion)
+12. Indicadores de negocio (tabla, si existen)
+13. Red perceptual ONA (KPIs + narrativa, si existe)
+14. Ficha tecnica (poblacion, muestra, tasa, margen de error, Cronbach alpha tabla)
 
 ---
 
@@ -1328,24 +1330,24 @@ La tabla `organizations` incluye:
 
 **Campos de BrandConfig:**
 
-| Campo                  | Tipo | Default   | Descripción                                    |
-| ---------------------- | ---- | --------- | ---------------------------------------------- |
-| `primary_color`        | hex  | `#1e3a5f` | Color principal (headers, KPIs, secciones PDF) |
-| `secondary_color`      | hex  | `#18181b` | Color secundario                               |
-| `accent_color`         | hex  | `#18181b` | Color de botones CTA                           |
-| `text_color`           | hex  | `#18181b` | Color de texto principal                       |
-| `background_color`     | hex  | `#f4f4f5` | Color de fondo                                 |
-| `logo_position`        | enum | `center`  | Posición del logo (left/center)                |
-| `show_powered_by`      | bool | `true`    | Mostrar "Powered by ClimaLab"                  |
-| `custom_welcome_text`  | text | null      | Texto de bienvenida en survey                  |
-| `custom_thankyou_text` | text | null      | Texto de agradecimiento en survey              |
-| `custom_email_footer`  | text | null      | Pie de email personalizado                     |
+| Campo                  | Tipo | Default   | Descripción                                     |
+| ---------------------- | ---- | --------- | ----------------------------------------------- |
+| `primary_color`        | hex  | `#1e3a5f` | Color principal (headers, KPIs, secciones DOCX) |
+| `secondary_color`      | hex  | `#18181b` | Color secundario                                |
+| `accent_color`         | hex  | `#18181b` | Color de botones CTA                            |
+| `text_color`           | hex  | `#18181b` | Color de texto principal                        |
+| `background_color`     | hex  | `#f4f4f5` | Color de fondo                                  |
+| `logo_position`        | enum | `center`  | Posición del logo (left/center)                 |
+| `show_powered_by`      | bool | `true`    | Mostrar "Powered by ClimaLab"                   |
+| `custom_welcome_text`  | text | null      | Texto de bienvenida en survey                   |
+| `custom_thankyou_text` | text | null      | Texto de agradecimiento en survey               |
+| `custom_email_footer`  | text | null      | Pie de email personalizado                      |
 
 ### Aplicación del Branding
 
 1. **Encuesta**: Colores de barra de progreso, botones Likert, CTA, textos personalizados
 2. **Emails**: Header con color principal + logo, CTA con color de acento, footer personalizado
-3. **PDF**: Títulos de sección y KPIs con color principal, logo en portada, footer condicional
+3. **DOCX**: Títulos de sección y KPIs con color principal, logo en portada, footer condicional
 4. **Resultados**: Logo de org en sidebar de resultados
 
 ### Infraestructura de Emails

@@ -14,7 +14,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Email**: Resend (transactional branded emails)
 - **ONA**: Python (igraph + matplotlib), invoked via `uv run`
 - **AI**: Triple backend — Anthropic API (Claude Haiku 4.5, priority) → DGX (OpenAI-compatible via Cloudflare Tunnel) → Ollama native fallback
-- **Export**: @react-pdf/renderer (PDF), exceljs (Excel)
+- **Export**: docx (Word/DOCX), exceljs (Excel)
 
 ## Project Structure
 
@@ -26,7 +26,6 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
 - `src/components/results/` — 21 reusable chart components for results module
-- `src/components/reports/` — PDF report component (@react-pdf/renderer)
 - `src/components/branding/` — LogoUpload and BrandConfigEditor components
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
@@ -95,8 +94,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Module categories**: Module dimensions have `category = NULL` in DB, mapped to `"modulos"` pseudo-category in UI. Naturally excluded from category score aggregation
 - **ONA**: Python igraph script invoked non-blocking from calculateResults, uses `uv` with `python3` fallback. Results stored in campaign_analytics as JSONB (includes base64 PNG graph image). Network nav link hidden via `hasONAData()` check in analytics.ts when no data exists
 - **Statistics extraction**: Pure functions in `src/lib/statistics.ts` shared between campaigns.ts and seed-results.ts
-- **PDF/Excel export**: Server-side generation via @react-pdf/renderer and exceljs in `src/actions/export.ts`. PDF uses dynamic `createStyles(primaryColor)` for per-org branding
-- **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), PDF report (dynamic `createStyles`), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab
+- **DOCX/Excel export**: Server-side generation via `docx` and exceljs in `src/actions/export.ts`. DOCX uses org primary color for headings/KPIs and embeds logo via ImageRun
+- **Branding system**: Per-org visual identity via `brand_config` JSONB column on organizations. `BrandConfig` type in `src/types/index.ts`, `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts`. Applied to survey (inline styles), emails (`sendBrandedEmail`), DOCX report (dynamic heading colors + embedded logo), and results sidebar (logo). Logo uploads to `org-assets` Supabase Storage bucket. Config UI in organization detail "Identidad visual" tab
 - **Email infrastructure**: Multi-type branded emails via `sendBrandedEmail()` in `src/lib/email.ts` (invitation, reminder, campaign_closed, results_ready). Shared HTML layout wrapper with dynamic logo/colors/footer. Legacy `sendSurveyInvitation` preserved as wrapper
 - **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. Updates `reminded_at` and `reminder_count` on participants. UI button in campaign detail page (active campaigns only) with confirmation dialog
 - **Rizoma branding**: ClimaLab uses the Rizo.ma design system — Inter (body) + Source Serif 4 (headings/brand), Rizoma Green (#289448) as primary, Cyan (#1FACC0) as secondary/accent, Red (#C32421) for destructive. Design tokens from `gonzalezulises/rizoma-ui`
@@ -137,7 +136,7 @@ Per-organization visual identity applied consistently across all touchpoints:
 - **Type**: `BrandConfig` in `src/types/index.ts` (primary_color, secondary_color, accent_color, text_color, background_color, logo_position, show_powered_by, custom_welcome_text, custom_thankyou_text, custom_email_footer)
 - **Defaults**: `DEFAULT_BRAND_CONFIG` in `src/lib/constants.ts` (primary=#289448 Rizoma Green, secondary=#1FACC0 Cyan, accent=#1FACC0 Cyan)
 - **Storage**: `org-assets` Supabase Storage bucket for logo uploads (public read, 2MiB limit)
-- **Applied to**: Survey (inline styles on header/buttons/progress), Emails (HTML template with dynamic header/CTA/footer), PDF report (dynamic `createStyles(primaryColor)`), Results sidebar (org logo)
+- **Applied to**: Survey (inline styles on header/buttons/progress), Emails (HTML template with dynamic header/CTA/footer), DOCX report (heading colors + embedded logo), Results sidebar (org logo)
 - **Config UI**: "Identidad visual" tab in organization detail page with `LogoUpload` + `BrandConfigEditor` components (live preview)
 
 ## Email Infrastructure
@@ -248,7 +247,7 @@ The technical page (ficha técnica) auto-generates:
 ## Export & Reports
 
 - **Excel export**: Full campaign data via exceljs (dimensions, items, segments, drivers, alerts, comments, ficha técnica)
-- **PDF report**: Executive report via @react-pdf/renderer with KPIs, categories, dimensions, departments, alerts, drivers, comments, business indicators, ONA summary, ficha técnica. Branded with org colors/logo
+- **DOCX report**: Editable executive report (.docx) via `docx` package with 14 sections: cover, executive summary, KPIs, categories, dimensions, departments, alerts (+AI context), drivers (+AI insights), comments, segment profiles, trends, business indicators, ONA, ficha técnica. Branded with org colors/logo. Compatible with Word and Google Docs
 - **AI report**: Text-based executive report with AI-generated narratives (requires Ollama)
 - **CSV/JSON**: Dimension data and full results dump
 - **Server action**: `src/actions/export.ts`
@@ -279,7 +278,7 @@ The technical page (ficha técnica) auto-generates:
    - ONA perceptual analysis (Python/igraph, Leiden + NMI stability, non-blocking) → campaign_analytics
 7. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
 8. AI Insights (optional, requires Ollama): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
-9. Export: branded PDF, Excel, CSV, AI report
+9. Export: branded DOCX, Excel, CSV, AI report
 
 ## Local Development
 
