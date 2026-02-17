@@ -101,6 +101,8 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Reminders**: `sendReminders(campaignId)` server action in `src/actions/reminders.ts`. Sends branded reminder emails to incomplete participants. Updates `reminded_at` and `reminder_count` on participants. UI button in campaign detail page (active campaigns only) with confirmation dialog
 - **Rizoma branding**: ClimaLab uses the Rizo.ma design system — Inter (body) + Source Serif 4 (headings/brand), Rizoma Green (#289448) as primary, Cyan (#1FACC0) as secondary/accent, Red (#C32421) for destructive. Design tokens from `gonzalezulises/rizoma-ui`
 - **Results enhancements (v4.7)**: Strengths/weaknesses card on dashboard, action priority matrix (scatter quadrants) on drivers, score-utils centralized classification with Rizoma colors
+- **Expandable dimension cards (v4.7.1)**: DimensionCard click-to-expand shows full item text (collapsed = truncated, expanded = full wrap with metrics below). Top/Bottom items view wraps text instead of truncating
+- **Vercel timeout (v4.7.1)**: `maxDuration = 300` in results layout.tsx — allows up to 5 minutes for AI server actions with 72B model (requires Vercel Pro)
 
 ## Statistical Methods (v4.1)
 
@@ -177,7 +179,7 @@ If neither is configured, AI buttons show a clear error message in Spanish. All 
 | `segment_profiles`    | Segments  | Per-segment narrative with strengths/risks                          |
 | `trends_narrative`    | Trends    | Trajectory, improving/declining/stable dims, inflection points      |
 
-**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (dual backend dispatcher), `callOpenAICompatible` (DGX/OpenAI endpoint), `callOllamaNative` (legacy Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights.
+**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (dual backend dispatcher), `callOpenAICompatible` (DGX/OpenAI endpoint), `callOllamaNative` (legacy Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights. Results layout exports `maxDuration = 300` for Vercel serverless timeout (72B model needs 30-120s per analysis).
 
 ## Psychometric Reporting
 

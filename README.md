@@ -103,7 +103,7 @@ npm run dev
 5. **Recordatorios** — botón manual envía emails de recordatorio a participantes pendientes
 6. **Monitorear** — panel en vivo con auto-refresh cada 30s
 7. **Cerrar y calcular** — motor estadístico computa resultados (base + módulos) + ONA perceptual
-8. **Resultados** — 11 sub-páginas: dashboard, dimensiones, tendencias, segmentos, benchmarks, drivers, alertas, comentarios, red ONA, ficha técnica, exportar
+8. **Resultados** — 11 sub-páginas: dashboard, dimensiones (cards expandibles con texto completo), tendencias, segmentos, benchmarks, drivers, alertas, comentarios, red ONA, ficha técnica, exportar
 9. **Insights IA** — análisis cualitativos generados por IA (DGX vía Cloudflare Tunnel o Ollama local): narrativas, drivers, alertas, segmentos, tendencias
 10. **Exportar** — PDF ejecutivo con branding, Excel completo, CSV, reporte IA
 
@@ -171,6 +171,7 @@ Backend dual con fallback automático para insights cualitativos en 6 páginas d
 
 - **Prioridad**: `AI_LOCAL_ENDPOINT` → `OLLAMA_BASE_URL` → error con mensaje claro
 - **Fail-fast**: si ningún proveedor configurado, retorna error inmediatamente (no falla silenciosamente)
+- **Timeout**: `maxDuration = 300` en results layout — permite hasta 5 min para modelos grandes (requiere Vercel Pro)
 - **6 tipos de análisis**: dashboard_narrative, comment_analysis, driver_insights, alert_context, segment_profiles, trends_narrative
 - **Orquestador**: `generateAllInsights()` ejecuta 5 análisis en paralelo; dashboard tiene botón "Generar insights IA"
 - **Almacenamiento**: `campaign_analytics` con `analysis_type` dedicado por tipo de insight
