@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/layout/nav-user";
+import { AppFooter } from "@/components/layout/app-footer";
 import type { Profile } from "@/types";
 
 const navItems = [
@@ -58,6 +59,7 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
       </SidebarContent>
       <SidebarFooter>
         <NavUser profile={profile} />
+        <AppFooter variant="compact" />
       </SidebarFooter>
     </Sidebar>
   );

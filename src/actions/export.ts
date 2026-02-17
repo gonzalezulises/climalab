@@ -543,7 +543,9 @@ export async function generateDocxReport(
     day: "numeric",
   });
 
-  const footerText = brand.show_powered_by ? "Generado por ClimaLab" : `Generado para ${orgName}`;
+  const footerText = brand.show_powered_by
+    ? "Generado por ClimaLab · © 2026 Rizo.ma — Marca propiedad de Prozess Group S.A."
+    : `Generado para ${orgName} · © 2026 Rizo.ma — Marca propiedad de Prozess Group S.A.`;
 
   // Fetch logo if available
   let logoBuffer: Buffer | null = null;
@@ -857,12 +859,27 @@ export async function generateDocxReport(
     );
   }
 
-  // Footer
+  // Footer + Disclaimer
   content.push(
     new Paragraph({
       spacing: { before: 600 },
       alignment: AlignmentType.CENTER,
       children: [new TextRun({ text: footerText, size: 16, color: "AAAAAA", font: "Calibri" })],
+    })
+  );
+  content.push(
+    new Paragraph({
+      spacing: { before: 200 },
+      alignment: AlignmentType.JUSTIFIED,
+      children: [
+        new TextRun({
+          text: "Aviso: Los resultados e insights generados por ClimaLab, incluyendo análisis estadísticos e interpretaciones de IA, son de carácter informativo y no constituyen asesoría profesional, legal ni psicológica. Las decisiones organizacionales deben complementarse con juicio profesional calificado.",
+          size: 14,
+          color: "AAAAAA",
+          font: "Calibri",
+          italics: true,
+        }),
+      ],
     })
   );
 

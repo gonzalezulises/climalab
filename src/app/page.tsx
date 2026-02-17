@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Eye, Target, CheckCircle2, ArrowRight, ChevronDown } from "lucide-react";
+import { AppFooter } from "@/components/layout/app-footer";
 
 export default function HomePage() {
   return (
@@ -128,11 +129,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="mx-auto max-w-5xl px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} ClimaLab. Todos los derechos reservados.
-        </div>
-      </footer>
+      <AppFooter variant="full" />
     </div>
   );
 }
