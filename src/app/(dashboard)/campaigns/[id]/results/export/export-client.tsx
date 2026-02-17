@@ -10,7 +10,7 @@ import {
   getCommentAnalysis,
   getDriverInsights,
 } from "@/actions/ai-insights";
-import { generateExcelReport, generatePdfReport } from "@/actions/export";
+import { generateExcelReport, generateDocxReport } from "@/actions/export";
 import type { DashboardNarrative, CommentAnalysis, DriverInsights } from "@/actions/ai-insights";
 
 type Props = {
@@ -41,7 +41,7 @@ export function ExportClient({
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [xlsxPending, startXlsxTransition] = useTransition();
-  const [pdfPending, startPdfTransition] = useTransition();
+  const [docxPending, startDocxTransition] = useTransition();
 
   function downloadXlsx() {
     startXlsxTransition(async () => {
@@ -62,14 +62,16 @@ export function ExportClient({
     });
   }
 
-  function downloadPdf() {
-    startPdfTransition(async () => {
-      const result = await generatePdfReport(campaignId);
+  function downloadDocx() {
+    startDocxTransition(async () => {
+      const result = await generateDocxReport(campaignId);
       if (!result.success) return;
 
       const { base64, filename } = result.data;
       const byteArray = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const blob = new Blob([byteArray], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -127,21 +129,21 @@ export function ExportClient({
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-5 w-5" /> PDF Ejecutivo
+              <FileText className="h-5 w-5" /> Word Ejecutivo
             </CardTitle>
             <CardDescription>
-              Reporte ejecutivo estructurado con KPIs, dimensiones, alertas, drivers y ficha
-              técnica.
+              Reporte ejecutivo editable (.docx) con KPIs, dimensiones, alertas, drivers, insights
+              IA y ficha técnica. Compatible con Word y Google Docs.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={downloadPdf} className="w-full" disabled={pdfPending}>
-              {pdfPending ? (
+            <Button onClick={downloadDocx} className="w-full" disabled={docxPending}>
+              {docxPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <FileText className="h-4 w-4 mr-2" />
               )}
-              Descargar PDF
+              Descargar Word
             </Button>
           </CardContent>
         </Card>

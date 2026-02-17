@@ -1,8 +1,22 @@
 "use server";
 
 import ExcelJS from "exceljs";
-import { renderToBuffer } from "@react-pdf/renderer";
-import React from "react";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  AlignmentType,
+  HeadingLevel,
+  BorderStyle,
+  ShadingType,
+  ImageRun,
+  PageBreak,
+} from "docx";
 import { getCampaign, getCampaignResults, getOpenResponses } from "@/actions/campaigns";
 import {
   getCategoryScores,
@@ -24,8 +38,7 @@ import { getBusinessIndicators } from "@/actions/business-indicators";
 import { getONAResults } from "@/actions/ona";
 import { getOrganization } from "@/actions/organizations";
 import type { ActionResult, BrandConfig } from "@/types";
-import { CATEGORY_LABELS } from "@/lib/constants";
-import { PdfReport } from "@/components/reports/pdf-report";
+import { CATEGORY_LABELS, DEFAULT_BRAND_CONFIG } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // generateExcelReport — multi-sheet XLSX export
@@ -280,9 +293,142 @@ function styleHeaderRow(sheet: ExcelJS.Worksheet) {
 }
 
 // ---------------------------------------------------------------------------
-// generatePdfReport — structured PDF executive report
+// DOCX helpers
 // ---------------------------------------------------------------------------
-export async function generatePdfReport(
+const BORDER_NONE = {
+  top: { style: BorderStyle.NONE, size: 0 },
+  bottom: { style: BorderStyle.NONE, size: 0 },
+  left: { style: BorderStyle.NONE, size: 0 },
+  right: { style: BorderStyle.NONE, size: 0 },
+} as const;
+
+const BORDER_LIGHT = {
+  top: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+  bottom: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+  left: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+  right: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+} as const;
+
+function sectionTitle(text: string, color: string): Paragraph {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { before: 400, after: 200 },
+    children: [new TextRun({ text, color, bold: true, size: 28, font: "Calibri" })],
+  });
+}
+
+function subTitle(text: string): Paragraph {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 240, after: 120 },
+    children: [new TextRun({ text, bold: true, size: 22, font: "Calibri" })],
+  });
+}
+
+function bodyText(text: string): Paragraph {
+  return new Paragraph({
+    spacing: { after: 100 },
+    children: [new TextRun({ text, size: 20, font: "Calibri" })],
+  });
+}
+
+function bulletItem(text: string, prefix = "-"): Paragraph {
+  return new Paragraph({
+    spacing: { after: 60 },
+    indent: { left: 360 },
+    children: [new TextRun({ text: `${prefix} ${text}`, size: 20, font: "Calibri" })],
+  });
+}
+
+function kpiParagraph(label: string, value: string, color: string): Paragraph {
+  return new Paragraph({
+    spacing: { after: 80 },
+    children: [
+      new TextRun({ text: `${label}: `, size: 20, font: "Calibri" }),
+      new TextRun({ text: value, bold: true, size: 22, color, font: "Calibri" }),
+    ],
+  });
+}
+
+function makeHeaderCell(text: string): TableCell {
+  return new TableCell({
+    shading: { type: ShadingType.SOLID, color: "E2E8F0" },
+    borders: BORDER_LIGHT,
+    children: [
+      new Paragraph({
+        children: [new TextRun({ text, bold: true, size: 18, font: "Calibri" })],
+      }),
+    ],
+  });
+}
+
+function makeCell(text: string): TableCell {
+  return new TableCell({
+    borders: BORDER_LIGHT,
+    children: [
+      new Paragraph({
+        children: [new TextRun({ text, size: 18, font: "Calibri" })],
+      }),
+    ],
+  });
+}
+
+function makeTable(headers: string[], rows: string[][], colWidths?: number[]): Table {
+  const widths = colWidths ?? headers.map(() => Math.floor(9000 / headers.length));
+  return new Table({
+    width: { size: 9000, type: WidthType.DXA },
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: headers.map(
+          (h, i) =>
+            new TableCell({
+              width: { size: widths[i], type: WidthType.DXA },
+              shading: { type: ShadingType.SOLID, color: "E2E8F0" },
+              borders: BORDER_LIGHT,
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: h, bold: true, size: 18, font: "Calibri" })],
+                }),
+              ],
+            })
+        ),
+      }),
+      ...rows.map(
+        (cells) =>
+          new TableRow({
+            children: cells.map(
+              (c, i) =>
+                new TableCell({
+                  width: { size: widths[i], type: WidthType.DXA },
+                  borders: BORDER_LIGHT,
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: c, size: 18, font: "Calibri" })],
+                    }),
+                  ],
+                })
+            ),
+          })
+      ),
+    ],
+  });
+}
+
+async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// generateDocxReport — structured DOCX executive report
+// ---------------------------------------------------------------------------
+export async function generateDocxReport(
   campaignId: string
 ): Promise<ActionResult<{ base64: string; filename: string }>> {
   const [
@@ -347,6 +493,9 @@ export async function generatePdfReport(
     : {};
   const orgName = orgRes.success ? orgRes.data.name : campaign.organization_id;
 
+  const brand = { ...DEFAULT_BRAND_CONFIG, ...orgBrandConfig };
+  const pc = brand.primary_color.replace("#", "");
+
   // Extract dimension results (global)
   const dimResults = results.filter(
     (r) => r.result_type === "dimension" && r.segment_type === "global"
@@ -371,50 +520,362 @@ export async function generatePdfReport(
     dimensions.length > 0
       ? Math.round((dimensions.reduce((s, d) => s + d.fav, 0) / dimensions.length) * 10) / 10
       : 0;
+  const engagement = engResult ? Number(engResult.avg_score) : 0;
+  const enps = enpsResult ? Number(enpsResult.avg_score) : 0;
+  const responseRate = Number(campaign.response_rate ?? 0);
+  const sampleN = campaign.sample_n ?? 0;
+  const populationN = campaign.population_n ?? 0;
+  const marginOfError = Number(campaign.margin_of_error ?? 0);
+  const departmentRanking = benchmark?.overallRanking ?? [];
+  const commentSummary = commentAnalysis?.summary ?? null;
+  const onaSummary = onaData
+    ? {
+        communities: onaData.summary.communities,
+        modularity: onaData.summary.modularity,
+        topDiscriminants: onaData.discriminants.slice(0, 5).map((d) => d.code),
+        narrative: onaData.narrative ?? "",
+      }
+    : null;
 
-  const pdfElement = React.createElement(PdfReport, {
-    campaignName: campaign.name,
-    organizationName: orgName,
-    logoUrl: orgLogoUrl,
-    brandConfig: orgBrandConfig,
-    engagement: engResult ? Number(engResult.avg_score) : 0,
-    favorability: globalFav,
-    enps: enpsResult ? Number(enpsResult.avg_score) : 0,
-    responseRate: Number(campaign.response_rate ?? 0),
-    sampleN: campaign.sample_n ?? 0,
-    populationN: campaign.population_n ?? 0,
-    marginOfError: Number(campaign.margin_of_error ?? 0),
-    categories,
-    dimensions,
-    departmentRanking: benchmark?.overallRanking ?? [],
-    alerts: alerts.slice(0, 15),
-    drivers: drivers.slice(0, 10),
-    reliability,
-    businessIndicators: businessIndicators.map((bi) => ({
-      indicator_name: bi.indicator_name,
-      indicator_value: Number(bi.indicator_value),
-      indicator_unit: bi.indicator_unit,
-    })),
-    onaSummary: onaData
-      ? {
-          communities: onaData.summary.communities,
-          modularity: onaData.summary.modularity,
-          topDiscriminants: onaData.discriminants.slice(0, 5).map((d) => d.code),
-          narrative: onaData.narrative ?? "",
-        }
-      : null,
-    narrative,
-    commentSummary: commentAnalysis?.summary ?? null,
-    driverInsights,
-    alertContext,
-    segmentProfiles,
-    trendsNarrative,
+  const date = new Date().toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfBuffer = await renderToBuffer(pdfElement as any);
-  const base64 = Buffer.from(pdfBuffer).toString("base64");
-  const filename = `${campaign.name.replace(/\s+/g, "_")}_reporte_ejecutivo.pdf`;
+  const footerText = brand.show_powered_by ? "Generado por ClimaLab" : `Generado para ${orgName}`;
+
+  // Fetch logo if available
+  let logoBuffer: Buffer | null = null;
+  if (orgLogoUrl) {
+    logoBuffer = await fetchImageBuffer(orgLogoUrl);
+  }
+
+  // Build sections array
+  const children: Paragraph[] | (Paragraph | Table)[] = [];
+  const content: (Paragraph | Table)[] = children as (Paragraph | Table)[];
+
+  // ── Cover page ──
+  content.push(new Paragraph({ spacing: { before: 3000 } }));
+  if (logoBuffer) {
+    content.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new ImageRun({
+            data: logoBuffer,
+            transformation: { width: 200, height: 60 },
+            type: "png",
+          }),
+        ],
+      })
+    );
+    content.push(new Paragraph({ spacing: { before: 200 } }));
+  }
+  content.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [
+        new TextRun({
+          text: "REPORTE EJECUTIVO",
+          bold: true,
+          size: 40,
+          color: pc,
+          font: "Calibri",
+        }),
+      ],
+    })
+  );
+  content.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100 },
+      children: [
+        new TextRun({
+          text: "DE CLIMA ORGANIZACIONAL",
+          bold: true,
+          size: 36,
+          color: pc,
+          font: "Calibri",
+        }),
+      ],
+    })
+  );
+  content.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [new TextRun({ text: campaign.name, size: 28, color: "555555", font: "Calibri" })],
+    })
+  );
+  content.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [new TextRun({ text: orgName, size: 28, color: "555555", font: "Calibri" })],
+    })
+  );
+  content.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+      children: [new TextRun({ text: date, size: 22, color: "888888", font: "Calibri" })],
+    })
+  );
+  content.push(
+    new Paragraph({
+      children: [new PageBreak()],
+    })
+  );
+
+  // ── 1. Resumen Ejecutivo ──
+  if (narrative) {
+    content.push(sectionTitle("1. Resumen Ejecutivo", pc));
+    content.push(bodyText(narrative.executive_summary));
+    if (narrative.highlights.length > 0) {
+      content.push(subTitle("Destacados"));
+      for (const h of narrative.highlights) content.push(bulletItem(h, "+"));
+    }
+    if (narrative.concerns.length > 0) {
+      content.push(subTitle("Preocupaciones"));
+      for (const c of narrative.concerns) content.push(bulletItem(c, "!"));
+    }
+    content.push(subTitle("Recomendación"));
+    content.push(bodyText(narrative.recommendation));
+  }
+
+  // ── 2. Indicadores Clave ──
+  content.push(sectionTitle("2. Indicadores Clave", pc));
+  content.push(kpiParagraph("Engagement (de 5.0)", engagement.toFixed(2), pc));
+  content.push(kpiParagraph("Favorabilidad", `${globalFav}%`, pc));
+  content.push(kpiParagraph("eNPS", String(enps), pc));
+  content.push(kpiParagraph("Tasa de respuesta", `${responseRate}%`, pc));
+
+  // ── 3. Scores por Categoría ──
+  content.push(sectionTitle("3. Scores por Categoría", pc));
+  content.push(
+    makeTable(
+      ["Categoría", "Score", "Favorabilidad"],
+      categories.map((c) => [
+        CATEGORY_LABELS[c.category] ?? c.category,
+        c.avg_score.toFixed(2),
+        `${c.favorability_pct}%`,
+      ]),
+      [4000, 2500, 2500]
+    )
+  );
+
+  // ── 4. Ranking de Dimensiones ──
+  content.push(sectionTitle("4. Ranking de Dimensiones", pc));
+  content.push(
+    makeTable(
+      ["Cód", "Dimensión", "Score", "Fav %", "rwg"],
+      dimensions.map((d) => [
+        d.code,
+        d.name,
+        d.avg.toFixed(2),
+        `${d.fav}%`,
+        d.rwg != null ? d.rwg.toFixed(3) : "-",
+      ]),
+      [1000, 3500, 1500, 1500, 1500]
+    )
+  );
+
+  // ── 5. Resumen por Departamento ──
+  if (departmentRanking.length > 0) {
+    content.push(sectionTitle("5. Resumen por Departamento", pc));
+    content.push(
+      makeTable(
+        ["Departamento", "Score", "Fav %", "n"],
+        departmentRanking.map((d) => [
+          d.department,
+          d.avgScore.toFixed(2),
+          `${d.avgFav}%`,
+          String(d.n),
+        ]),
+        [3500, 2000, 2000, 1500]
+      )
+    );
+  }
+
+  // ── 6. Alertas ──
+  if (alerts.length > 0) {
+    content.push(sectionTitle("6. Alertas Principales", pc));
+    content.push(
+      makeTable(
+        ["Severidad", "Mensaje", "Valor", "Umbral"],
+        alerts
+          .slice(0, 15)
+          .map((a) => [
+            a.severity,
+            a.message,
+            typeof a.value === "number" ? a.value.toFixed(1) : String(a.value),
+            String(a.threshold),
+          ]),
+        [1500, 4500, 1500, 1500]
+      )
+    );
+    if (alertContext && alertContext.length > 0) {
+      content.push(subTitle("Análisis IA por alerta"));
+      for (const ctx of alertContext) {
+        const alertMsg = alerts[ctx.alert_index]?.message ?? `Alerta ${ctx.alert_index + 1}`;
+        content.push(
+          new Paragraph({
+            spacing: { before: 120, after: 40 },
+            children: [new TextRun({ text: alertMsg, bold: true, size: 20, font: "Calibri" })],
+          })
+        );
+        content.push(bulletItem(`Causa probable: ${ctx.root_cause}`));
+        content.push(bulletItem(`Recomendación: ${ctx.recommendation}`));
+      }
+    }
+  }
+
+  // ── 7. Drivers ──
+  if (drivers.length > 0) {
+    content.push(sectionTitle("7. Top Drivers de Engagement", pc));
+    content.push(
+      makeTable(
+        ["Código", "Dimensión", "r (correlación)"],
+        drivers.slice(0, 10).map((d) => [d.code, d.name, d.r.toFixed(3)]),
+        [1500, 5000, 2500]
+      )
+    );
+    if (driverInsights) {
+      content.push(subTitle("Interpretación IA"));
+      content.push(bodyText(driverInsights.narrative));
+      if (driverInsights.quick_wins.length > 0) {
+        content.push(subTitle("Quick Wins"));
+        for (const qw of driverInsights.quick_wins) {
+          content.push(bulletItem(`${qw.dimension}: ${qw.action} (Impacto: ${qw.impact})`));
+        }
+      }
+      if (driverInsights.paradoxes.length > 0) {
+        content.push(subTitle("Paradojas detectadas"));
+        for (const p of driverInsights.paradoxes) content.push(bulletItem(p, "?"));
+      }
+    }
+  }
+
+  // ── 8. Resumen de Comentarios ──
+  if (commentSummary) {
+    content.push(sectionTitle("8. Resumen de Comentarios", pc));
+    content.push(subTitle("Fortalezas"));
+    content.push(bodyText(commentSummary.strengths));
+    content.push(subTitle("Áreas de mejora"));
+    content.push(bodyText(commentSummary.improvements));
+    if (commentSummary.general) {
+      content.push(subTitle("General"));
+      content.push(bodyText(commentSummary.general));
+    }
+  }
+
+  // ── 9. Perfiles de Segmento ──
+  if (segmentProfiles && segmentProfiles.length > 0) {
+    content.push(sectionTitle("9. Perfiles de Segmento", pc));
+    for (const p of segmentProfiles) {
+      content.push(subTitle(`${p.segment} (${p.segment_type})`));
+      content.push(bodyText(p.narrative));
+      if (p.strengths.length > 0) {
+        content.push(bodyText(`Fortalezas: ${p.strengths.join(", ")}`));
+      }
+      if (p.risks.length > 0) {
+        content.push(bodyText(`Riesgos: ${p.risks.join(", ")}`));
+      }
+    }
+  }
+
+  // ── 10. Análisis de Tendencias ──
+  if (trendsNarrative) {
+    content.push(sectionTitle("10. Análisis de Tendencias", pc));
+    content.push(bodyText(trendsNarrative.trajectory));
+    if (trendsNarrative.improving.length > 0) {
+      content.push(subTitle("Mejorando"));
+      for (const item of trendsNarrative.improving) content.push(bulletItem(item, "+"));
+    }
+    if (trendsNarrative.declining.length > 0) {
+      content.push(subTitle("En declive"));
+      for (const item of trendsNarrative.declining) content.push(bulletItem(item, "-"));
+    }
+    if (trendsNarrative.inflection_points.length > 0) {
+      content.push(subTitle("Puntos de inflexión"));
+      for (const item of trendsNarrative.inflection_points) content.push(bulletItem(item));
+    }
+  }
+
+  // ── 11. Indicadores de Negocio ──
+  if (businessIndicators.length > 0) {
+    content.push(sectionTitle("11. Indicadores de Negocio", pc));
+    content.push(
+      makeTable(
+        ["Indicador", "Valor", "Unidad"],
+        businessIndicators.map((bi) => [
+          bi.indicator_name,
+          String(Number(bi.indicator_value)),
+          bi.indicator_unit ?? "-",
+        ]),
+        [4500, 2500, 2000]
+      )
+    );
+  }
+
+  // ── 12. Red Perceptual ONA ──
+  if (onaSummary) {
+    content.push(sectionTitle("12. Red Perceptual (ONA)", pc));
+    content.push(kpiParagraph("Comunidades", String(onaSummary.communities), pc));
+    content.push(kpiParagraph("Modularidad", onaSummary.modularity.toFixed(3), pc));
+    if (onaSummary.topDiscriminants.length > 0) {
+      content.push(
+        bodyText(`Dimensiones discriminantes: ${onaSummary.topDiscriminants.join(", ")}`)
+      );
+    }
+    if (onaSummary.narrative) content.push(bodyText(onaSummary.narrative));
+  }
+
+  // ── 13. Ficha Técnica ──
+  content.push(sectionTitle("13. Ficha Técnica", pc));
+  content.push(kpiParagraph("Población (N)", String(populationN), pc));
+  content.push(kpiParagraph("Muestra (n)", String(sampleN), pc));
+  content.push(kpiParagraph("Tasa de respuesta", `${responseRate}%`, pc));
+  content.push(kpiParagraph("Margen de error", `±${marginOfError}%`, pc));
+
+  if (reliability.length > 0) {
+    content.push(subTitle("Confiabilidad (Cronbach α)"));
+    content.push(
+      makeTable(
+        ["Cód", "Dimensión", "α", "Ítems", "n"],
+        reliability.map((r) => [
+          r.dimension_code,
+          r.dimension_name,
+          r.alpha != null ? r.alpha.toFixed(3) : "N/A",
+          String(r.item_count),
+          String(r.respondent_count),
+        ]),
+        [1000, 3500, 1500, 1500, 1500]
+      )
+    );
+  }
+
+  // Footer
+  content.push(
+    new Paragraph({
+      spacing: { before: 600 },
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: footerText, size: 16, color: "AAAAAA", font: "Calibri" })],
+    })
+  );
+
+  // Build document
+  const doc = new Document({
+    creator: "ClimaLab",
+    title: `Reporte Ejecutivo - ${campaign.name}`,
+    sections: [{ children: content }],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const base64 = Buffer.from(buffer).toString("base64");
+  const filename = `${campaign.name.replace(/\s+/g, "_")}_reporte_ejecutivo.docx`;
 
   return { success: true, data: { base64, filename } };
 }
