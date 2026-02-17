@@ -35,14 +35,18 @@ export function ResultsSidebar({
   campaignName,
   orgLogoUrl,
   orgName,
+  hasONA = true,
 }: {
   campaignId: string;
   campaignName: string;
   orgLogoUrl?: string | null;
   orgName?: string | null;
+  hasONA?: boolean;
 }) {
   const pathname = usePathname();
   const basePath = `/campaigns/${campaignId}/results`;
+
+  const visibleItems = hasONA ? navItems : navItems.filter((i) => i.href !== "network");
 
   return (
     <aside className="w-56 border-r bg-muted/30 p-4 print:hidden">
@@ -58,7 +62,7 @@ export function ResultsSidebar({
         <p className="text-sm font-semibold truncate">{campaignName}</p>
       </div>
       <nav className="space-y-1">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const href = `${basePath}/${item.href}`;
           const isActive =
             pathname === href || (item.href === "dashboard" && pathname === basePath);

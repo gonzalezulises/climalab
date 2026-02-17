@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getCampaign } from "@/actions/campaigns";
 import { getOrganization } from "@/actions/organizations";
-import { getAvailableSegments } from "@/actions/analytics";
+import { getAvailableSegments, hasONAData } from "@/actions/analytics";
 import { notFound } from "next/navigation";
 import { ResultsSidebar } from "./results-nav";
 import { SegmentFilterBar } from "@/components/results/segment-filter-bar";
@@ -14,7 +14,11 @@ export default async function ResultsLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [result, segmentsResult] = await Promise.all([getCampaign(id), getAvailableSegments(id)]);
+  const [result, segmentsResult, hasONA] = await Promise.all([
+    getCampaign(id),
+    getAvailableSegments(id),
+    hasONAData(id),
+  ]);
   if (!result.success) notFound();
 
   const orgResult = await getOrganization(result.data.organization_id);
@@ -37,6 +41,7 @@ export default async function ResultsLayout({
         campaignName={result.data.name}
         orgLogoUrl={orgLogoUrl}
         orgName={orgName}
+        hasONA={hasONA}
       />
       <div className="flex-1 flex flex-col overflow-auto">
         {hasSegments && (

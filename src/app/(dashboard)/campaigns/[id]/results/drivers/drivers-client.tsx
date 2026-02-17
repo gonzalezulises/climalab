@@ -10,6 +10,11 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  ReferenceLine,
+  Label,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -195,6 +200,137 @@ export function DriversClient({
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {aiError}
         </div>
+      )}
+
+      {/* Action Priority Matrix */}
+      {drivers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Matriz de Prioridad de Acción</CardTitle>
+            <CardDescription>
+              Impacto (correlación con ENG) vs. score actual — las dimensiones en el cuadrante
+              superior izquierdo son prioridades de acción
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const midScore = 3.5;
+              const midR = 0.4;
+              const scatterData = drivers.map((d) => ({
+                x: dimScores[d.code] ?? 0,
+                y: Math.abs(d.r),
+                code: d.code,
+                name: d.name,
+                r: d.r,
+              }));
+
+              const QUADRANT_COLORS: Record<string, string> = {
+                priority: "#dc2626",
+                maintain: "#16a34a",
+                monitor: "#f59e0b",
+                leverage: "#2563eb",
+              };
+
+              function getQuadrant(x: number, y: number) {
+                if (y >= midR && x < midScore) return "priority";
+                if (y >= midR && x >= midScore) return "maintain";
+                if (y < midR && x < midScore) return "monitor";
+                return "leverage";
+              }
+
+              return (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" dataKey="x" domain={[1, 5]} name="Score">
+                        <Label value="Score actual" offset={-10} position="insideBottom" />
+                      </XAxis>
+                      <YAxis type="number" dataKey="y" domain={[0, 1]} name="|r|">
+                        <Label
+                          value="Impacto (|r|)"
+                          angle={-90}
+                          position="insideLeft"
+                          style={{ textAnchor: "middle" }}
+                        />
+                      </YAxis>
+                      <ZAxis range={[80, 80]} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          const q = getQuadrant(d.x, d.y);
+                          const labels: Record<string, string> = {
+                            priority: "Prioridad",
+                            maintain: "Mantener",
+                            monitor: "Monitorear",
+                            leverage: "Aprovechar",
+                          };
+                          return (
+                            <div className="rounded border bg-white p-2 shadow-sm text-xs">
+                              <p className="font-medium">
+                                {d.name} ({d.code})
+                              </p>
+                              <p>
+                                Score: {d.x.toFixed(2)} | r: {d.r.toFixed(3)}
+                              </p>
+                              <p style={{ color: QUADRANT_COLORS[q] }}>{labels[q]}</p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <ReferenceLine x={midScore} stroke="#94a3b8" strokeDasharray="5 5" />
+                      <ReferenceLine y={midR} stroke="#94a3b8" strokeDasharray="5 5" />
+                      <Scatter
+                        data={scatterData}
+                        shape={
+                          ((props: Record<string, unknown>) => {
+                            const cx = (props.cx as number) ?? 0;
+                            const cy = (props.cy as number) ?? 0;
+                            const payload = props.payload as { code: string; x: number; y: number };
+                            const color = QUADRANT_COLORS[getQuadrant(payload.x, payload.y)];
+                            return (
+                              <g>
+                                <circle cx={cx} cy={cy} r={5} fill={color} />
+                                <text
+                                  x={cx}
+                                  y={cy - 10}
+                                  textAnchor="middle"
+                                  fontSize={10}
+                                  fill="#374151"
+                                >
+                                  {payload.code}
+                                </text>
+                              </g>
+                            );
+                          }) as unknown as undefined
+                        }
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-4 mt-2 justify-center text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded-full bg-red-600" /> Prioridad (alto impacto,
+                      score bajo)
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded-full bg-green-600" /> Mantener (alto impacto,
+                      score alto)
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500" /> Monitorear (bajo
+                      impacto, score bajo)
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 rounded-full bg-blue-600" /> Aprovechar (bajo
+                      impacto, score alto)
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
       )}
 
       {/* Driver bars */}

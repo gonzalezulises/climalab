@@ -4,6 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult, CampaignAnalytics } from "@/types";
 
 // ---------------------------------------------------------------------------
+// hasONAData — lightweight check for ONA results (no JSONB fetched)
+// ---------------------------------------------------------------------------
+export async function hasONAData(campaignId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("campaign_analytics")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId)
+    .eq("analysis_type", "ona_network");
+  return (count ?? 0) > 0;
+}
+
+// ---------------------------------------------------------------------------
 // getAvailableSegments — distinct segment types/keys with n >= 5
 // ---------------------------------------------------------------------------
 export async function getAvailableSegments(

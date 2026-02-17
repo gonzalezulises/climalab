@@ -36,26 +36,9 @@ import { compareCampaigns } from "@/actions/campaigns";
 import { generateAllInsights } from "@/actions/ai-insights";
 import type { DashboardNarrative } from "@/actions/ai-insights";
 import { AnalysisLevelCards } from "@/components/results/analysis-level-cards";
-import { INDICATOR_TYPES } from "@/lib/constants";
+import { INDICATOR_TYPES, CATEGORY_LABELS } from "@/lib/constants";
+import { classifyFavorability, favToHex, SEVERITY_LABELS } from "@/lib/score-utils";
 import type { BusinessIndicator } from "@/types";
-
-function classifyScore(fav: number) {
-  if (fav >= 90)
-    return { label: "Excepcional", color: "#1dc47c", bg: "bg-green-100 text-green-800" };
-  if (fav >= 80) return { label: "Sólida", color: "#00B4D8", bg: "bg-cyan-100 text-cyan-800" };
-  if (fav >= 70) return { label: "Aceptable", color: "#0052CC", bg: "bg-blue-100 text-blue-800" };
-  if (fav >= 60)
-    return { label: "Atención", color: "#F59E0B", bg: "bg-yellow-100 text-yellow-800" };
-  return { label: "Crisis", color: "#DC2626", bg: "bg-red-100 text-red-800" };
-}
-
-function getBarColor(fav: number) {
-  if (fav >= 90) return "#1dc47c";
-  if (fav >= 80) return "#00B4D8";
-  if (fav >= 70) return "#0052CC";
-  if (fav >= 60) return "#F59E0B";
-  return "#DC2626";
-}
 
 type Props = {
   campaignId: string;
@@ -168,20 +151,10 @@ export function DashboardClient({
       ]
     : [];
 
-  const sevBadge: Record<string, string> = {
-    crisis: "bg-red-600 text-white",
-    attention: "bg-yellow-500 text-white",
-    risk_group: "bg-orange-500 text-white",
-    decline: "bg-purple-500 text-white",
-  };
-
-  const catLabels: Record<string, string> = {
-    bienestar: "Bienestar",
-    direccion: "Dirección y Supervisión",
-    compensacion: "Compensación",
-    cultura: "Cultura",
-    engagement: "Engagement",
-  };
+  // Strengths & weaknesses (top/bottom 3 by fav)
+  const sortedDims = [...dimensionResults].sort((a, b) => b.fav - a.fav);
+  const strengths = sortedDims.slice(0, 3);
+  const weaknesses = sortedDims.slice(-3).reverse();
 
   return (
     <div className="space-y-6">
@@ -238,6 +211,44 @@ export function DashboardClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* Strengths & Weaknesses */}
+      {dimensionResults.length >= 6 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-green-700">Fortalezas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {strengths.map((d) => (
+                <div key={d.code} className="flex items-center justify-between">
+                  <span className="text-sm">{d.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold">{d.avg.toFixed(2)}</span>
+                    <Badge className="bg-green-100 text-green-800 text-xs">{d.fav}%</Badge>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card className="border-amber-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-amber-700">Oportunidades de mejora</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {weaknesses.map((d) => (
+                <div key={d.code} className="flex items-center justify-between">
+                  <span className="text-sm">{d.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold">{d.avg.toFixed(2)}</span>
+                    <Badge className="bg-amber-100 text-amber-800 text-xs">{d.fav}%</Badge>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* AI Narrative */}
       {narrative ? (
@@ -336,14 +347,15 @@ export function DashboardClient({
       {categories.length > 0 && (
         <div className="grid gap-4 md:grid-cols-5">
           {categories.map((cat) => {
-            const cls = classifyScore(cat.favorability_pct);
+            const cls = classifyFavorability(cat.favorability_pct);
             return (
               <Card key={cat.category}>
                 <CardContent className="pt-4">
                   <p className="text-xs text-muted-foreground">
-                    {catLabels[cat.category] ?? cat.category}
+                    {CATEGORY_LABELS[cat.category] ?? cat.category}
                   </p>
                   <p className="text-2xl font-bold">{cat.avg_score.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Fav: {cat.favorability_pct}%</p>
                   <Badge className={cls.bg}>{cls.label}</Badge>
                 </CardContent>
               </Card>
@@ -393,7 +405,7 @@ export function DashboardClient({
                 <Tooltip formatter={(v) => [Number(v).toFixed(2), "Score"]} />
                 <Bar dataKey="avg" radius={[0, 4, 4, 0]}>
                   {lollipopData.map((d, i) => (
-                    <Cell key={i} fill={getBarColor(d.fav)} />
+                    <Cell key={i} fill={favToHex(d.fav)} />
                   ))}
                 </Bar>
               </BarChart>
@@ -442,8 +454,8 @@ export function DashboardClient({
               <div className="space-y-3">
                 {alerts.map((a, i) => (
                   <div key={i} className="flex items-start gap-3 text-sm">
-                    <Badge className={sevBadge[a.severity] ?? "bg-gray-500 text-white"}>
-                      {a.severity}
+                    <Badge className={SEVERITY_LABELS[a.severity]?.bg ?? "bg-gray-500 text-white"}>
+                      {SEVERITY_LABELS[a.severity]?.label ?? a.severity}
                     </Badge>
                     <span>{a.message}</span>
                   </div>
@@ -589,8 +601,10 @@ export function DashboardClient({
               </ResponsiveContainer>
               <div className="mt-4 grid grid-cols-3 md:grid-cols-6 gap-2">
                 {compData.map((d) => (
-                  <div key={d.dimension} className="text-center text-xs">
-                    <p className="font-medium truncate">{d.dimension}</p>
+                  <div key={d.dimension} className="text-center text-xs overflow-hidden">
+                    <p className="font-medium truncate" title={d.dimension}>
+                      {d.dimension}
+                    </p>
                     <p
                       className={`text-sm font-bold ${d.delta > 0 ? "text-green-600" : d.delta < 0 ? "text-red-600" : "text-gray-500"}`}
                     >
