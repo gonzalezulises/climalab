@@ -32,8 +32,8 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <Image src="/logo.png" alt="ClimaLab" width={32} height={32} className="rounded-lg" />
+        <div className="flex items-center gap-3 px-2 py-1.5">
+          <Image src="/logo.png" alt="ClimaLab" width={40} height={40} />
           <span className="text-lg font-semibold font-serif">ClimaLab</span>
         </div>
       </SidebarHeader>
