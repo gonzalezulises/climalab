@@ -1,9 +1,10 @@
 # ClimaLab — Referencia Técnica para Auditoría
 
-**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 | **Multi-instrumento**: v4.2 | **ONA perceptual**: v4.3 (igraph/Leiden)
+**Versión del instrumento**: Core v4.0 / Pulso v4.0 | **Mejoras estadísticas**: v4.1 | **IA**: v4.1.1 → v4.5 (triple backend) | **Multi-instrumento**: v4.2 | **ONA perceptual**: v4.3 (igraph/Leiden) + determinismo v4.3.1 | **Branding**: v4.4 | **Score classification**: v4.7
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
+**Última actualización**: 2026-03-08
 
 ---
 
@@ -24,6 +25,10 @@
 13. [Referencias Adicionales](#13-referencias-adicionales-v41)
 14. [Multi-instrumento](#14-multi-instrumento-v42)
 15. [Export y Reportes](#15-export-y-reportes)
+16. [Sistema de Branding](#16-sistema-de-branding-v44)
+17. [Clasificación de Puntajes](#17-clasificación-de-puntajes-v47)
+18. [Seguridad — Funciones SECURITY DEFINER](#18-seguridad--funciones-security-definer)
+19. [Pruebas y Calidad](#19-pruebas-y-calidad)
 
 ---
 
@@ -185,7 +190,7 @@ Basados en el promedio global (todos los ítems ajustados) por respondente:
 
 ## 3. Algoritmos de Cálculo
 
-Todos los algoritmos están implementados en `src/actions/campaigns.ts` (función `calculateResults()`, líneas 284-950) y replicados en `scripts/seed-results.ts` para procesamiento offline.
+Las funciones estadísticas puras están centralizadas en `src/lib/statistics.ts` y se importan tanto desde `src/actions/campaigns.ts` (`calculateResults()`) como desde `scripts/seed-results.ts` (procesamiento offline). Esto garantiza una única fuente de verdad para todas las fórmulas.
 
 ### 3.1 Inversión de Ítems Inversos
 
@@ -209,7 +214,7 @@ const adjustedScore = itemInfo.is_reverse ? 6 - score : score;
 
 Donde `xᵢ` son los puntajes ajustados y `n` es el número de observaciones.
 
-**Referencia en código** (`src/actions/campaigns.ts:451-453`):
+**Referencia en código** (`src/lib/statistics.ts`):
 
 ```typescript
 function mean(arr: number[]): number {
@@ -225,7 +230,7 @@ function mean(arr: number[]): number {
 
 Se utiliza `n - 1` en el denominador (corrección de Bessel) ya que se trabaja con una muestra, no con la población completa. Para muestras de tamaño 1, retorna 0.
 
-**Referencia en código** (`src/actions/campaigns.ts:455-460`):
+**Referencia en código** (`src/lib/statistics.ts`):
 
 ```typescript
 function stdDev(arr: number[]): number {
@@ -244,7 +249,7 @@ favorabilidad = (count(xᵢ >= 4) / n) × 100
 
 Porcentaje de respuestas con valor 4 ("De acuerdo") o 5 ("Totalmente de acuerdo"). Es la métrica principal para identificar fortalezas y oportunidades.
 
-**Referencia en código** (`src/actions/campaigns.ts:462-464`):
+**Referencia en código** (`src/lib/statistics.ts`):
 
 ```typescript
 function favorability(arr: number[]): number {
@@ -264,7 +269,7 @@ Donde `dxᵢ = xᵢ - μₓ` y `dyᵢ = yᵢ - μᵧ`.
 
 Se calcula sobre los **promedios por dimensión por respondente** (no sobre ítems individuales), lo cual produce una correlación ecológicamente válida a nivel de dimensión.
 
-**Referencia en código** (`src/actions/campaigns.ts:761-783`):
+**Referencia en código** (`src/lib/statistics.ts`):
 
 ```typescript
 function pearson(xArr: number[], yArr: number[]): { r: number; pValue: number; n: number } {
@@ -300,7 +305,7 @@ p ≈ exp(-0.717 × |t| - 0.416 × t² / df)
 
 Donde `df = n - 2` y `ε = 1e-10` para estabilidad numérica. Esta es una aproximación computacionalmente eficiente que evita la necesidad de tablas de distribución t.
 
-**Referencia en código** (`src/actions/campaigns.ts:778-782`):
+**Referencia en código** (`src/lib/statistics.ts`):
 
 ```typescript
 const t = r * Math.sqrt((n - 2) / (1 - r * r + 1e-10));
@@ -950,16 +955,26 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 
 ## Apéndice A: Archivos Fuente Clave
 
-| Archivo                                    | Líneas      | Descripción                                                           |
-| ------------------------------------------ | ----------- | --------------------------------------------------------------------- |
-| `src/actions/campaigns.ts`                 | 284–950     | `calculateResults()` — motor de cálculo estadístico                   |
-| `src/actions/analytics.ts`                 | 1–221       | 7 server actions para consulta de analytics                           |
-| `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo                          |
-| `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32)            |
-| `scripts/ona-analysis.py`                  | —           | Análisis de redes perceptuales (Python/igraph, Leiden + NMI)          |
-| `supabase/seed.sql`                        | ~24K líneas | Definición completa del instrumento v4.0 + datos demo (incl. módulos) |
-| `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                             |
-| `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta                       |
+| Archivo                                    | Líneas      | Descripción                                                                 |
+| ------------------------------------------ | ----------- | --------------------------------------------------------------------------- |
+| `src/actions/campaigns.ts`                 | 284–950     | `calculateResults()` — motor de cálculo estadístico                         |
+| `src/actions/analytics.ts`                 | 1–221       | 9 server actions para consulta de analytics                                 |
+| `src/actions/ai-insights.ts`               | ~840        | Triple backend AI: dispatcher, 6 generadores, orquestador                   |
+| `src/actions/export.ts`                    | ~915        | Generación de DOCX y Excel con branding                                     |
+| `src/actions/reminders.ts`                 | —           | Envío de recordatorios branded a participantes incompletos                  |
+| `src/lib/statistics.ts`                    | ~180        | Funciones estadísticas puras (mean, stdDev, rwg, cronbachAlpha, pearson)    |
+| `src/lib/statistics.test.ts`               | ~300        | 41 tests unitarios para funciones estadísticas                              |
+| `src/lib/score-utils.ts`                   | ~80         | Clasificación centralizada de puntajes con colores Rizoma                   |
+| `src/lib/email.ts`                         | —           | Email sender multi-tipo con branding dinámico (Resend)                      |
+| `src/lib/env.ts`                           | —           | Variables de entorno validadas con Zod                                      |
+| `scripts/seed-results.ts`                  | —           | Réplica offline del pipeline para datos demo                                |
+| `scripts/generate-demo-seed.mjs`           | —           | Generador de datos demo con PRNG determinista (mulberry32)                  |
+| `scripts/ona-analysis.py`                  | —           | Análisis de redes perceptuales (Python/igraph, Leiden + NMI + determinismo) |
+| `scripts/test_ona.py`                      | ~230        | 9 tests para ONA (clusters, NMI, determinismo, constantes)                  |
+| `supabase/seed.sql`                        | ~24K líneas | Definición completa del instrumento v4.0 + datos demo (incl. módulos)       |
+| `supabase/tests/rls-isolation.test.ts`     | ~700        | 65 tests de aislamiento RLS multi-tenant (10 bloques A-J)                   |
+| `src/app/survey/[token]/page.tsx`          | —           | Server component de validación del survey                                   |
+| `src/app/survey/[token]/survey-client.tsx` | ~800 líneas | Client component con toda la lógica de encuesta                             |
 
 ## Apéndice B: Migraciones SQL
 
@@ -983,6 +998,8 @@ Para garantizar reproducibilidad en datos de demostración y facilitar las migra
 | `000016_instrument_v4_corrections.sql`    | Correcciones psicométricas: desagregación EQA/NDI, reducción LID a 6 ítems, fix DEM reverse, fix SEG anchor, renombrar liderazgo→direccion, ítem de orientación al cliente en RES |
 | `000017_business_indicators.sql`          | Tabla business_indicators para métricas objetivas de negocio por campaña                                                                                                          |
 | `000018_multi_instrument_modules.sql`     | Enum `instrument_type` (base/module) en instruments + columna `module_instrument_ids uuid[]` en campaigns para soporte multi-instrumento                                          |
+| `000019_org_branding.sql`                 | Columna `brand_config jsonb` en organizations + bucket `org-assets` en Supabase Storage (2MiB, image MIME) + RLS para upload/read                                                 |
+| `000020_fix_dept_counts_guard.sql`        | Fix seguridad: guard de ownership en `get_org_department_counts()` SECURITY DEFINER + fix `unnest(jsonb)` → `jsonb_array_elements()` para columna JSONB departments               |
 
 ## Apéndice C: Server Actions de Analytics
 
@@ -1109,22 +1126,38 @@ turnover_rate, absenteeism_rate, customer_nps, customer_satisfaction, productivi
 
 ---
 
-## 11. Análisis con IA (v4.1.1)
+## 11. Análisis con IA (v4.5 — Triple Backend)
 
 ### 11.1 Arquitectura
 
-ClimaLab integra un modelo de lenguaje (LLM) vía Ollama para generar análisis cualitativos complementarios a las métricas estadísticas. La integración sigue el patrón:
+ClimaLab integra LLMs para generar análisis cualitativos complementarios a las métricas estadísticas. La arquitectura usa tres proveedores con fallback automático:
 
 ```
-Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campaign_analytics
+1. Anthropic API (Claude Haiku 4.5) — prioridad, ~2-5s, ~$0.03/generación completa
+   ↓ fallback
+2. DGX (OpenAI-compatible vía Cloudflare Tunnel) — Qwen 2.5 72B, ~30-120s
+   ↓ fallback
+3. Ollama native — servidor local, ~30-120s
 ```
 
-**Configuración:**
+El dispatcher `callAI()` en `src/actions/ai-insights.ts` verifica los proveedores en orden y usa el primero disponible. Si ninguno está configurado, retorna error inmediato sin afectar la operación normal.
 
-- `OLLAMA_BASE_URL`: URL del servidor Ollama
-- `OLLAMA_MODEL`: Modelo a usar (default: `qwen2.5:72b`)
+**Configuración (al menos uno requerido para IA):**
+
+| Variable            | Proveedor                        | Default                     |
+| ------------------- | -------------------------------- | --------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic API (prioridad)        | —                           |
+| `ANTHROPIC_MODEL`   | Modelo Anthropic                 | `claude-haiku-4-5-20251001` |
+| `AI_LOCAL_ENDPOINT` | DGX/OpenAI-compatible (fallback) | —                           |
+| `AI_LOCAL_MODEL`    | Modelo para endpoint local       | `qwen2.5:72b`               |
+| `AI_LOCAL_API_KEY`  | API key para endpoint local      | —                           |
+| `OLLAMA_BASE_URL`   | Ollama native (terciario)        | —                           |
+
+**Parámetros:**
+
 - Temperature: 0.3 (baja para consistencia)
-- Timeout: 120s por llamada
+- Timeout: 60s (Anthropic), 120s (DGX/Ollama)
+- Rate limit: 5 llamadas/min por usuario (individual), 2/min (batch)
 
 ### 11.2 Funciones de Generación
 
@@ -1139,7 +1172,7 @@ Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campa
 
 ### 11.3 Orquestación
 
-`generateAllInsights(campaignId)` ejecuta las 5 funciones de campaña en paralelo (`Promise.all`), luego genera la narrativa de tendencias. Elimina insights previos antes de insertar nuevos. Disponible desde el dashboard con botón "Generar insights IA".
+`generateAllInsights(campaignId)` ejecuta las 5 funciones de campaña en paralelo (`Promise.all`), luego genera la narrativa de tendencias. Usa upsert (no delete+insert) para actualizar insights existentes. **Fail-fast**: si ningún proveedor de IA está configurado, retorna error inmediato en lugar de "éxito silencioso" con datos vacíos. Disponible desde el dashboard con botón "Generar insights IA".
 
 ### 11.4 Páginas con IA
 
@@ -1158,9 +1191,10 @@ Ollama (Qwen 2.5 72B) ← system prompt + datos estructurados → JSON → campa
 - Los insights IA son **complementarios**, no sustituyen el análisis estadístico
 - Se almacenan en `campaign_analytics` y se cargan en SSR para carga rápida
 - Cada página tiene botón "Regenerar" para actualización on-demand
-- Si Ollama no está configurado (`OLLAMA_BASE_URL` ausente), las funciones retornan error sin afectar la operación normal
+- Si ningún proveedor está configurado, las funciones retornan error claro en español sin afectar la operación normal
 - Los prompts están en español latinoamericano profesional
 - Se solicita JSON estructurado al modelo para parsing confiable
+- `maxDuration = 300` en results layout.tsx — permite hasta 5 min para modelos grandes (requiere Vercel Pro)
 
 ---
 
@@ -1176,7 +1210,7 @@ El módulo ONA (Organizational Network Analysis) construye un grafo de similitud
 
 2. **Grafo de similitud**: Se calcula la similitud coseno entre todos los pares de respondentes (vectorizado con `scipy.spatial.distance.pdist`). Se aplica un umbral adaptativo mediante búsqueda binaria buscando una densidad de aristas entre 10-30%.
 
-3. **Detección de comunidades**: Algoritmo de Leiden (Traag et al. 2019) ejecutado 50 veces sin seed fijo. Se selecciona la partición con mayor modularidad. La estabilidad se mide calculando el NMI (Normalized Mutual Information) promedio entre todos los pares de particiones.
+3. **Detección de comunidades**: Algoritmo de Leiden (Traag et al. 2019) ejecutado 50 veces. Se selecciona la partición con mayor modularidad. La estabilidad se mide calculando el NMI (Normalized Mutual Information) promedio entre todos los pares de particiones.
 
 4. **Análisis de estabilidad (NMI)**:
    - Se ejecutan 50 iteraciones de Leiden, cada una con ordenamiento aleatorio distinto
@@ -1244,6 +1278,38 @@ Se almacena en `campaign_analytics` con `analysis_type = 'ona_network'`:
 - **Invocación**: `uv run scripts/ona-analysis.py [campaign_id]` (prefiere uv, fallback a `python3`)
 - **Integración**: Se invoca automáticamente al cerrar campaña (async, non-blocking) y en `seed-results.ts` (sync). Ambos usan cadena de fallback: intenta `uv run` primero, luego `python3`. Si ninguno está disponible, falla silenciosamente sin afectar el flujo principal
 - **Narrativa server-side**: El script genera una narrativa template-based que incluye advertencias de estabilidad débil. El cliente usa esta narrativa si existe, con fallback a generación client-side
+
+### 12.8 Determinismo (v4.3.1)
+
+Todas las ejecuciones de ONA son **exactamente reproducibles** (no solo estadísticamente estables). El mecanismo:
+
+```python
+RANDOM_SEED = 42
+
+def _init_deterministic_rng():
+    """Inyecta un RNG con semilla fija en el core C de igraph."""
+    rng = _random.Random(RANDOM_SEED)
+    ig.set_random_number_generator(rng)
+```
+
+**Qué controla:**
+
+- `community_leiden()`: orden de visita de vértices en cada iteración
+- `layout_fruchterman_reingold()`: posiciones iniciales del grafo PNG
+- NMI sampling: `random.seed(42)` local para selección de pares
+
+**Función de testabilidad:**
+
+`run_ona_pipeline(df, dim_codes)` — wrapper que ejecuta el pipeline completo sin Supabase, para pruebas unitarias. Inicializa el RNG determinista al inicio.
+
+**Garantía:** Dos ejecuciones con los mismos datos producen:
+
+- Mismas asignaciones de comunidad
+- Mismo umbral de similitud
+- Mismo número de comunidades
+- Mismo valor de NMI (diferencia < 0.001)
+
+Verificado en `scripts/test_ona.py` (tests 8-9: determinismo y determinismo cross-restart).
 
 ---
 
@@ -1330,18 +1396,18 @@ La tabla `organizations` incluye:
 
 **Campos de BrandConfig:**
 
-| Campo                  | Tipo | Default   | Descripción                                     |
-| ---------------------- | ---- | --------- | ----------------------------------------------- |
-| `primary_color`        | hex  | `#1e3a5f` | Color principal (headers, KPIs, secciones DOCX) |
-| `secondary_color`      | hex  | `#18181b` | Color secundario                                |
-| `accent_color`         | hex  | `#18181b` | Color de botones CTA                            |
-| `text_color`           | hex  | `#18181b` | Color de texto principal                        |
-| `background_color`     | hex  | `#f4f4f5` | Color de fondo                                  |
-| `logo_position`        | enum | `center`  | Posición del logo (left/center)                 |
-| `show_powered_by`      | bool | `true`    | Mostrar "Powered by ClimaLab"                   |
-| `custom_welcome_text`  | text | null      | Texto de bienvenida en survey                   |
-| `custom_thankyou_text` | text | null      | Texto de agradecimiento en survey               |
-| `custom_email_footer`  | text | null      | Pie de email personalizado                      |
+| Campo                  | Tipo | Default   | Descripción                                                    |
+| ---------------------- | ---- | --------- | -------------------------------------------------------------- |
+| `primary_color`        | hex  | `#289448` | Color principal — Rizoma Green (headers, KPIs, secciones DOCX) |
+| `secondary_color`      | hex  | `#1FACC0` | Color secundario — Cyan                                        |
+| `accent_color`         | hex  | `#1FACC0` | Color de botones CTA — Cyan                                    |
+| `text_color`           | hex  | `#18181b` | Color de texto principal                                       |
+| `background_color`     | hex  | `#f4f4f5` | Color de fondo                                                 |
+| `logo_position`        | enum | `center`  | Posición del logo (left/center)                                |
+| `show_powered_by`      | bool | `true`    | Mostrar "Powered by ClimaLab"                                  |
+| `custom_welcome_text`  | text | null      | Texto de bienvenida en survey                                  |
+| `custom_thankyou_text` | text | null      | Texto de agradecimiento en survey                              |
+| `custom_email_footer`  | text | null      | Pie de email personalizado                                     |
 
 ### Aplicación del Branding
 
@@ -1367,6 +1433,135 @@ Wrapper de layout compartido con logo dinámico y colores de la organización.
 
 ---
 
+## 17. Clasificación de Puntajes (v4.7)
+
+### 17.1 Sistema Centralizado
+
+El archivo `src/lib/score-utils.ts` centraliza la clasificación de favorabilidad con colores del sistema de diseño Rizoma:
+
+| Nivel       | Rango Favorabilidad | Color        | Hex       |
+| ----------- | ------------------- | ------------ | --------- |
+| Excepcional | ≥ 90%               | Rizoma Green | `#289448` |
+| Sólida      | 80–89%              | Cyan         | `#1FACC0` |
+| Aceptable   | 70–79%              | Blue         | `#2F5DFF` |
+| Atención    | 60–69%              | Orange       | `#FF8044` |
+| Crisis      | < 60%               | Red          | `#C32421` |
+
+**Funciones exportadas:**
+
+- `classifyFavorability(pct)` — retorna `{ label, color, bgClass }`
+- `favToHex(pct)` — retorna solo el color hex
+- `SEVERITY_LABELS` — map de severidades de alerta a clases Tailwind
+
+**Uso:** Aplicado en dashboard (KPIs), dimensiones (cards), alertas (badges), heatmaps (celdas), DOCX (colores de sección).
+
+### 17.2 Diseño Rizoma
+
+ClimaLab usa el sistema de diseño de Rizo.ma:
+
+- **Tipografía**: Inter (cuerpo) + Source Serif 4 (headings/marca)
+- **Primary**: Rizoma Green `#289448`
+- **Secondary/Accent**: Cyan `#1FACC0`
+- **Destructive**: Red `#C32421`
+
+---
+
+## 18. Seguridad — Funciones SECURITY DEFINER
+
+### 18.1 Inventario
+
+Las funciones `SECURITY DEFINER` ejecutan con permisos del creador (superuser), no del llamante. Pueden bypasear RLS si no filtran internamente.
+
+| Función                             | Migración           | ¿Filtra por org?           | Riesgo             |
+| ----------------------------------- | ------------------- | -------------------------- | ------------------ |
+| `get_user_role()`                   | 000004              | N/A (lee por `auth.uid()`) | Bajo               |
+| `get_user_org_id()`                 | 000004              | N/A (lee por `auth.uid()`) | Bajo               |
+| `handle_new_user()`                 | 000002              | N/A (trigger interno)      | Bajo               |
+| `get_org_department_counts(org_id)` | 000005 + **000020** | **Sí** — guard interno     | **Bajo** (cerrado) |
+
+### 18.2 Guard de `get_org_department_counts` (Migración 000020)
+
+**Hallazgo**: Cualquier usuario autenticado podía consultar departamentos de otra organización llamando directamente a la función.
+
+**Fix**: Guard interno que verifica ownership:
+
+```sql
+IF org_id IS DISTINCT FROM get_user_org_id() THEN
+  RAISE EXCEPTION 'access_denied'
+    USING HINT = 'Cannot query department counts for another organization';
+END IF;
+```
+
+Además corrige `unnest(departments)` → `jsonb_array_elements(departments)` ya que la columna `departments` cambió de `text[]` a JSONB en migración 000012.
+
+### 18.3 Funciones NO SECURITY DEFINER (seguras)
+
+| Función                                | Tipo      | Nota                |
+| -------------------------------------- | --------- | ------------------- |
+| `generate_slug(text)`                  | IMMUTABLE | Transformación pura |
+| `get_org_total_headcount(uuid)`        | STABLE    | Respeta RLS         |
+| `get_department_headcount(uuid, text)` | STABLE    | Respeta RLS         |
+
+---
+
+## 19. Pruebas y Calidad
+
+### 19.1 Tests Estadísticos (`src/lib/statistics.test.ts`)
+
+41 tests unitarios cubriendo las 5 funciones estadísticas:
+
+| Función         | Tests | Cobertura                                                                          |
+| --------------- | ----- | ---------------------------------------------------------------------------------- |
+| `mean`          | 3     | Valor único, distribución uniforme, elementos idénticos                            |
+| `stdDev`        | 3     | Valor único, sin variación, caso conocido                                          |
+| `favorability`  | 3     | Todos favorables, ninguno, boundary en score 4                                     |
+| `rwg`           | 4     | Umbral mínimo (n<3), acuerdo perfecto, desacuerdo máximo, decimales                |
+| `cronbachAlpha` | 7     | Items insuficientes, n insuficiente, varianza cero, matriz confiable, incoherente  |
+| `pearson`       | 5     | Guard n<10, correlación perfecta (+/-), datos no correlacionados, denominador cero |
+
+**Ejecución:** `npx vitest run src/lib/statistics.test.ts`
+
+### 19.2 Tests ONA (`scripts/test_ona.py`)
+
+9 tests para el módulo de análisis de redes perceptuales:
+
+| Test | Verificación                                                              |
+| ---- | ------------------------------------------------------------------------- |
+| 1    | Perfiles idénticos → 1 comunidad                                          |
+| 2    | Dos clusters distintos → ≥2 comunidades                                   |
+| 3    | NMI de particiones idénticas = 1.0                                        |
+| 4    | Constantes de densidad documentadas y válidas                             |
+| 5    | MIN_RESPONDENTS = 10                                                      |
+| 6    | Umbrales NMI documentados (0.80, 0.50)                                    |
+| 7    | RANDOM_SEED = 42                                                          |
+| 8    | **Determinismo**: dos ejecuciones → resultados idénticos                  |
+| 9    | **Determinismo cross-restart**: resultado idéntico tras reimportar módulo |
+
+**Ejecución:** `pytest scripts/test_ona.py -v`
+
+### 19.3 Tests RLS (`supabase/tests/rls-isolation.test.ts`)
+
+65 tests de aislamiento multi-tenant organizados en 10 bloques:
+
+| Bloque | Tabla(s)            | Tests                                        |
+| ------ | ------------------- | -------------------------------------------- |
+| A      | organizations       | SELECT/UPDATE aislamiento por org            |
+| B      | campaigns           | CRUD aislamiento por org                     |
+| C      | respondents         | Acceso vía campaign→org chain                |
+| D      | responses           | Acceso vía respondent→campaign→org chain     |
+| E      | open_responses      | Acceso vía respondent→campaign→org chain     |
+| F      | campaign_results    | SELECT aislamiento por org                   |
+| G      | campaign_analytics  | SELECT aislamiento por org                   |
+| H      | participants        | CRUD aislamiento por org                     |
+| I      | business_indicators | CRUD aislamiento por org                     |
+| J      | SECURITY DEFINER    | `get_org_department_counts` guard validation |
+
+**Ejecución:** `npx vitest run supabase/tests/rls-isolation.test.ts --config /dev/null`
+
+(Requiere `--config /dev/null` porque `vitest.config.ts` excluye `supabase/tests/`. Requiere Supabase local corriendo.)
+
+---
+
 ## 13. Referencias Adicionales (v4.1)
 
 - James, L. R., Demaree, R. G., & Wolf, G. (1984). Estimating within-group interrater reliability with and without response bias. _Journal of Applied Psychology, 69_(1), 85-98.
@@ -1374,3 +1569,4 @@ Wrapper de layout compartido con logo dinámico y colores de la organización.
 - Blondel, V. D., Guillaume, J. L., Lambiotte, R., & Lefebvre, E. (2008). Fast unfolding of communities in large networks. _Journal of Statistical Mechanics, 2008_(10), P10008.
 - Martinolli, G. et al. (2023). Encuesta de Clima Organizacional VI (ECO VI). Universidad de Buenos Aires.
 - Patlán, J. & Flores, R. (2013). Desarrollo y validación de la escala multidimensional de clima organizacional (EMCO). _Acta de Investigación Psicológica, 3_(1), 1067-1084.
+- Traag, V. A., Waltman, L., & van Eck, N. J. (2019). From Louvain to Leiden: guaranteeing well-connected communities. _Scientific Reports, 9_, 5233.
