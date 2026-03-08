@@ -31,6 +31,8 @@ import io
 from datetime import datetime, timezone
 from collections import defaultdict
 
+import random as _random
+
 import igraph as ig
 import numpy as np
 import pandas as pd
@@ -56,8 +58,35 @@ SUPABASE_KEY = os.environ.get(
 MIN_RESPONDENTS = 10
 ENG_CODE = "ENG"  # excluded from similarity vectors (dependent variable)
 STABILITY_ITERATIONS = 50  # number of Leiden runs for stability analysis
+RANDOM_SEED = 42  # fixed seed for deterministic results (Leiden, FR layout)
+
+# Adaptive threshold: no fixed COSINE_SIMILARITY_THRESHOLD constant.
+# build_similarity_graph() uses binary search to find a threshold that yields
+# 10-30% edge density. See DENSITY_TARGET_MIN / DENSITY_TARGET_MAX below.
+DENSITY_TARGET_MIN = 0.10
+DENSITY_TARGET_MAX = 0.30
+
+# NMI stability thresholds (used in detect_communities_with_stability)
+NMI_ROBUST_THRESHOLD = 0.80
+NMI_MODERATE_THRESHOLD = 0.50
 CLUSTER_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6", "#ec4899",
                   "#0ea5e9", "#f97316", "#14b8a6", "#a855f7"]
+
+
+def _init_deterministic_rng() -> None:
+    """Set igraph's RNG to a seeded instance for reproducible results.
+
+    Randomness points controlled:
+    - community_leiden: vertex visit order and initial partition (igraph C core RNG)
+    - layout_fruchterman_reingold: initial vertex positions (igraph C core RNG)
+    - NMI pair sampling: already uses random.seed(42) locally
+
+    python-igraph's community_leiden does NOT expose a seed parameter.
+    Instead, we replace igraph's internal RNG with a seeded random.Random
+    instance via set_random_number_generator(). This makes all igraph
+    stochastic operations deterministic for the same input data.
+    """
+    ig.set_random_number_generator(_random.Random(RANDOM_SEED))
 
 
 def get_supabase() -> Client:
@@ -205,10 +234,10 @@ def build_similarity_graph(
         mid = (lo + hi) / 2
         edge_count = int(np.sum(upper_tri >= mid))
         density = edge_count / max_edges if max_edges > 0 else 0
-        if 0.10 <= density <= 0.30:
+        if DENSITY_TARGET_MIN <= density <= DENSITY_TARGET_MAX:
             best_threshold = mid
             break
-        elif density < 0.10:
+        elif density < DENSITY_TARGET_MIN:
             hi = mid
         else:
             lo = mid
@@ -302,9 +331,9 @@ def detect_communities_with_stability(
 
     stability = float(np.mean(nmis)) if nmis else 0.0
 
-    if stability >= 0.80:
+    if stability >= NMI_ROBUST_THRESHOLD:
         label = "robust"
-    elif stability >= 0.50:
+    elif stability >= NMI_MODERATE_THRESHOLD:
         label = "moderate"
     else:
         label = "weak"
@@ -695,8 +724,34 @@ def save_results(sb: Client, campaign_id: str, data: dict) -> None:
 # ---------------------------------------------------------------------------
 # 7. Main
 # ---------------------------------------------------------------------------
+def run_ona_pipeline(df: pd.DataFrame, dim_codes: list[str]) -> dict:
+    """Run the full ONA pipeline on in-memory data. Returns metrics dict.
+
+    Useful for testing determinism without Supabase dependency.
+    Resets RNG before each run to ensure reproducibility.
+    """
+    _init_deterministic_rng()
+
+    g = build_similarity_graph(df, dim_codes)
+    if g.ecount() == 0:
+        return {"error": "no_edges"}
+
+    partition, stability, stability_label = detect_communities_with_stability(g)
+    metrics = compute_ona_metrics(
+        g, partition, stability, stability_label, df, dim_codes
+    )
+    return {
+        "n_communities": len(partition),
+        "community_assignments": partition.membership,
+        "nmi_stability": stability,
+        "threshold": g.density(),  # actual density after threshold
+        "metrics": metrics,
+    }
+
+
 def process_campaign(sb: Client, campaign_id: str) -> None:
     print(f"\n=== ONA Analysis: {campaign_id} ===")
+    _init_deterministic_rng()  # Reset RNG per campaign for reproducibility
     result = fetch_campaign_data(sb, campaign_id)
     if result is None:
         return
