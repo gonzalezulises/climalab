@@ -481,127 +481,106 @@ function addSectionTitle(slide, title, y) {
 }
 
 // ============================================================
-// SLIDE 7 — Modelo de servicio
+// SLIDE 7 — Qué incluye el servicio
 // ============================================================
 {
   const s = lightSlide();
-  addSectionTitle(s, "Dos formas de trabajar según el nivel de acompañamiento que necesitas");
+  addSectionTitle(s, "Un diagnóstico completo con acompañamiento experto");
 
-  const cardW = 5.5;
-  const cardH = 4.6;
-  const cardY = 1.6;
+  // Intro text
+  s.addText(
+    "No entregamos una plataforma para que te las arregles solo. El instrumento siempre se acompaña de interpretación estratégica para que los datos se conviertan en decisiones.",
+    {
+      x: 0.8, y: 1.3, w: 11.5, h: 0.7,
+      fontSize: 14, fontFace: BODY_FONT,
+      color: C.textSec, lineSpacingMultiple: 1.3,
+    }
+  );
 
-  // Card left — Self-service
+  // Two columns: Plataforma (left) + Acompañamiento (right)
+  const colW = 5.5;
+  const colY = 2.4;
+  const colH = 4.4;
+
+  // Left column — Plataforma
   const lx = 0.8;
   s.addShape(pres.ShapeType.rect, {
-    x: lx, y: cardY, w: cardW, h: cardH,
+    x: lx, y: colY, w: colW, h: colH,
     fill: { color: C.white },
     shadow: { type: "outer", color: "000000", opacity: 0.1, blur: 6, offset: 2, angle: 45 },
   });
-  // Top border
   s.addShape(pres.ShapeType.rect, {
-    x: lx, y: cardY, w: cardW, h: 0.06,
+    x: lx, y: colY, w: colW, h: 0.06,
     fill: { color: C.primary },
   });
 
-  // Badge
-  s.addText("PLATAFORMA", {
-    x: lx + 0.3, y: cardY + 0.3, w: 1.8, h: 0.35,
-    fontSize: 10, fontFace: BODY_FONT, bold: true,
-    color: C.primary, align: "center", valign: "middle",
-    shape: pres.ShapeType.roundRect,
-    line: { color: C.primary, width: 1 },
-    fill: { color: C.light },
-    rectRadius: 0.05,
+  s.addText("📊  Plataforma", {
+    x: lx + 0.3, y: colY + 0.25, w: colW - 0.6, h: 0.45,
+    fontSize: 18, fontFace: HEADER_FONT, bold: true,
+    color: C.primary,
   });
 
-  s.addText("Diagnóstico autogestionado", {
-    x: lx + 0.3, y: cardY + 0.85, w: cardW - 0.6, h: 0.4,
-    fontSize: 16, fontFace: HEADER_FONT, bold: true,
-    color: C.text,
-  });
-
-  s.addText(
-    "Acceso completo a la plataforma. Tu equipo configura, lanza y analiza. Ideal para organizaciones con capacidad interna de RRHH o People Analytics.",
-    {
-      x: lx + 0.3, y: cardY + 1.3, w: cardW - 0.6, h: 0.8,
-      fontSize: 12, fontFace: BODY_FONT,
-      color: C.textSec, lineSpacingMultiple: 1.3,
-    }
-  );
-
-  const leftIncludes = [
-    "Instrumento Core (107 ítems) o Pulso (22 ítems)",
-    "Dashboard completo con 11 vistas",
-    "Exportación DOCX y Excel",
-    "Insights de IA automáticos",
+  const platformItems = [
+    "Instrumento Core (107 ítems, 22 dimensiones) o Pulso (22 ítems ancla)",
+    "Módulos opcionales: Cambio, Cliente, Digital",
+    "Encuesta anónima con marca de tu organización",
+    "Dashboard interactivo con 11 vistas de resultados",
+    "Motor estadístico: rwg, Cronbach, Pearson, eNPS",
+    "Análisis de redes organizacionales (ONA)",
+    "Insights generados por IA (6 tipos de análisis)",
+    "Exportación: DOCX ejecutivo, Excel completo, CSV",
   ];
 
   s.addText(
-    leftIncludes.map((t) => ({
+    platformItems.map((t) => ({
       text: t,
-      options: { bullet: { code: "2713" }, fontSize: 12, fontFace: BODY_FONT, color: C.text, lineSpacingMultiple: 1.5 },
+      options: { bullet: { code: "2713" }, fontSize: 11.5, fontFace: BODY_FONT, color: C.text, lineSpacingMultiple: 1.45 },
     })),
-    { x: lx + 0.3, y: cardY + 2.3, w: cardW - 0.6, h: 2.0 }
+    { x: lx + 0.3, y: colY + 0.85, w: colW - 0.6, h: 3.3 }
   );
 
-  // Card right — Consultancy
+  // Right column — Acompañamiento
   const rx = 7.0;
   s.addShape(pres.ShapeType.rect, {
-    x: rx, y: cardY, w: cardW, h: cardH,
-    fill: { color: C.white },
+    x: rx, y: colY, w: colW, h: colH,
+    fill: { color: C.primary },
     shadow: { type: "outer", color: "000000", opacity: 0.1, blur: 6, offset: 2, angle: 45 },
   });
-  s.addShape(pres.ShapeType.rect, {
-    x: rx, y: cardY, w: cardW, h: 0.06,
-    fill: { color: C.accent },
+
+  s.addText("🤝  Acompañamiento", {
+    x: rx + 0.3, y: colY + 0.25, w: colW - 0.6, h: 0.45,
+    fontSize: 18, fontFace: HEADER_FONT, bold: true,
+    color: C.white,
   });
 
-  // Badge dark
-  s.addText("CONSULTORÍA + PLATAFORMA", {
-    x: rx + 0.3, y: cardY + 0.3, w: 2.8, h: 0.35,
-    fontSize: 10, fontFace: BODY_FONT, bold: true,
-    color: C.white, align: "center", valign: "middle",
-    shape: pres.ShapeType.roundRect,
-    fill: { color: C.primary },
-    rectRadius: 0.05,
-  });
-
-  s.addText("Diagnóstico con interpretación estratégica", {
-    x: rx + 0.3, y: cardY + 0.85, w: cardW - 0.6, h: 0.4,
-    fontSize: 16, fontFace: HEADER_FONT, bold: true,
-    color: C.text,
-  });
-
-  s.addText(
-    "Plataforma más sesiones de análisis, presentación ejecutiva y plan de acción. Para organizaciones que quieren convertir los datos en decisiones de forma inmediata.",
-    {
-      x: rx + 0.3, y: cardY + 1.3, w: cardW - 0.6, h: 0.8,
-      fontSize: 12, fontFace: BODY_FONT,
-      color: C.textSec, lineSpacingMultiple: 1.3,
-    }
-  );
-
-  const rightIncludes = [
-    "Todo lo de Plataforma",
-    "Sesión de análisis de resultados",
-    "Presentación al comité directivo",
-    "Identificación de quick wins y plan de 90 días",
+  const consultItems = [
+    "Diseño de campaña adaptado a tu contexto organizacional",
+    "Sesión de análisis de resultados con tu equipo",
+    "Interpretación estratégica: qué significan los datos",
+    "Presentación ejecutiva para el comité directivo",
+    "Identificación de quick wins y focos de intervención",
+    "Plan de acción con horizonte de 90 días",
   ];
 
   s.addText(
-    rightIncludes.map((t) => ({
+    consultItems.map((t) => ({
       text: t,
-      options: { bullet: { code: "2713" }, fontSize: 12, fontFace: BODY_FONT, color: C.text, lineSpacingMultiple: 1.5 },
+      options: {
+        bullet: { code: "2713" },
+        fontSize: 11.5, fontFace: BODY_FONT,
+        color: C.white,
+        bulletColor: C.accent,
+        lineSpacingMultiple: 1.45,
+      },
     })),
-    { x: rx + 0.3, y: cardY + 2.3, w: cardW - 0.6, h: 2.0 }
+    { x: rx + 0.3, y: colY + 0.85, w: colW - 0.6, h: 3.3 }
   );
 
-  // Footnote
+  // Bottom message
   s.addText(
-    "[NOMBRE DE TU EMPRESA] puede orientarte sobre la modalidad más adecuada para el tamaño y madurez de tu organización.",
+    "El valor no está en los datos — está en lo que haces con ellos. Por eso cada diagnóstico incluye acompañamiento.",
     {
-      x: 0.8, y: 6.7, w: 11.5, h: 0.4,
+      x: 0.8, y: 7.0, w: 11.5, h: 0.35,
       fontSize: 11, fontFace: BODY_FONT, italic: true,
       color: C.textSec,
     }
