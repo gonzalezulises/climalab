@@ -14,6 +14,7 @@ import { simulateSurveyCommand } from "./commands/simulate-survey.js";
 import { calculateCommand } from "./commands/calculate.js";
 import { verifyCommand } from "./commands/verify.js";
 import { cleanupCommand } from "./commands/cleanup.js";
+import { verifyStatsCommand } from "./commands/verify-stats.js";
 
 const program = new Command()
   .name("climalab-test")
@@ -145,6 +146,16 @@ program
   .requiredOption("--org-id <uuid>", "Organization ID to delete")
   .action(async (opts) => {
     await cleanupCommand({ orgId: opts.orgId });
+  });
+
+// verify-stats
+program
+  .command("verify-stats")
+  .description(
+    "Verify statistical motor with known inputs and expected outputs (no Supabase required)"
+  )
+  .action(async () => {
+    await verifyStatsCommand();
   });
 
 program.parse();

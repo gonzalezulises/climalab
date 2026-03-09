@@ -951,6 +951,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     dimension_code: string;
     dimension_name: string;
     alpha: number | null;
+    alphaStatus: "calculated" | "insufficient_n" | "insufficient_items" | "zero_variance";
     item_count: number;
     respondent_count: number;
   }> = [];
@@ -979,11 +980,12 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       if (complete) matrix.push(row);
     }
 
-    const alpha = cronbachAlpha(matrix);
+    const alphaResult = cronbachAlpha(matrix);
     reliabilityData.push({
       dimension_code: dim.code,
       dimension_name: dim.name,
-      alpha,
+      alpha: alphaResult.value,
+      alphaStatus: alphaResult.status,
       item_count: dimItems.length,
       respondent_count: matrix.length,
     });

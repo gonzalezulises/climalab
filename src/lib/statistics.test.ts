@@ -77,20 +77,26 @@ describe("rwg", () => {
 });
 
 describe("cronbachAlpha", () => {
-  it("returns null if k < 2", () => {
+  it("returns insufficient_items if k < 2", () => {
     const matrix = Array.from({ length: 10 }, () => [3]);
-    expect(cronbachAlpha(matrix)).toBeNull();
+    const result = cronbachAlpha(matrix);
+    expect(result.status).toBe("insufficient_items");
+    expect(result.value).toBeNull();
   });
 
-  it("returns null if n < 10", () => {
+  it("returns insufficient_n if n < 10", () => {
     const matrix = Array.from({ length: 9 }, () => [3, 4]);
-    expect(cronbachAlpha(matrix)).toBeNull();
+    const result = cronbachAlpha(matrix);
+    expect(result.status).toBe("insufficient_n");
+    expect(result.value).toBeNull();
   });
 
-  it("returns null if totalVar is 0", () => {
+  it("returns zero_variance if totalVar is 0", () => {
     // All identical rows → total variance = 0
     const matrix = Array.from({ length: 10 }, () => [3, 4, 5]);
-    expect(cronbachAlpha(matrix)).toBeNull();
+    const result = cronbachAlpha(matrix);
+    expect(result.status).toBe("zero_variance");
+    expect(result.value).toBeNull();
   });
 
   it("returns high alpha for a reliable matrix", () => {
@@ -100,9 +106,10 @@ describe("cronbachAlpha", () => {
       const base = 2 + (i % 4); // varies 2-5
       matrix.push([base, base, base + (i % 2 === 0 ? 0 : 1)]);
     }
-    const alpha = cronbachAlpha(matrix);
-    expect(alpha).not.toBeNull();
-    expect(alpha!).toBeGreaterThan(0.6);
+    const result = cronbachAlpha(matrix);
+    expect(result.status).toBe("calculated");
+    expect(result.value).not.toBeNull();
+    expect(result.value!).toBeGreaterThan(0.6);
   });
 
   it("returns low or negative alpha for incoherent matrix", () => {
@@ -111,9 +118,10 @@ describe("cronbachAlpha", () => {
     for (let i = 0; i < 20; i++) {
       matrix.push([1 + (i % 5), 5 - (i % 5), 1 + ((i * 3) % 5)]);
     }
-    const alpha = cronbachAlpha(matrix);
-    expect(alpha).not.toBeNull();
-    expect(alpha!).toBeLessThan(0.3);
+    const result = cronbachAlpha(matrix);
+    expect(result.status).toBe("calculated");
+    expect(result.value).not.toBeNull();
+    expect(result.value!).toBeLessThan(0.3);
   });
 
   it("rounds to 3 decimal places", () => {
@@ -122,9 +130,9 @@ describe("cronbachAlpha", () => {
       const base = 1 + (i % 5);
       matrix.push([base, base + (i % 3), base + (i % 2)]);
     }
-    const alpha = cronbachAlpha(matrix);
-    if (alpha !== null) {
-      const str = alpha.toString();
+    const result = cronbachAlpha(matrix);
+    if (result.value !== null) {
+      const str = result.value.toString();
       const decimals = str.includes(".") ? str.split(".")[1].length : 0;
       expect(decimals).toBeLessThanOrEqual(3);
     }

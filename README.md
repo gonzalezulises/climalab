@@ -121,6 +121,80 @@ npm run dev
 - Segmentación por departamento, antigüedad y género
 - Limitaciones metodológicas auto-detectadas
 
+## Contratos del Motor Estadístico
+
+Los siguientes contratos son verificables mediante `npm run test`. Cada contrato
+tiene un test correspondiente en `src/lib/__tests__/statistics.test.ts`.
+
+### Cronbach Alpha
+
+- **Precondición**: n ≥ 10 respondentes, k ≥ 2 ítems (implementación usa umbral más estricto que el mínimo teórico de n ≥ 2)
+- **Retorna**: `CronbachResult` — discriminated union con `value`, `status`, `n`, `k`
+- **Status posibles**: `calculated` | `insufficient_n` | `insufficient_items` | `zero_variance`
+- **Rango válido** (cuando calculated): [-∞, 1.0] — valores < 0.6 indican baja confiabilidad
+- **UI**: `AlphaIndicator` component — muestra valor con color de calidad o razón de ausencia con tooltip en español
+- **Exports**: DOCX/Excel muestran `n/d (n=X)` con nota al pie cuando status ≠ calculated
+- **Umbral**: n < 10 retorna `insufficient_n` (conservador — alfas con n < 10 son inestables)
+- **Redondeo**: 3 decimales
+- **Referencia**: Cronbach (1951), Coefficient Alpha and the Internal Structure of Tests
+
+### rwg(j)
+
+- **Precondición**: n ≥ 3 scores (implementación usa umbral más estricto que James que permite n ≥ 2)
+- **Escala**: Likert 1-5, σ²EU = 2.0 = (A² - 1) / 12 = (25 - 1) / 12
+- **Varianza**: poblacional (÷ N), no muestral
+- **Rango válido**: [0, 1.0] — clamped con `Math.max(0, Math.min(1, value))`
+- **Thresholds**: ≥ 0.70 acuerdo aceptable, 0.50–0.69 moderado, < 0.50 bajo
+- **Edge n < 3**: retorna `null`
+- **Edge todos los scores idénticos**: varianza = 0, retorna 1.0 (acuerdo perfecto)
+- **Redondeo**: 3 decimales
+- **Referencia**: James, Demaree & Wolf (1984), rwg: An Assessment of Within-Group Interrater Agreement
+
+### Corrección de Población Finita
+
+- **Implementación**: inline en `src/actions/campaigns.ts` (no exportada como función pura)
+- **Fórmula**: ME = 1.96 × √(0.25/n) × √((N−n)/(N−1)) × 100
+- **Resultado**: porcentaje redondeado a 2 decimales
+- **Edge n ≥ N**: `(N−n)/(N−1)` → 0 o negativo, FPC correction → 0, ME → 0 (censo completo)
+- **Edge N ≤ 1**: retorna 0
+
+### eNPS
+
+- **Implementación**: inline en `src/actions/campaigns.ts` (no exportada como función pura)
+- **Escala**: 0-10 (almacenado en `respondents.enps_score`)
+- **Promotores**: score ≥ 9
+- **Detractores**: score ≤ 6
+- **Pasivos**: score 7-8
+- **Fórmula**: eNPS = Math.round(((promotores − detractores) / total) × 100)
+- **Rango**: [-100, 100]
+
+### Umbral de Anonimato
+
+- **Regla**: segmentos con n < 5 no se reportan en ninguna vista
+- **Implementación**: `src/actions/campaigns.ts:555-556`
+- **Alcance**: aplica a segmentación por departamento, antigüedad y género
+- **No hay excepciones**: ni admins ni exports bypasean este umbral
+
+### Perfiles de Engagement
+
+| Perfil       | Rango      | Límite inferior | Límite superior |
+| ------------ | ---------- | --------------- | --------------- |
+| Embajador    | [4.5, 5.0] | inclusivo       | inclusivo       |
+| Comprometido | [4.0, 4.5) | inclusivo       | exclusivo       |
+| Neutral      | [3.0, 4.0) | inclusivo       | exclusivo       |
+| Desvinculado | [0, 3.0)   | inclusivo       | exclusivo       |
+
+- **Implementación**: `src/actions/campaigns.ts:641-644`
+- **Input**: promedio de todos los scores (Likert 1-5) del respondente
+
+### Pearson
+
+- **Precondición**: n ≥ 10 pares de observaciones
+- **Edge n < 10**: retorna `{ r: 0, pValue: 1, n }`
+- **Edge denominador = 0**: retorna `{ r: 0, pValue: 1, n }` (array constante)
+- **p-value**: aproximación (no distribución t exacta), epsilon 1e-10 para estabilidad numérica
+- **Redondeo**: r a 3 decimales, pValue a 4 decimales
+
 ## ONA — Análisis de Red Perceptual
 
 Módulo Python (igraph) que construye un grafo de similitud coseno a partir de vectores de 22 dimensiones por respondente. Detecta clusters de personas que perciben la organización de manera similar (NO es ONA sociométrica).
@@ -130,6 +204,18 @@ Módulo Python (igraph) que construye un grafo de similitud coseno a partir de v
 - **Centralidad**: Eigenvector, betweenness (vértices + aristas), grado
 - **Visualización**: Imagen PNG generada server-side (matplotlib + igraph Fruchterman-Reingold)
 - **Aristas críticas**: Top 10 aristas inter-comunidad por edge betweenness
+
+## Contratos del ONA
+
+Verificable mediante `pytest scripts/test_ona.py`.
+
+- **Threshold de similitud coseno**: adaptativo (NO es un valor fijo). `build_similarity_graph()` usa búsqueda binaria para encontrar un threshold que produzca entre 10–30% de densidad de aristas (`DENSITY_TARGET_MIN = 0.10`, `DENSITY_TARGET_MAX = 0.30`)
+- **Iteraciones de estabilidad**: `STABILITY_ITERATIONS = 50`
+- **Clasificación NMI**: `NMI_ROBUST_THRESHOLD = 0.80` (robusto), `NMI_MODERATE_THRESHOLD = 0.50` (moderado), < 0.50 (débil)
+- **Tipo de ONA**: perceptual (similitud de respuestas), NO sociométrica (no mide interacciones)
+- **Mínimo de respondentes**: `MIN_RESPONDENTS = 10`
+- **Variable excluida**: ENG (variable dependiente) excluida de vectores de similitud
+- **Algoritmo**: Leiden community detection con `objective_function="modularity"`
 
 ## Branding por organización
 
@@ -214,6 +300,18 @@ Opcionales (IA — al menos una requerida para insights):
 - `AI_LOCAL_MODEL` — Nombre del modelo (default: `qwen2.5:72b`)
 - `AI_LOCAL_API_KEY` — Clave API para el endpoint local (si aplica)
 - `OLLAMA_BASE_URL` — URL de Ollama nativo (proveedor fallback, e.g., `http://localhost:11434`)
+
+## Invariantes del Sistema
+
+Las siguientes propiedades deben mantenerse verdaderas en todo momento.
+Cualquier cambio que las viole requiere actualización de esta sección primero.
+
+1. **Anonimato**: ningún endpoint, vista o export expone datos individuales de respondentes. La tabla `participants` (PII) está separada de `respondents` (respuestas anónimas)
+2. **Determinismo estadístico**: dado el mismo set de respuestas, el motor produce siempre el mismo resultado. Las funciones en `src/lib/statistics.ts` son puras (sin estado, sin I/O)
+3. **Aislamiento multi-tenant**: una organización nunca puede leer datos de otra (RLS en Supabase con `get_user_org_id()` SECURITY DEFINER). Verificado con test suite: `supabase/tests/rls-isolation.test.ts` (61 tests — 2 orgs × 3 usuarios, usuario huérfano, joins cross-tabla, escala 12 departamentos). Auditoría completa: `docs/rls-audit.md`
+4. **Degradación de IA**: si el backend de IA no está disponible, las páginas de resultados cargan sin insights pero sin error bloqueante. `callAI()` retorna error, no lanza excepción
+5. **Módulos aditivos**: agregar un módulo opcional a una campaña nunca altera los scores del instrumento base. Los módulos tienen `category = NULL` y se excluyen de agregación por categoría
+6. **ONA opcional**: si el proceso Python falla, el sistema reporta el error claramente pero entrega el resto de resultados. ONA se invoca non-blocking desde `calculateResults`
 
 ## Licencia
 

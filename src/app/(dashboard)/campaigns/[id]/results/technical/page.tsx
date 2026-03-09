@@ -3,14 +3,8 @@ import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getReliabilityData } from "@/actions/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AlphaIndicator } from "@/components/results/AlphaIndicator";
 import { TechnicalClient } from "./technical-client";
-
-function alphaStatus(alpha: number | null) {
-  if (alpha === null) return { label: "N/D", bg: "bg-gray-100 text-gray-600" };
-  if (alpha >= 0.7) return { label: "Aceptable", bg: "bg-green-100 text-green-800" };
-  if (alpha >= 0.6) return { label: "Marginal", bg: "bg-yellow-100 text-yellow-800" };
-  return { label: "Bajo", bg: "bg-red-100 text-red-800" };
-}
 
 function rwgStatus(rwg: number | null) {
   if (rwg === null) return { label: "N/D", bg: "bg-gray-100 text-gray-600" };
@@ -81,6 +75,7 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
 
   // Auto-generated limitations
   const lowAlphaDims = reliability.filter((r) => r.alpha !== null && r.alpha < 0.6);
+  const uncalculatedAlphaDims = reliability.filter((r) => r.alpha === null);
   const lowRwgDims = globalDimResults.filter((d) => d.rwg !== null && d.rwg < 0.5);
   const responseRate = Number(campaign.response_rate ?? 0);
   const sampleN = campaign.sample_n ?? 0;
@@ -146,25 +141,37 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                   </tr>
                 </thead>
                 <tbody>
-                  {reliability.map((r) => {
-                    const status = alphaStatus(r.alpha);
-                    return (
-                      <tr key={r.dimension_code} className="border-b last:border-0">
-                        <td className="py-2 pr-4">
-                          <span className="font-medium">{r.dimension_code}</span>
-                          <span className="text-muted-foreground ml-2">{r.dimension_name}</span>
-                        </td>
-                        <td className="text-center px-3 py-2 font-mono">
-                          {r.alpha !== null ? r.alpha.toFixed(3) : "—"}
-                        </td>
-                        <td className="text-center px-3 py-2">{r.item_count}</td>
-                        <td className="text-center px-3 py-2">{r.respondent_count}</td>
-                        <td className="text-center px-3 py-2">
-                          <Badge className={status.bg}>{status.label}</Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {reliability.map((r) => (
+                    <tr key={r.dimension_code} className="border-b last:border-0">
+                      <td className="py-2 pr-4">
+                        <span className="font-medium">{r.dimension_code}</span>
+                        <span className="text-muted-foreground ml-2">{r.dimension_name}</span>
+                      </td>
+                      <td className="text-center px-3 py-2">
+                        <AlphaIndicator
+                          alpha={r.alpha}
+                          status={
+                            r.alphaStatus ?? (r.alpha !== null ? "calculated" : "insufficient_n")
+                          }
+                          n={r.respondent_count}
+                          k={r.item_count}
+                          compact
+                        />
+                      </td>
+                      <td className="text-center px-3 py-2">{r.item_count}</td>
+                      <td className="text-center px-3 py-2">{r.respondent_count}</td>
+                      <td className="text-center px-3 py-2">
+                        <AlphaIndicator
+                          alpha={r.alpha}
+                          status={
+                            r.alphaStatus ?? (r.alpha !== null ? "calculated" : "insufficient_n")
+                          }
+                          n={r.respondent_count}
+                          k={r.item_count}
+                        />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -234,6 +241,12 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                 Las siguientes dimensiones presentaron consistencia interna baja (α &lt; 0.60):{" "}
                 {lowAlphaDims.map((d) => d.dimension_code).join(", ")}. Los resultados de estas
                 dimensiones deben interpretarse con cautela.
+              </p>
+            )}
+            {uncalculatedAlphaDims.length > 0 && (
+              <p className="text-muted-foreground">
+                Confiabilidad no calculada en {uncalculatedAlphaDims.length} dimensión(es) con menos
+                de 10 respondentes: {uncalculatedAlphaDims.map((d) => d.dimension_code).join(", ")}.
               </p>
             )}
             {lowRwgDims.length > 0 && (

@@ -267,7 +267,7 @@ export async function generateExcelReport(
     techSheet.addRow({
       code: r.dimension_code,
       name: r.dimension_name,
-      alpha: r.alpha != null ? Number(r.alpha.toFixed(3)) : "N/A",
+      alpha: r.alpha != null ? Number(r.alpha.toFixed(3)) : `n/d (n=${r.respondent_count})`,
       items: r.item_count,
       n: r.respondent_count,
     });
@@ -843,6 +843,7 @@ export async function generateDocxReport(
   content.push(kpiParagraph("Margen de error", `±${marginOfError}%`, pc));
 
   if (reliability.length > 0) {
+    const hasUncalculated = reliability.some((r) => r.alpha == null);
     content.push(subTitle("Confiabilidad (Cronbach α)"));
     content.push(
       makeTable(
@@ -850,13 +851,29 @@ export async function generateDocxReport(
         reliability.map((r) => [
           r.dimension_code,
           r.dimension_name,
-          r.alpha != null ? r.alpha.toFixed(3) : "N/A",
+          r.alpha != null ? r.alpha.toFixed(3) : `n/d (n=${r.respondent_count})`,
           String(r.item_count),
           String(r.respondent_count),
         ]),
         [1000, 3500, 1500, 1500, 1500]
       )
     );
+    if (hasUncalculated) {
+      content.push(
+        new Paragraph({
+          spacing: { before: 100 },
+          children: [
+            new TextRun({
+              text: "(*) Confiabilidad no calculada en dimensiones con menos de 10 respondentes.",
+              size: 18,
+              italics: true,
+              color: "888888",
+              font: "Calibri",
+            }),
+          ],
+        })
+      );
+    }
   }
 
   // Footer + Disclaimer

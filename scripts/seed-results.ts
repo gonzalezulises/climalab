@@ -530,10 +530,12 @@ async function processOneCampaign(supabase: ReturnType<typeof createClient>, cam
       }
       if (complete) matrix.push(row);
     }
+    const alphaResult = cronbachAlpha(matrix);
     reliabilityData.push({
       dimension_code: dim.code,
       dimension_name: dim.name,
-      alpha: cronbachAlpha(matrix),
+      alpha: alphaResult.value,
+      alphaStatus: alphaResult.status,
       item_count: dimItems.length,
       respondent_count: matrix.length,
     });

@@ -197,6 +197,7 @@ export async function getReliabilityData(campaignId: string): Promise<
       dimension_code: string;
       dimension_name: string;
       alpha: number | null;
+      alphaStatus: "calculated" | "insufficient_n" | "insufficient_items" | "zero_variance";
       item_count: number;
       respondent_count: number;
     }>
@@ -218,6 +219,7 @@ export async function getReliabilityData(campaignId: string): Promise<
       dimension_code: string;
       dimension_name: string;
       alpha: number | null;
+      alphaStatus: "calculated" | "insufficient_n" | "insufficient_items" | "zero_variance";
       item_count: number;
       respondent_count: number;
     }>,
