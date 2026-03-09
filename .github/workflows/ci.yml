@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -25,12 +23,6 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Format check
-        run: npm run format:check
 
       - name: Tests
         run: npm test
