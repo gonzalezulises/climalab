@@ -34,7 +34,10 @@ export function SegmentFilterBar({ availableSegments }: Props) {
       params.delete("segment_type");
       params.delete("segment_key");
     }
-    router.push(`${pathname}?${params.toString()}`);
+    const query = params.toString();
+    const url = query ? `${pathname}?${query}` : pathname;
+    router.push(url);
+    router.refresh();
   }
 
   const segmentTypeOptions = (
