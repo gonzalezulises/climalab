@@ -16,6 +16,7 @@ import { CampaignActions } from "./campaign-actions";
 import { ReminderButton } from "./reminder-button";
 import { ParticipantsPanel } from "./participants-panel";
 import { MonitoringPanel } from "./monitoring-panel";
+import { PublicLinkCard } from "./public-link-card";
 import { BusinessIndicatorsPanel } from "@/components/results/business-indicators-panel";
 import type { Department } from "@/types";
 
@@ -183,6 +184,9 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               )}
             </CardContent>
           </Card>
+          {campaign.status === "active" && (
+            <PublicLinkCard campaignId={campaign.id} baseUrl={baseUrl} />
+          )}
         </TabsContent>
 
         {/* Participants Tab */}
