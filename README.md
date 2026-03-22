@@ -11,8 +11,8 @@ Plataforma SaaS multi-tenant para medición de clima organizacional en PYMEs (1�
 - **i18n**: next-intl (español)
 - **Email**: Resend (emails transaccionales con marca de organización)
 - **ONA**: Python (igraph + matplotlib), invocado vía `uv run`
-- **IA**: Backend dual — DGX (OpenAI-compatible vía Cloudflare Tunnel) con fallback a Ollama nativo. Modelo: Qwen 2.5 72B
-- **Exportación**: @react-pdf/renderer (PDF), exceljs (Excel)
+- **IA**: Triple backend — OpenAI (GPT-4o, prioridad) → Anthropic API (Claude Haiku 4.5) → Ollama nativo fallback
+- **Exportación**: docx (Word/DOCX), exceljs (Excel)
 
 ## Instrumento
 
@@ -53,14 +53,13 @@ src/
 ├── components/
 │   ├── ui/           # shadcn/ui
 │   ├── layout/       # Sidebar, header, nav
-│   ├── results/      # 21 componentes reutilizables de gráficos
-│   ├── branding/     # LogoUpload, BrandConfigEditor (identidad visual per-org)
-│   └── reports/      # Componente PDF (@react-pdf/renderer)
+│   ├── results/      # 22 componentes reutilizables de gráficos
+│   └── branding/     # LogoUpload, BrandConfigEditor (identidad visual per-org)
 ├── lib/              # Supabase clients, validations, constants, statistics, email, env
 └── types/            # Database types (auto-generated) + derived types (BrandConfig)
 
 supabase/
-├── migrations/       # 19 migraciones (schema + RLS + enums + multi-instrument + branding)
+├── migrations/       # 20 migraciones (schema + RLS + enums + multi-instrument + branding)
 └── seed.sql          # Demo org + instrumentos + ~200 respondentes demo
 
 scripts/
@@ -104,8 +103,8 @@ npm run dev
 6. **Monitorear** — panel en vivo con auto-refresh cada 30s
 7. **Cerrar y calcular** — motor estadístico computa resultados (base + módulos) + ONA perceptual
 8. **Resultados** — 11 sub-páginas: dashboard, dimensiones (cards expandibles con texto completo), tendencias, segmentos, benchmarks, drivers, alertas, comentarios, red ONA, ficha técnica, exportar
-9. **Insights IA** — análisis cualitativos generados por IA (DGX vía Cloudflare Tunnel o Ollama local): narrativas, drivers, alertas, segmentos, tendencias
-10. **Exportar** — PDF ejecutivo con branding, Excel completo, CSV, reporte IA
+9. **Insights IA** — análisis cualitativos generados por IA (OpenAI → Anthropic → Ollama): narrativas, drivers, alertas, segmentos, tendencias
+10. **Exportar** — DOCX ejecutivo con branding, Excel completo, CSV, reporte IA
 
 ## Motor estadístico
 
@@ -223,39 +222,33 @@ Sistema de identidad visual per-org aplicado en todos los touchpoints:
 
 - **Encuesta**: colores dinámicos en header, botones CTA, barra de progreso
 - **Emails**: 4 tipos (invitación, recordatorio, cierre, resultados) con logo y colores de la org
-- **PDF**: colores dinámicos en portada, secciones, tablas
+- **DOCX**: colores dinámicos en portada, secciones, tablas
 - **Resultados**: logo de la org en sidebar
 - **Configuración**: pestaña "Identidad visual" en detalle de organización (color pickers, upload de logo, textos personalizados)
 
 ## Infraestructura IA
 
-Backend dual con fallback automático para insights cualitativos en 6 páginas de resultados:
+Backend triple con fallback automático para insights cualitativos en 6 páginas de resultados:
 
 ```
                     ┌─────────────────────────┐
                     │   callAI() dispatcher    │
                     └────────┬────────────────┘
                              │
-              ┌──────────────┴──────────────┐
-              ▼                             ▼
-   AI_LOCAL_ENDPOINT                 OLLAMA_BASE_URL
-   (OpenAI-compatible)               (Ollama nativo)
-              │                             │
-   /v1/chat/completions              /api/chat
-              │                             │
-   ┌──────────┴──────────┐      ┌──────────┴──────────┐
-   │  Cloudflare Tunnel  │      │   Ollama local       │
-   │  ollama.rizo.ma/v1  │      │   localhost:11434    │
-   └──────────┬──────────┘      └─────────────────────┘
-              │
-   ┌──────────┴──────────┐
-   │  NVIDIA DGX Spark   │
-   │  Qwen 2.5 72B       │
-   │  128GB unified mem   │
-   └─────────────────────┘
+         ┌───────────────────┼───────────────────┐
+         ▼                   ▼                   ▼
+   OPENAI_API_KEY     ANTHROPIC_API_KEY    OLLAMA_BASE_URL
+   (Chat API)         (Messages API)       (Ollama nativo)
+         │                   │                   │
+      GPT-4o          Claude Haiku 4.5       /api/chat
+   (~3-8s, prioridad)   (~2-5s)                 │
+                                          ┌─────┴─────────────┐
+                                          │  DGX / local       │
+                                          │  Qwen 2.5 72B      │
+                                          └───────────────────┘
 ```
 
-- **Prioridad**: `AI_LOCAL_ENDPOINT` → `OLLAMA_BASE_URL` → error con mensaje claro
+- **Prioridad**: `OPENAI_API_KEY` → `ANTHROPIC_API_KEY` → `OLLAMA_BASE_URL` → error con mensaje claro
 - **Fail-fast**: si ningún proveedor configurado, retorna error inmediatamente (no falla silenciosamente)
 - **Timeout**: `maxDuration = 300` en results layout — permite hasta 5 min para modelos grandes (requiere Vercel Pro)
 - **6 tipos de análisis**: dashboard_narrative, comment_analysis, driver_insights, alert_context, segment_profiles, trends_narrative
@@ -296,10 +289,11 @@ Requeridas (producción):
 
 Opcionales (IA — al menos una requerida para insights):
 
-- `AI_LOCAL_ENDPOINT` — URL del endpoint OpenAI-compatible (e.g., `https://ollama.rizo.ma/v1`). **Proveedor prioritario**.
-- `AI_LOCAL_MODEL` — Nombre del modelo (default: `qwen2.5:72b`)
-- `AI_LOCAL_API_KEY` — Clave API para el endpoint local (si aplica)
-- `OLLAMA_BASE_URL` — URL de Ollama nativo (proveedor fallback, e.g., `http://localhost:11434`)
+- `OPENAI_API_KEY` — Clave API de OpenAI para GPT-4o. **Proveedor prioritario** (~3-8s).
+- `OPENAI_MODEL` — Nombre del modelo OpenAI (default: `gpt-4o`)
+- `ANTHROPIC_API_KEY` — Clave API de Anthropic para Claude Haiku 4.5. **Proveedor secundario** (~2-5s).
+- `ANTHROPIC_MODEL` — Nombre del modelo Anthropic (default: `claude-haiku-4-5-20251001`)
+- `OLLAMA_BASE_URL` — URL de Ollama (proveedor terciario, e.g., `http://localhost:11434` o DGX vía Tailscale)
 
 ## Invariantes del Sistema
 

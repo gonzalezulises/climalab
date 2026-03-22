@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { env } from "@/lib/env";
 
 export async function signInWithMagicLink(formData: FormData) {
   const email = formData.get("email") as string;
@@ -12,13 +12,12 @@ export async function signInWithMagicLink(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const headersList = await headers();
-  const origin = headersList.get("origin") || "http://localhost:3000";
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL;
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   });
 
