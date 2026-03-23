@@ -186,6 +186,7 @@ function pageBreakBlock(groupUuid: string): TallyBlock {
     type: "PAGE_BREAK",
     groupUuid,
     groupType: "PAGE_BREAK",
+    payload: {},
   };
 }
 
