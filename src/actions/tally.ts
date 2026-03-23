@@ -96,9 +96,9 @@ function multipleChoiceBlock(
       uuid: fieldKey,
       type: "MULTIPLE_CHOICE",
       groupUuid,
-      groupType: "QUESTION",
+      groupType: "MULTIPLE_CHOICE",
       payload: {
-        label: `<p>${label}</p>`,
+        html: `<p>${label}</p>`,
         isRequired: true,
         options: options.map((o) => ({
           id: uuid(),
@@ -124,9 +124,9 @@ function linearScaleBlock(
       uuid: fieldKey,
       type: "LINEAR_SCALE",
       groupUuid,
-      groupType: "QUESTION",
+      groupType: "LINEAR_SCALE",
       payload: {
-        label: `<p>${label}</p>`,
+        html: `<p>${label}</p>`,
         isRequired: true,
         min,
         max,
@@ -151,7 +151,7 @@ function textareaBlock(
       groupUuid,
       groupType: "TEXTAREA",
       payload: {
-        label: `<p>${label}</p>`,
+        html: `<p>${label}</p>`,
         isRequired: required,
       },
     },
