@@ -62,7 +62,7 @@ function makePageGroup() {
   return uuid();
 }
 
-// --- Block helpers (based on Tally OpenAPI spec) ---
+// --- Block helpers (validated against live Tally API) ---
 
 function formTitleBlock(groupUuid: string, title: string): TallyBlock {
   return {
@@ -84,67 +84,33 @@ function sectionTitleBlock(groupUuid: string, text: string): TallyBlock {
   };
 }
 
-// A "question" in Tally = TITLE block (label) + input block, sharing the same groupUuid with groupType "QUESTION"
-function questionTitle(groupUuid: string, text: string): TallyBlock {
-  return {
-    uuid: uuid(),
-    type: "TITLE",
-    groupUuid,
-    groupType: "QUESTION",
-    payload: { html: `<p>${text}</p>` },
-  };
-}
-
-function multipleChoiceQuestion(
-  parentGroupUuid: string,
+// DROPDOWN for demographic selects
+function dropdownQuestion(
   label: string,
   options: { label: string }[],
   required: boolean
 ): { blocks: TallyBlock[]; fieldKey: string } {
   const groupUuid = uuid();
-  const blocks: TallyBlock[] = [];
-
-  // Question title
-  blocks.push(questionTitle(groupUuid, label));
-
-  // Option blocks — each is MULTIPLE_CHOICE_OPTION with groupType MULTIPLE_CHOICE
-  const fieldKey = groupUuid; // use groupUuid as field key for mapping
-  for (let i = 0; i < options.length; i++) {
-    blocks.push({
-      uuid: uuid(),
-      type: "MULTIPLE_CHOICE_OPTION",
-      groupUuid,
-      groupType: "MULTIPLE_CHOICE",
-      payload: {
-        index: i,
-        isFirst: i === 0,
-        isLast: i === options.length - 1,
-        isRequired: required,
+  const fieldKey = uuid();
+  return {
+    fieldKey,
+    blocks: [
+      {
+        uuid: fieldKey,
+        type: "DROPDOWN",
+        groupUuid,
+        groupType: "DROPDOWN",
+        payload: {
+          isRequired: required,
+          options: options.map((o) => ({ id: uuid(), text: o.label })),
+        },
       },
-    });
-  }
-
-  // The MULTIPLE_CHOICE container
-  blocks.push({
-    uuid: uuid(),
-    type: "MULTIPLE_CHOICE",
-    groupUuid,
-    groupType: "QUESTION",
-    payload: {
-      isRequired: required,
-      options: options.map((o, i) => ({
-        id: uuid(),
-        text: o.label,
-        index: i,
-      })),
-    },
-  });
-
-  return { blocks, fieldKey };
+    ],
+  };
 }
 
+// LINEAR_SCALE: TITLE (groupType QUESTION) + LINEAR_SCALE (groupType LINEAR_SCALE)
 function linearScaleQuestion(
-  parentGroupUuid: string,
   label: string,
   start: number,
   end: number,
@@ -152,51 +118,61 @@ function linearScaleQuestion(
   rightLabel?: string
 ): { blocks: TallyBlock[]; fieldKey: string } {
   const groupUuid = uuid();
-  const blocks: TallyBlock[] = [];
-
-  // Question title
-  blocks.push(questionTitle(groupUuid, label));
-
-  // LINEAR_SCALE input
   const fieldKey = uuid();
-  blocks.push({
-    uuid: fieldKey,
-    type: "LINEAR_SCALE",
-    groupUuid,
-    groupType: "QUESTION",
-    payload: {
-      isRequired: true,
-      start,
-      end,
-      step: 1,
-      ...(leftLabel && { hasLeftLabel: true, leftLabel }),
-      ...(rightLabel && { hasRightLabel: true, rightLabel }),
-    },
-  });
-
-  return { blocks, fieldKey };
+  return {
+    fieldKey,
+    blocks: [
+      {
+        uuid: uuid(),
+        type: "TITLE",
+        groupUuid,
+        groupType: "QUESTION",
+        payload: { html: `<p>${label}</p>` },
+      },
+      {
+        uuid: fieldKey,
+        type: "LINEAR_SCALE",
+        groupUuid,
+        groupType: "LINEAR_SCALE",
+        payload: {
+          isRequired: true,
+          start,
+          end,
+          step: 1,
+          ...(leftLabel && { hasLeftLabel: true, leftLabel }),
+          ...(rightLabel && { hasRightLabel: true, rightLabel }),
+        },
+      },
+    ],
+  };
 }
 
+// TEXTAREA: TITLE (groupType QUESTION) + TEXTAREA (groupType TEXTAREA)
 function textareaQuestion(
-  parentGroupUuid: string,
   label: string,
   required: boolean
 ): { blocks: TallyBlock[]; fieldKey: string } {
   const groupUuid = uuid();
-  const blocks: TallyBlock[] = [];
-
-  blocks.push(questionTitle(groupUuid, label));
-
   const fieldKey = uuid();
-  blocks.push({
-    uuid: fieldKey,
-    type: "TEXTAREA",
-    groupUuid,
-    groupType: "QUESTION",
-    payload: { isRequired: required },
-  });
-
-  return { blocks, fieldKey };
+  return {
+    fieldKey,
+    blocks: [
+      {
+        uuid: uuid(),
+        type: "TITLE",
+        groupUuid,
+        groupType: "QUESTION",
+        payload: { html: `<p>${label}</p>` },
+      },
+      {
+        uuid: fieldKey,
+        type: "TEXTAREA",
+        groupUuid,
+        groupType: "TEXTAREA",
+        payload: { isRequired: required },
+      },
+    ],
+  };
 }
 
 function hiddenFieldBlock(
@@ -313,8 +289,7 @@ export async function createTallyForm(
       : allDeptNames;
 
   if (deptOptions.length > 0) {
-    const dept = multipleChoiceQuestion(
-      welcomeGroup,
+    const dept = dropdownQuestion(
       "¿A qué departamento perteneces?",
       deptOptions.map((d) => ({ label: d })),
       true
@@ -328,9 +303,7 @@ export async function createTallyForm(
     });
   }
 
-  // Tenure
-  const tenure = multipleChoiceQuestion(
-    welcomeGroup,
+  const tenure = dropdownQuestion(
     "¿Cuánto tiempo llevas en la organización?",
     TENURE_OPTIONS.map((o) => ({ label: o.label })),
     true
@@ -343,9 +316,7 @@ export async function createTallyForm(
     target_meta: "tenure",
   });
 
-  // Gender
-  const gender = multipleChoiceQuestion(
-    welcomeGroup,
+  const gender = dropdownQuestion(
     "Género",
     GENDER_OPTIONS.map((o) => ({ label: o.label })),
     true
@@ -368,7 +339,7 @@ export async function createTallyForm(
     const sortedItems = [...dim.items].sort((a, b) => a.sort_order - b.sort_order);
 
     for (const item of sortedItems) {
-      const ls = linearScaleQuestion(dimGroup, item.text, 1, 5, LIKERT_LABELS[1], LIKERT_LABELS[5]);
+      const ls = linearScaleQuestion(item.text, 1, 5, LIKERT_LABELS[1], LIKERT_LABELS[5]);
       blocks.push(...ls.blocks);
       mappings.push({
         tally_field_key: ls.fieldKey,
@@ -386,7 +357,6 @@ export async function createTallyForm(
   blocks.push(sectionTitleBlock(finalGroup, "Preguntas abiertas"));
 
   const q1 = textareaQuestion(
-    finalGroup,
     "¿Cuál consideras que es la mayor fortaleza de la organización?",
     false
   );
@@ -399,7 +369,6 @@ export async function createTallyForm(
   });
 
   const q2 = textareaQuestion(
-    finalGroup,
     "¿Qué aspecto consideras que la organización debería mejorar?",
     false
   );
@@ -411,7 +380,7 @@ export async function createTallyForm(
     target_meta: "improvement",
   });
 
-  const q3 = textareaQuestion(finalGroup, "¿Hay algo más que quieras compartir?", false);
+  const q3 = textareaQuestion("¿Hay algo más que quieras compartir?", false);
   blocks.push(...q3.blocks);
   mappings.push({
     tally_field_key: q3.fieldKey,
@@ -421,7 +390,6 @@ export async function createTallyForm(
   });
 
   const enps = linearScaleQuestion(
-    finalGroup,
     "En una escala de 0 a 10, ¿qué tan probable es que recomiendes esta organización como un lugar para trabajar?",
     0,
     10,
