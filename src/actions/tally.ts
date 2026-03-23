@@ -160,7 +160,7 @@ function textareaBlock(
 
 function hiddenFieldBlock(
   groupUuid: string,
-  label: string
+  fieldName: string
 ): { block: TallyBlock; fieldKey: string } {
   const fieldKey = uuid();
   return {
@@ -170,7 +170,9 @@ function hiddenFieldBlock(
       type: "HIDDEN_FIELDS",
       groupUuid,
       groupType: "HIDDEN_FIELDS",
-      payload: { label },
+      payload: {
+        hiddenFields: [{ uuid: uuid(), name: fieldName, value: "" }],
+      },
     },
   };
 }
