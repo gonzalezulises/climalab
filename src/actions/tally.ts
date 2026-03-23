@@ -171,7 +171,7 @@ function hiddenFieldBlock(
       groupUuid,
       groupType: "HIDDEN_FIELDS",
       payload: {
-        hiddenFields: [{ uuid: uuid(), name: fieldName, value: "" }],
+        hiddenFields: [{ uuid: uuid(), name: fieldName }],
       },
     },
   };
