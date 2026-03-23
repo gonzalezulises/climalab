@@ -67,7 +67,7 @@ function titleBlock(groupUuid: string, text: string): TallyBlock {
     uuid: uuid(),
     type: "TITLE",
     groupUuid,
-    groupType: "STANDARD",
+    groupType: "TITLE",
     payload: { html: `<p>${text}</p>`, level: "DEFAULT" },
   };
 }
@@ -84,7 +84,7 @@ function formTitleBlock(groupUuid: string, title: string, description?: string):
     uuid: uuid(),
     type: "FORM_TITLE",
     groupUuid,
-    groupType: "STANDARD",
+    groupType: "FORM_TITLE",
     payload,
   };
 }
@@ -101,7 +101,7 @@ function multipleChoiceBlock(
       uuid: fieldKey,
       type: "MULTIPLE_CHOICE",
       groupUuid,
-      groupType: "STANDARD",
+      groupType: "QUESTION",
       payload: {
         label: `<p>${label}</p>`,
         isRequired: true,
@@ -129,7 +129,7 @@ function linearScaleBlock(
       uuid: fieldKey,
       type: "LINEAR_SCALE",
       groupUuid,
-      groupType: "STANDARD",
+      groupType: "QUESTION",
       payload: {
         label: `<p>${label}</p>`,
         isRequired: true,
@@ -154,7 +154,7 @@ function textareaBlock(
       uuid: fieldKey,
       type: "TEXTAREA",
       groupUuid,
-      groupType: "STANDARD",
+      groupType: "TEXTAREA",
       payload: {
         label: `<p>${label}</p>`,
         isRequired: required,
@@ -174,7 +174,7 @@ function hiddenFieldBlock(
       uuid: fieldKey,
       type: "HIDDEN_FIELDS",
       groupUuid,
-      groupType: "STANDARD",
+      groupType: "HIDDEN_FIELDS",
       payload: { label },
     },
   };
@@ -185,7 +185,7 @@ function pageBreakBlock(groupUuid: string): TallyBlock {
     uuid: uuid(),
     type: "PAGE_BREAK",
     groupUuid,
-    groupType: "STANDARD",
+    groupType: "PAGE_BREAK",
   };
 }
 
