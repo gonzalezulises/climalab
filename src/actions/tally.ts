@@ -62,7 +62,15 @@ function makePageGroup() {
   return uuid();
 }
 
-// --- Block helpers (validated against live Tally API) ---
+// --- Block helpers (based on working clickleads implementation) ---
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 function formTitleBlock(groupUuid: string, title: string): TallyBlock {
   return {
@@ -70,53 +78,58 @@ function formTitleBlock(groupUuid: string, title: string): TallyBlock {
     type: "FORM_TITLE",
     groupUuid,
     groupType: "FORM_TITLE",
-    payload: { html: `<p>${title}</p>` },
+    payload: { html: `<p>${escapeHtml(title)}</p>` },
   };
 }
 
-function sectionTitleBlock(groupUuid: string, text: string): TallyBlock {
+function sectionTitleBlock(text: string): TallyBlock {
+  const groupUuid = uuid();
   return {
     uuid: uuid(),
     type: "TITLE",
     groupUuid,
     groupType: "TITLE",
-    payload: { html: `<p>${text}</p>` },
+    payload: { html: `<p>${escapeHtml(text)}</p>` },
   };
 }
 
-// DROPDOWN: TITLE (groupType QUESTION) + DROPDOWN (groupType DROPDOWN)
-function dropdownQuestion(
+// MULTIPLE_CHOICE: TITLE + N MULTIPLE_CHOICE_OPTION blocks (same groupUuid)
+function multipleChoiceQuestion(
   label: string,
-  options: { label: string }[],
+  options: string[],
   required: boolean
 ): { blocks: TallyBlock[]; fieldKey: string } {
   const groupUuid = uuid();
-  const fieldKey = uuid();
-  return {
-    fieldKey,
-    blocks: [
-      {
-        uuid: uuid(),
-        type: "TITLE",
-        groupUuid,
-        groupType: "QUESTION",
-        payload: { html: `<p>${label}</p>` },
+  const blocks: TallyBlock[] = [];
+
+  blocks.push({
+    uuid: uuid(),
+    type: "TITLE",
+    groupUuid,
+    groupType: "QUESTION",
+    payload: { html: `<p>${escapeHtml(label)}</p>` },
+  });
+
+  for (let i = 0; i < options.length; i++) {
+    blocks.push({
+      uuid: uuid(),
+      type: "MULTIPLE_CHOICE_OPTION",
+      groupUuid,
+      groupType: "MULTIPLE_CHOICE",
+      payload: {
+        text: options[i],
+        index: i,
+        isFirst: i === 0,
+        isLast: i === options.length - 1,
+        ...(i === 0 && { isRequired: required }),
       },
-      {
-        uuid: fieldKey,
-        type: "DROPDOWN",
-        groupUuid,
-        groupType: "DROPDOWN",
-        payload: {
-          isRequired: required,
-          options: options.map((o) => ({ id: uuid(), text: o.label })),
-        },
-      },
-    ],
-  };
+    });
+  }
+
+  return { blocks, fieldKey: groupUuid };
 }
 
-// LINEAR_SCALE: TITLE (groupType QUESTION) + LINEAR_SCALE (groupType LINEAR_SCALE)
+// LINEAR_SCALE: TITLE + LINEAR_SCALE (same groupUuid)
 function linearScaleQuestion(
   label: string,
   start: number,
@@ -134,7 +147,7 @@ function linearScaleQuestion(
         type: "TITLE",
         groupUuid,
         groupType: "QUESTION",
-        payload: { html: `<p>${label}</p>` },
+        payload: { html: `<p>${escapeHtml(label)}</p>` },
       },
       {
         uuid: fieldKey,
@@ -146,15 +159,17 @@ function linearScaleQuestion(
           start,
           end,
           step: 1,
-          ...(leftLabel && { hasLeftLabel: true, leftLabel }),
-          ...(rightLabel && { hasRightLabel: true, rightLabel }),
+          hasLeftLabel: !!leftLabel,
+          leftLabel: leftLabel || "",
+          hasRightLabel: !!rightLabel,
+          rightLabel: rightLabel || "",
         },
       },
     ],
   };
 }
 
-// TEXTAREA: TITLE (groupType QUESTION) + TEXTAREA (groupType TEXTAREA)
+// TEXTAREA: TITLE + TEXTAREA (same groupUuid)
 function textareaQuestion(
   label: string,
   required: boolean
@@ -169,7 +184,7 @@ function textareaQuestion(
         type: "TITLE",
         groupUuid,
         groupType: "QUESTION",
-        payload: { html: `<p>${label}</p>` },
+        payload: { html: `<p>${escapeHtml(label)}</p>` },
       },
       {
         uuid: fieldKey,
@@ -199,18 +214,13 @@ function hiddenFieldBlock(
   };
 }
 
-function pageBreakBlock(
-  groupUuid: string,
-  index: number,
-  isFirst: boolean,
-  isLast: boolean
-): TallyBlock {
+function pageBreakBlock(): TallyBlock {
   return {
     uuid: uuid(),
     type: "PAGE_BREAK",
-    groupUuid,
+    groupUuid: uuid(),
     groupType: "PAGE_BREAK",
-    payload: { index, isFirst, isLast },
+    payload: {},
   };
 }
 
@@ -274,7 +284,6 @@ export async function createTallyForm(
   // Build form blocks and collect mappings
   const blocks: TallyBlock[] = [];
   const mappings: FieldMapping[] = [];
-  let pageIndex = 0;
 
   // --- Page 1: Welcome + Demographics ---
   const welcomeGroup = makePageGroup();
@@ -296,11 +305,7 @@ export async function createTallyForm(
       : allDeptNames;
 
   if (deptOptions.length > 0) {
-    const dept = dropdownQuestion(
-      "¿A qué departamento perteneces?",
-      deptOptions.map((d) => ({ label: d })),
-      true
-    );
+    const dept = multipleChoiceQuestion("¿A qué departamento perteneces?", deptOptions, true);
     blocks.push(...dept.blocks);
     mappings.push({
       tally_field_key: dept.fieldKey,
@@ -310,9 +315,9 @@ export async function createTallyForm(
     });
   }
 
-  const tenure = dropdownQuestion(
+  const tenure = multipleChoiceQuestion(
     "¿Cuánto tiempo llevas en la organización?",
-    TENURE_OPTIONS.map((o) => ({ label: o.label })),
+    TENURE_OPTIONS.map((o) => o.label),
     true
   );
   blocks.push(...tenure.blocks);
@@ -323,9 +328,9 @@ export async function createTallyForm(
     target_meta: "tenure",
   });
 
-  const gender = dropdownQuestion(
+  const gender = multipleChoiceQuestion(
     "Género",
-    GENDER_OPTIONS.map((o) => ({ label: o.label })),
+    GENDER_OPTIONS.map((o) => o.label),
     true
   );
   blocks.push(...gender.blocks);
@@ -336,12 +341,11 @@ export async function createTallyForm(
     target_meta: "gender",
   });
 
-  blocks.push(pageBreakBlock(welcomeGroup, pageIndex++, true, false));
+  blocks.push(pageBreakBlock());
 
   // --- Pages 2-N: Dimensions ---
   for (const dim of dimensions) {
-    const dimGroup = makePageGroup();
-    blocks.push(sectionTitleBlock(dimGroup, dim.name));
+    blocks.push(sectionTitleBlock(dim.name));
 
     const sortedItems = [...dim.items].sort((a, b) => a.sort_order - b.sort_order);
 
@@ -356,12 +360,11 @@ export async function createTallyForm(
       });
     }
 
-    blocks.push(pageBreakBlock(dimGroup, pageIndex++, false, false));
+    blocks.push(pageBreakBlock());
   }
 
   // --- Final Page: Open questions + eNPS ---
-  const finalGroup = makePageGroup();
-  blocks.push(sectionTitleBlock(finalGroup, "Preguntas abiertas"));
+  blocks.push(sectionTitleBlock("Preguntas abiertas"));
 
   const q1 = textareaQuestion(
     "¿Cuál consideras que es la mayor fortaleza de la organización?",
