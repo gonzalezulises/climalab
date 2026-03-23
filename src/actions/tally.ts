@@ -84,7 +84,7 @@ function sectionTitleBlock(groupUuid: string, text: string): TallyBlock {
   };
 }
 
-// DROPDOWN for demographic selects
+// DROPDOWN: TITLE (groupType QUESTION) + DROPDOWN (groupType DROPDOWN)
 function dropdownQuestion(
   label: string,
   options: { label: string }[],
@@ -95,6 +95,13 @@ function dropdownQuestion(
   return {
     fieldKey,
     blocks: [
+      {
+        uuid: uuid(),
+        type: "TITLE",
+        groupUuid,
+        groupType: "QUESTION",
+        payload: { html: `<p>${label}</p>` },
+      },
       {
         uuid: fieldKey,
         type: "DROPDOWN",
