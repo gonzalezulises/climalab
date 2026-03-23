@@ -586,6 +586,57 @@ export type Database = {
           },
         ]
       }
+      tally_form_mappings: {
+        Row: {
+          id: string
+          campaign_id: string
+          tally_form_id: string
+          tally_form_url: string
+          tally_field_key: string
+          target_type: string
+          target_id: string | null
+          target_meta: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          campaign_id: string
+          tally_form_id: string
+          tally_form_url: string
+          tally_field_key: string
+          target_type: string
+          target_id?: string | null
+          target_meta?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          campaign_id?: string
+          tally_form_id?: string
+          tally_form_url?: string
+          tally_field_key?: string
+          target_type?: string
+          target_id?: string | null
+          target_meta?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tally_form_mappings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tally_form_mappings_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       respondents: {
         Row: {
           campaign_id: string

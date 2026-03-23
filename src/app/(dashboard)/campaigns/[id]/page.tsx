@@ -184,9 +184,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               )}
             </CardContent>
           </Card>
-          {campaign.status === "active" && (
-            <PublicLinkCard campaignId={campaign.id} baseUrl={baseUrl} />
-          )}
+          {campaign.status === "active" && <PublicLinkCard campaignId={campaign.id} />}
         </TabsContent>
 
         {/* Participants Tab */}

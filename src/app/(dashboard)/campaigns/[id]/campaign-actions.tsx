@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateCampaignStatus, calculateResults } from "@/actions/campaigns";
+import { createTallyForm } from "@/actions/tally";
 import { Button } from "@/components/ui/button";
 import type { Campaign } from "@/types";
 import { Play, Lock, Calculator } from "lucide-react";
@@ -19,17 +20,24 @@ export function CampaignActions({
   const [loading, setLoading] = useState(false);
 
   const handleActivate = async () => {
-    if (participantCount === 0) {
-      toast.error("Agrega al menos un participante antes de activar la campaña.");
+    setLoading(true);
+
+    // Create Tally form first
+    toast.info("Creando formulario en Tally...");
+    const tallyResult = await createTallyForm(campaign.id);
+    if (!tallyResult.success) {
+      toast.error(tallyResult.error);
+      setLoading(false);
       return;
     }
-    setLoading(true);
+
+    // Then activate the campaign
     const result = await updateCampaignStatus({
       id: campaign.id,
       status: "active",
     });
     if (result.success) {
-      toast.success("Campaña activada");
+      toast.success("Campaña activada — formulario de Tally listo");
       router.refresh();
     } else {
       toast.error(result.error);
