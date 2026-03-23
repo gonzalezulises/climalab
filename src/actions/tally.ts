@@ -68,24 +68,19 @@ function titleBlock(groupUuid: string, text: string): TallyBlock {
     type: "TITLE",
     groupUuid,
     groupType: "TITLE",
-    payload: { html: `<p>${text}</p>`, level: "DEFAULT" },
+    payload: { html: `<p>${text}</p>` },
   };
 }
 
-function formTitleBlock(groupUuid: string, title: string, description?: string): TallyBlock {
-  const payload: Record<string, unknown> = {
-    html: `<p>${title}</p>`,
-    level: "DEFAULT",
-  };
-  if (description) {
-    payload.description = `<p>${description}</p>`;
-  }
+function formTitleBlock(groupUuid: string, title: string): TallyBlock {
   return {
     uuid: uuid(),
     type: "FORM_TITLE",
     groupUuid,
     groupType: "FORM_TITLE",
-    payload,
+    payload: {
+      html: `<p>${title}</p>`,
+    },
   };
 }
 
@@ -255,11 +250,7 @@ export async function createTallyForm(
   const welcomeGroup = makePageGroup();
 
   blocks.push(
-    formTitleBlock(
-      welcomeGroup,
-      `Encuesta de Clima Organizacional`,
-      `${org?.name ?? ""} — Tu participación es anónima y confidencial.`
-    )
+    formTitleBlock(welcomeGroup, `Encuesta de Clima Organizacional — ${org?.name ?? ""}`)
   );
 
   // Hidden field: campaign_id
