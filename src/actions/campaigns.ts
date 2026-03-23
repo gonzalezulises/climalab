@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import {
   createCampaignSchema,
   updateCampaignStatusSchema,
+  updateCampaignConfigSchema,
   generateLinksSchema,
   type CreateCampaignInput,
   type UpdateCampaignStatusInput,
+  type UpdateCampaignConfigInput,
   type GenerateLinksInput,
 } from "@/lib/validations/campaign";
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
@@ -90,6 +92,65 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Action
   }
 
   revalidatePath("/campaigns");
+  return { success: true, data };
+}
+
+// ---------------------------------------------------------------------------
+// updateCampaignConfig — edit campaign settings (only in draft)
+// ---------------------------------------------------------------------------
+export async function updateCampaignConfig(
+  input: UpdateCampaignConfigInput
+): Promise<ActionResult<Campaign>> {
+  const parsed = updateCampaignConfigSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((i) => i.message).join(", "),
+    };
+  }
+
+  const supabase = await createClient();
+
+  // Verify campaign is in draft
+  const { data: existing } = await supabase
+    .from("campaigns")
+    .select("status")
+    .eq("id", parsed.data.id)
+    .single();
+
+  if (!existing) {
+    return { success: false, error: "Campaña no encontrada" };
+  }
+
+  if (existing.status !== "draft") {
+    return { success: false, error: "Solo se pueden editar campañas en borrador" };
+  }
+
+  const { id, ...updates } = parsed.data;
+
+  // Remove undefined fields
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined)
+  );
+
+  if (Object.keys(cleanUpdates).length === 0) {
+    return { success: false, error: "No hay cambios" };
+  }
+
+  const { data, error } = await supabase
+    .from("campaigns")
+    .update(cleanUpdates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/campaigns");
+  revalidatePath(`/campaigns/${id}`);
   return { success: true, data };
 }
 

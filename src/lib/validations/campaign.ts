@@ -67,6 +67,30 @@ export const removeParticipantSchema = z.object({
   campaign_id: zUuid(),
 });
 
+export const updateCampaignConfigSchema = z.object({
+  id: zUuid(),
+  name: z.string().min(2, "Mínimo 2 caracteres").max(100, "Máximo 100 caracteres").optional(),
+  instrument_id: zUuid("ID de instrumento inválido").optional(),
+  module_instrument_ids: z.array(zUuid("ID de módulo inválido")).max(3).optional(),
+  starts_at: z.string().datetime().nullable().optional(),
+  ends_at: z.string().datetime().nullable().optional(),
+  measurement_objective: z
+    .enum([
+      "initial_diagnosis",
+      "periodic_followup",
+      "post_intervention",
+      "specific_assessment",
+      "other",
+    ])
+    .nullable()
+    .optional(),
+  objective_description: z.string().max(500).nullable().optional(),
+  context_notes: z.string().max(2000).nullable().optional(),
+  target_departments: z.array(z.string()).nullable().optional(),
+  target_population: z.number().int().min(1).nullable().optional(),
+});
+
+export type UpdateCampaignConfigInput = z.infer<typeof updateCampaignConfigSchema>;
 export type CreateCampaignInput = z.input<typeof createCampaignSchema>;
 export type UpdateCampaignStatusInput = z.infer<typeof updateCampaignStatusSchema>;
 export type GenerateLinksInput = z.infer<typeof generateLinksSchema>;

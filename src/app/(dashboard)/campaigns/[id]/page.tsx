@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { BarChart3 } from "lucide-react";
 import { CampaignActions } from "./campaign-actions";
+import { EditCampaignDialog } from "./edit-campaign-dialog";
 import { ReminderButton } from "./reminder-button";
 import { ParticipantsPanel } from "./participants-panel";
 import { MonitoringPanel } from "./monitoring-panel";
@@ -91,6 +92,12 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           <p className="text-muted-foreground">{orgName}</p>
         </div>
         <div className="flex items-center gap-2">
+          {campaign.status === "draft" && (
+            <EditCampaignDialog
+              campaign={campaign}
+              instruments={instrumentsResult.success ? instrumentsResult.data : []}
+            />
+          )}
           {campaign.status === "active" && (
             <ReminderButton campaignId={id} pendingCount={pendingCount + inProgressCount} />
           )}
