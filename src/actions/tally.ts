@@ -62,7 +62,19 @@ function makePageGroup() {
   return uuid();
 }
 
-function titleBlock(groupUuid: string, text: string): TallyBlock {
+// --- Block helpers (based on Tally OpenAPI spec) ---
+
+function formTitleBlock(groupUuid: string, title: string): TallyBlock {
+  return {
+    uuid: uuid(),
+    type: "FORM_TITLE",
+    groupUuid,
+    groupType: "FORM_TITLE",
+    payload: { html: `<p>${title}</p>` },
+  };
+}
+
+function sectionTitleBlock(groupUuid: string, text: string): TallyBlock {
   return {
     uuid: uuid(),
     type: "TITLE",
@@ -72,90 +84,119 @@ function titleBlock(groupUuid: string, text: string): TallyBlock {
   };
 }
 
-function formTitleBlock(groupUuid: string, title: string): TallyBlock {
+// A "question" in Tally = TITLE block (label) + input block, sharing the same groupUuid with groupType "QUESTION"
+function questionTitle(groupUuid: string, text: string): TallyBlock {
   return {
     uuid: uuid(),
-    type: "FORM_TITLE",
+    type: "TITLE",
     groupUuid,
-    groupType: "FORM_TITLE",
-    payload: {
-      html: `<p>${title}</p>`,
-    },
+    groupType: "QUESTION",
+    payload: { html: `<p>${text}</p>` },
   };
 }
 
-function multipleChoiceBlock(
-  groupUuid: string,
+function multipleChoiceQuestion(
+  parentGroupUuid: string,
   label: string,
-  options: { label: string; value: string }[]
-): { block: TallyBlock; fieldKey: string } {
-  const fieldKey = uuid();
-  return {
-    fieldKey,
-    block: {
-      uuid: fieldKey,
-      type: "MULTIPLE_CHOICE",
+  options: { label: string }[],
+  required: boolean
+): { blocks: TallyBlock[]; fieldKey: string } {
+  const groupUuid = uuid();
+  const blocks: TallyBlock[] = [];
+
+  // Question title
+  blocks.push(questionTitle(groupUuid, label));
+
+  // Option blocks — each is MULTIPLE_CHOICE_OPTION with groupType MULTIPLE_CHOICE
+  const fieldKey = groupUuid; // use groupUuid as field key for mapping
+  for (let i = 0; i < options.length; i++) {
+    blocks.push({
+      uuid: uuid(),
+      type: "MULTIPLE_CHOICE_OPTION",
       groupUuid,
       groupType: "MULTIPLE_CHOICE",
       payload: {
-        html: `<p>${label}</p>`,
-        isRequired: true,
-        options: options.map((o) => ({
-          id: uuid(),
-          text: o.label,
-        })),
-      },
-    },
-  };
-}
-
-function linearScaleBlock(
-  groupUuid: string,
-  label: string,
-  min: number,
-  max: number,
-  minLabel?: string,
-  maxLabel?: string
-): { block: TallyBlock; fieldKey: string } {
-  const fieldKey = uuid();
-  return {
-    fieldKey,
-    block: {
-      uuid: fieldKey,
-      type: "LINEAR_SCALE",
-      groupUuid,
-      groupType: "LINEAR_SCALE",
-      payload: {
-        html: `<p>${label}</p>`,
-        isRequired: true,
-        min,
-        max,
-        minLabel: minLabel ?? undefined,
-        maxLabel: maxLabel ?? undefined,
-      },
-    },
-  };
-}
-
-function textareaBlock(
-  groupUuid: string,
-  label: string,
-  required: boolean
-): { block: TallyBlock; fieldKey: string } {
-  const fieldKey = uuid();
-  return {
-    fieldKey,
-    block: {
-      uuid: fieldKey,
-      type: "TEXTAREA",
-      groupUuid,
-      groupType: "TEXTAREA",
-      payload: {
-        html: `<p>${label}</p>`,
+        index: i,
+        isFirst: i === 0,
+        isLast: i === options.length - 1,
         isRequired: required,
       },
+    });
+  }
+
+  // The MULTIPLE_CHOICE container
+  blocks.push({
+    uuid: uuid(),
+    type: "MULTIPLE_CHOICE",
+    groupUuid,
+    groupType: "QUESTION",
+    payload: {
+      isRequired: required,
+      options: options.map((o, i) => ({
+        id: uuid(),
+        text: o.label,
+        index: i,
+      })),
     },
-  };
+  });
+
+  return { blocks, fieldKey };
+}
+
+function linearScaleQuestion(
+  parentGroupUuid: string,
+  label: string,
+  start: number,
+  end: number,
+  leftLabel?: string,
+  rightLabel?: string
+): { blocks: TallyBlock[]; fieldKey: string } {
+  const groupUuid = uuid();
+  const blocks: TallyBlock[] = [];
+
+  // Question title
+  blocks.push(questionTitle(groupUuid, label));
+
+  // LINEAR_SCALE input
+  const fieldKey = uuid();
+  blocks.push({
+    uuid: fieldKey,
+    type: "LINEAR_SCALE",
+    groupUuid,
+    groupType: "QUESTION",
+    payload: {
+      isRequired: true,
+      start,
+      end,
+      step: 1,
+      ...(leftLabel && { hasLeftLabel: true, leftLabel }),
+      ...(rightLabel && { hasRightLabel: true, rightLabel }),
+    },
+  });
+
+  return { blocks, fieldKey };
+}
+
+function textareaQuestion(
+  parentGroupUuid: string,
+  label: string,
+  required: boolean
+): { blocks: TallyBlock[]; fieldKey: string } {
+  const groupUuid = uuid();
+  const blocks: TallyBlock[] = [];
+
+  blocks.push(questionTitle(groupUuid, label));
+
+  const fieldKey = uuid();
+  blocks.push({
+    uuid: fieldKey,
+    type: "TEXTAREA",
+    groupUuid,
+    groupType: "QUESTION",
+    payload: { isRequired: required },
+  });
+
+  return { blocks, fieldKey };
 }
 
 function hiddenFieldBlock(
@@ -170,20 +211,23 @@ function hiddenFieldBlock(
       type: "HIDDEN_FIELDS",
       groupUuid,
       groupType: "HIDDEN_FIELDS",
-      payload: {
-        hiddenFields: [{ uuid: uuid(), name: fieldName }],
-      },
+      payload: { hiddenFields: [{ uuid: uuid(), name: fieldName }] },
     },
   };
 }
 
-function pageBreakBlock(groupUuid: string): TallyBlock {
+function pageBreakBlock(
+  groupUuid: string,
+  index: number,
+  isFirst: boolean,
+  isLast: boolean
+): TallyBlock {
   return {
     uuid: uuid(),
     type: "PAGE_BREAK",
     groupUuid,
     groupType: "PAGE_BREAK",
-    payload: {},
+    payload: { index, isFirst, isLast },
   };
 }
 
@@ -247,6 +291,7 @@ export async function createTallyForm(
   // Build form blocks and collect mappings
   const blocks: TallyBlock[] = [];
   const mappings: FieldMapping[] = [];
+  let pageIndex = 0;
 
   // --- Page 1: Welcome + Demographics ---
   const welcomeGroup = makePageGroup();
@@ -268,12 +313,13 @@ export async function createTallyForm(
       : allDeptNames;
 
   if (deptOptions.length > 0) {
-    const dept = multipleChoiceBlock(
+    const dept = multipleChoiceQuestion(
       welcomeGroup,
       "¿A qué departamento perteneces?",
-      deptOptions.map((d) => ({ label: d, value: d }))
+      deptOptions.map((d) => ({ label: d })),
+      true
     );
-    blocks.push(dept.block);
+    blocks.push(...dept.blocks);
     mappings.push({
       tally_field_key: dept.fieldKey,
       target_type: "demographic",
@@ -283,12 +329,13 @@ export async function createTallyForm(
   }
 
   // Tenure
-  const tenure = multipleChoiceBlock(
+  const tenure = multipleChoiceQuestion(
     welcomeGroup,
     "¿Cuánto tiempo llevas en la organización?",
-    TENURE_OPTIONS
+    TENURE_OPTIONS.map((o) => ({ label: o.label })),
+    true
   );
-  blocks.push(tenure.block);
+  blocks.push(...tenure.blocks);
   mappings.push({
     tally_field_key: tenure.fieldKey,
     target_type: "demographic",
@@ -297,8 +344,13 @@ export async function createTallyForm(
   });
 
   // Gender
-  const gender = multipleChoiceBlock(welcomeGroup, "Género", GENDER_OPTIONS);
-  blocks.push(gender.block);
+  const gender = multipleChoiceQuestion(
+    welcomeGroup,
+    "Género",
+    GENDER_OPTIONS.map((o) => ({ label: o.label })),
+    true
+  );
+  blocks.push(...gender.blocks);
   mappings.push({
     tally_field_key: gender.fieldKey,
     target_type: "demographic",
@@ -306,18 +358,18 @@ export async function createTallyForm(
     target_meta: "gender",
   });
 
-  blocks.push(pageBreakBlock(welcomeGroup));
+  blocks.push(pageBreakBlock(welcomeGroup, pageIndex++, true, false));
 
   // --- Pages 2-N: Dimensions ---
   for (const dim of dimensions) {
     const dimGroup = makePageGroup();
-    blocks.push(titleBlock(dimGroup, dim.name));
+    blocks.push(sectionTitleBlock(dimGroup, dim.name));
 
     const sortedItems = [...dim.items].sort((a, b) => a.sort_order - b.sort_order);
 
     for (const item of sortedItems) {
-      const ls = linearScaleBlock(dimGroup, item.text, 1, 5, LIKERT_LABELS[1], LIKERT_LABELS[5]);
-      blocks.push(ls.block);
+      const ls = linearScaleQuestion(dimGroup, item.text, 1, 5, LIKERT_LABELS[1], LIKERT_LABELS[5]);
+      blocks.push(...ls.blocks);
       mappings.push({
         tally_field_key: ls.fieldKey,
         target_type: "item",
@@ -326,19 +378,19 @@ export async function createTallyForm(
       });
     }
 
-    blocks.push(pageBreakBlock(dimGroup));
+    blocks.push(pageBreakBlock(dimGroup, pageIndex++, false, false));
   }
 
   // --- Final Page: Open questions + eNPS ---
   const finalGroup = makePageGroup();
-  blocks.push(titleBlock(finalGroup, "Preguntas abiertas"));
+  blocks.push(sectionTitleBlock(finalGroup, "Preguntas abiertas"));
 
-  const q1 = textareaBlock(
+  const q1 = textareaQuestion(
     finalGroup,
     "¿Cuál consideras que es la mayor fortaleza de la organización?",
     false
   );
-  blocks.push(q1.block);
+  blocks.push(...q1.blocks);
   mappings.push({
     tally_field_key: q1.fieldKey,
     target_type: "open_response",
@@ -346,12 +398,12 @@ export async function createTallyForm(
     target_meta: "strength",
   });
 
-  const q2 = textareaBlock(
+  const q2 = textareaQuestion(
     finalGroup,
     "¿Qué aspecto consideras que la organización debería mejorar?",
     false
   );
-  blocks.push(q2.block);
+  blocks.push(...q2.blocks);
   mappings.push({
     tally_field_key: q2.fieldKey,
     target_type: "open_response",
@@ -359,8 +411,8 @@ export async function createTallyForm(
     target_meta: "improvement",
   });
 
-  const q3 = textareaBlock(finalGroup, "¿Hay algo más que quieras compartir?", false);
-  blocks.push(q3.block);
+  const q3 = textareaQuestion(finalGroup, "¿Hay algo más que quieras compartir?", false);
+  blocks.push(...q3.blocks);
   mappings.push({
     tally_field_key: q3.fieldKey,
     target_type: "open_response",
@@ -368,7 +420,7 @@ export async function createTallyForm(
     target_meta: "general",
   });
 
-  const enps = linearScaleBlock(
+  const enps = linearScaleQuestion(
     finalGroup,
     "En una escala de 0 a 10, ¿qué tan probable es que recomiendes esta organización como un lugar para trabajar?",
     0,
@@ -376,7 +428,7 @@ export async function createTallyForm(
     "Nada probable",
     "Muy probable"
   );
-  blocks.push(enps.block);
+  blocks.push(...enps.blocks);
   mappings.push({
     tally_field_key: enps.fieldKey,
     target_type: "enps",
