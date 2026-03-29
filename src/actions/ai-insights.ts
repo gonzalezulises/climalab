@@ -7,7 +7,20 @@ import { rateLimit } from "@/lib/rate-limit";
 import type { ActionResult } from "@/types";
 import type { Database } from "@/types/database";
 
-type Json = Database["public"]["Tables"]["campaign_analytics"]["Insert"]["data"];
+type Json = Database["public"]["Tables"]["campaign_ai_insights"]["Insert"]["data"];
+
+function getAiProviderMetadata() {
+  if (env.OPENAI_API_KEY) {
+    return { provider: "openai", model: env.OPENAI_MODEL };
+  }
+  if (env.ANTHROPIC_API_KEY) {
+    return { provider: "anthropic", model: env.ANTHROPIC_MODEL };
+  }
+  if (env.OLLAMA_BASE_URL) {
+    return { provider: "ollama", model: env.OLLAMA_MODEL };
+  }
+  return { provider: null, model: null };
+}
 
 // ---------------------------------------------------------------------------
 // AI helper — supports OpenAI, Anthropic, and Ollama
@@ -758,36 +771,53 @@ export async function generateAllInsights(campaignId: string): Promise<
   ]);
 
   // Store successful results in campaign_analytics
-  const inserts: Array<{ campaign_id: string; analysis_type: string; data: Json }> = [];
+  const aiMetadata = getAiProviderMetadata();
+  const inserts: Array<{
+    campaign_id: string;
+    insight_type: string;
+    provider: string | null;
+    model: string | null;
+    data: Json;
+  }> = [];
 
   if (comments.success)
     inserts.push({
       campaign_id: campaignId,
-      analysis_type: "comment_analysis",
+      insight_type: "comment_analysis",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: comments.data as unknown as Json,
     });
   if (narrative.success)
     inserts.push({
       campaign_id: campaignId,
-      analysis_type: "dashboard_narrative",
+      insight_type: "dashboard_narrative",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: narrative.data as unknown as Json,
     });
   if (drivers.success)
     inserts.push({
       campaign_id: campaignId,
-      analysis_type: "driver_insights",
+      insight_type: "driver_insights",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: drivers.data as unknown as Json,
     });
   if (alerts.success)
     inserts.push({
       campaign_id: campaignId,
-      analysis_type: "alert_context",
+      insight_type: "alert_context",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: alerts.data as unknown as Json,
     });
   if (segments.success)
     inserts.push({
       campaign_id: campaignId,
-      analysis_type: "segment_profiles",
+      insight_type: "segment_profiles",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: segments.data as unknown as Json,
     });
 
@@ -800,26 +830,28 @@ export async function generateAllInsights(campaignId: string): Promise<
     "segment_profiles",
   ];
   await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .delete()
     .eq("campaign_id", campaignId)
-    .in("analysis_type", aiTypes);
+    .in("insight_type", aiTypes);
 
   if (inserts.length > 0) {
-    await supabase.from("campaign_analytics").insert(inserts);
+    await supabase.from("campaign_ai_insights").insert(inserts);
   }
 
   // Also generate trends narrative if there are multiple campaigns
   const trendsResult = await generateTrendsNarrative(campaign.organization_id);
   if (trendsResult.success) {
     await supabase
-      .from("campaign_analytics")
+      .from("campaign_ai_insights")
       .delete()
       .eq("campaign_id", campaignId)
-      .eq("analysis_type", "trends_narrative");
-    await supabase.from("campaign_analytics").insert({
+      .eq("insight_type", "trends_narrative");
+    await supabase.from("campaign_ai_insights").insert({
       campaign_id: campaignId,
-      analysis_type: "trends_narrative",
+      insight_type: "trends_narrative",
+      provider: aiMetadata.provider,
+      model: aiMetadata.model,
       data: trendsResult.data as unknown as Json,
     });
   }
@@ -844,10 +876,10 @@ export async function getCommentAnalysis(
 ): Promise<ActionResult<CommentAnalysis>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "comment_analysis")
+    .eq("insight_type", "comment_analysis")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -860,10 +892,10 @@ export async function getDashboardNarrative(
 ): Promise<ActionResult<DashboardNarrative>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "dashboard_narrative")
+    .eq("insight_type", "dashboard_narrative")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -874,10 +906,10 @@ export async function getDashboardNarrative(
 export async function getDriverInsights(campaignId: string): Promise<ActionResult<DriverInsights>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "driver_insights")
+    .eq("insight_type", "driver_insights")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -888,10 +920,10 @@ export async function getDriverInsights(campaignId: string): Promise<ActionResul
 export async function getAlertContext(campaignId: string): Promise<ActionResult<AlertContext>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "alert_context")
+    .eq("insight_type", "alert_context")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -904,10 +936,10 @@ export async function getSegmentProfiles(
 ): Promise<ActionResult<SegmentProfiles>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "segment_profiles")
+    .eq("insight_type", "segment_profiles")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -920,10 +952,10 @@ export async function getTrendsNarrative(
 ): Promise<ActionResult<TrendsNarrative>> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("campaign_analytics")
+    .from("campaign_ai_insights")
     .select("data")
     .eq("campaign_id", campaignId)
-    .eq("analysis_type", "trends_narrative")
+    .eq("insight_type", "trends_narrative")
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateResults } from "@/actions/campaigns";
+import type { AnalysisRunTriggerSource } from "@/lib/analysis-engine";
 
 export async function getCampaignsWithRecentResponses(hours = 24) {
   const admin = createAdminClient();
@@ -38,8 +39,11 @@ export async function refreshCampaignStats(campaignId: string) {
   }
 }
 
-export async function runBatchAnalysisForCampaign(campaignId: string) {
-  const result = await calculateResults(campaignId);
+export async function runBatchAnalysisForCampaign(
+  campaignId: string,
+  triggerSource: AnalysisRunTriggerSource = "batch"
+) {
+  const result = await calculateResults(campaignId, { triggerSource });
   return {
     campaignId,
     success: result.success,

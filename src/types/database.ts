@@ -34,6 +34,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_run_respondent_quality: {
+        Row: {
+          analysis_run_id: string
+          created_at: string
+          quality_status: string
+          reason: string | null
+          respondent_id: string
+        }
+        Insert: {
+          analysis_run_id: string
+          created_at?: string
+          quality_status: string
+          reason?: string | null
+          respondent_id: string
+        }
+        Update: {
+          analysis_run_id?: string
+          created_at?: string
+          quality_status?: string
+          reason?: string | null
+          respondent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_run_respondent_quality_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_run_respondent_quality_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "respondents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analysis_runs: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          input_snapshot: Json
+          logic_version: string
+          started_at: string
+          status: string
+          trigger_source: string
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_snapshot?: Json
+          logic_version: string
+          started_at?: string
+          status?: string
+          trigger_source: string
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_snapshot?: Json
+          logic_version?: string
+          started_at?: string
+          status?: string
+          trigger_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_runs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_job_runs: {
         Row: {
           campaign_ids: string[]
@@ -128,6 +211,7 @@ export type Database = {
       }
       campaign_analytics: {
         Row: {
+          analysis_run_id: string | null
           analysis_type: string
           campaign_id: string
           created_at: string
@@ -135,6 +219,7 @@ export type Database = {
           id: string
         }
         Insert: {
+          analysis_run_id?: string | null
           analysis_type: string
           campaign_id: string
           created_at?: string
@@ -142,6 +227,7 @@ export type Database = {
           id?: string
         }
         Update: {
+          analysis_run_id?: string | null
           analysis_type?: string
           campaign_id?: string
           created_at?: string
@@ -149,6 +235,13 @@ export type Database = {
           id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_analytics_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_analytics_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -158,14 +251,111 @@ export type Database = {
           },
         ]
       }
+      campaign_ai_insights: {
+        Row: {
+          analysis_run_id: string | null
+          campaign_id: string
+          created_at: string
+          data: Json
+          id: string
+          insight_type: string
+          model: string | null
+          provider: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_run_id?: string | null
+          campaign_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          insight_type: string
+          model?: string | null
+          provider?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_run_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          insight_type?: string
+          model?: string | null
+          provider?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ai_insights_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_ai_insights_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_instruments: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          instrument_id: string
+          instrument_type: Database["public"]["Enums"]["instrument_type"]
+          sort_order: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          instrument_id: string
+          instrument_type: Database["public"]["Enums"]["instrument_type"]
+          sort_order?: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          instrument_id?: string
+          instrument_type?: Database["public"]["Enums"]["instrument_type"]
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_instruments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_instruments_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_results: {
         Row: {
+          analysis_run_id: string | null
           avg_score: number | null
           calculated_at: string
           campaign_id: string
+          dimension_id: string | null
           dimension_code: string | null
           favorability_pct: number | null
           id: string
+          instrument_id: string | null
+          instrument_type: Database["public"]["Enums"]["instrument_type"] | null
           metadata: Json | null
           respondent_count: number | null
           response_count: number | null
@@ -175,12 +365,16 @@ export type Database = {
           std_score: number | null
         }
         Insert: {
+          analysis_run_id?: string | null
           avg_score?: number | null
           calculated_at?: string
           campaign_id: string
+          dimension_id?: string | null
           dimension_code?: string | null
           favorability_pct?: number | null
           id?: string
+          instrument_id?: string | null
+          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
           metadata?: Json | null
           respondent_count?: number | null
           response_count?: number | null
@@ -190,12 +384,16 @@ export type Database = {
           std_score?: number | null
         }
         Update: {
+          analysis_run_id?: string | null
           avg_score?: number | null
           calculated_at?: string
           campaign_id?: string
+          dimension_id?: string | null
           dimension_code?: string | null
           favorability_pct?: number | null
           id?: string
+          instrument_id?: string | null
+          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
           metadata?: Json | null
           respondent_count?: number | null
           response_count?: number | null
@@ -206,20 +404,45 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "campaign_results_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "campaign_results_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaign_results_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_results_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "instruments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campaign_stats: {
         Row: {
+          analysis_run_id: string | null
           avg_score: number | null
           campaign_id: string
+          dimension_id: string | null
           dimension_code: string
           favorability_pct: number | null
+          instrument_id: string | null
+          instrument_type: Database["public"]["Enums"]["instrument_type"] | null
           last_response_at: string | null
           response_count: number
           respondent_count: number
@@ -228,10 +451,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analysis_run_id?: string | null
           avg_score?: number | null
           campaign_id: string
+          dimension_id?: string | null
           dimension_code: string
           favorability_pct?: number | null
+          instrument_id?: string | null
+          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
           last_response_at?: string | null
           response_count?: number
           respondent_count?: number
@@ -240,10 +467,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analysis_run_id?: string | null
           avg_score?: number | null
           campaign_id?: string
+          dimension_id?: string | null
           dimension_code?: string
           favorability_pct?: number | null
+          instrument_id?: string | null
+          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
           last_response_at?: string | null
           response_count?: number
           respondent_count?: number
@@ -253,10 +484,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "campaign_stats_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "campaign_stats_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_stats_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_stats_instrument_id_fkey"
+            columns: ["instrument_id"]
+            isOneToOne: false
+            referencedRelation: "instruments"
             referencedColumns: ["id"]
           },
         ]
@@ -391,6 +643,35 @@ export type Database = {
             columns: ["instrument_id"]
             isOneToOne: false
             referencedRelation: "instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dimension_taxonomy: {
+        Row: {
+          analytics_category: string
+          created_at: string
+          dimension_id: string
+          updated_at: string
+        }
+        Insert: {
+          analytics_category: string
+          created_at?: string
+          dimension_id: string
+          updated_at?: string
+        }
+        Update: {
+          analytics_category?: string
+          created_at?: string
+          dimension_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dimension_taxonomy_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: true
+            referencedRelation: "dimensions"
             referencedColumns: ["id"]
           },
         ]
@@ -943,6 +1224,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      finalize_analysis_run: {
+        Args: {
+          p_analysis_run_id: string
+          p_error_message?: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       generate_slug: { Args: { input: string }; Returns: string }
       get_department_headcount: {
         Args: { p_dept_name: string; p_org_id: string }
@@ -955,6 +1244,28 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      process_normalized_ingest: {
+        Args: {
+          p_campaign_id: string
+          p_completed_at?: string
+          p_demographics?: Json
+          p_enps_score?: number
+          p_external_event_id: string
+          p_open_responses?: Json
+          p_payload_hash?: string
+          p_responses?: Json
+          p_source: string
+          p_started_at?: string
+        }
+        Returns: {
+          campaign_id: string
+          duplicate: boolean
+          error_message: string | null
+          ingest_event_id: string | null
+          ok: boolean
+          respondent_id: string | null
+        }[]
+      }
       refresh_campaign_stats: {
         Args: { p_campaign_id: string }
         Returns: number
@@ -965,6 +1276,7 @@ export type Database = {
       }
       replace_campaign_materialization: {
         Args: {
+          p_analysis_run_id: string
           p_analytics: Json
           p_campaign_id: string
           p_margin_of_error: number

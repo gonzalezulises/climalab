@@ -16,6 +16,7 @@ import { verifyCommand } from "./commands/verify.js";
 import { cleanupCommand } from "./commands/cleanup.js";
 import { verifyStatsCommand } from "./commands/verify-stats.js";
 import { e2eHttpCommand } from "./commands/e2e-http.js";
+import { e2eLineageCommand } from "./commands/e2e-lineage.js";
 
 const program = new Command()
   .name("climalab-test")
@@ -165,6 +166,16 @@ program
   .option("--skip-cleanup", "Keep generated test data after run", false)
   .action(async (opts) => {
     await e2eHttpCommand({
+      skipCleanup: opts.skipCleanup,
+    });
+  });
+
+program
+  .command("e2e-lineage")
+  .description("Run CSV + batch lineage verification for explicit analytical provenance")
+  .option("--skip-cleanup", "Keep generated test data after run", false)
+  .action(async (opts) => {
+    await e2eLineageCommand({
       skipCleanup: opts.skipCleanup,
     });
   });

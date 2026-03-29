@@ -1,26 +1,81 @@
-import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { assertIngestSecret } from "@/lib/ingest-auth";
 import { normalizeResponse } from "@/lib/normalizeResponse";
 
-function parseCsv(text: string) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+export function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = "";
+  let inQuotes = false;
 
-  if (lines.length < 2) {
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentField += '"';
+        index++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        index++;
+      }
+      currentRow.push(currentField);
+      currentField = "";
+      if (currentRow.some((value) => value !== "")) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      continue;
+    }
+
+    currentField += char;
+  }
+
+  if (inQuotes) {
+    throw new Error("El CSV contiene comillas sin cerrar");
+  }
+
+  currentRow.push(currentField);
+  if (currentRow.some((value) => value !== "")) {
+    rows.push(currentRow);
+  }
+
+  if (rows.length < 2) {
     throw new Error("El CSV debe tener encabezados y al menos una fila");
   }
 
-  const headers = lines[0].split(",").map((value) => value.trim());
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((value) => value.trim());
+  const headers = rows[0].map((value) => value.trim());
+  return rows.slice(1).map((row, rowIndex) => {
+    if (row.length > headers.length) {
+      throw new Error(`La fila ${rowIndex + 2} tiene más columnas que el encabezado`);
+    }
+
     return headers.reduce<Record<string, string>>((acc, header, index) => {
-      acc[header] = values[index] ?? "";
+      acc[header] = (row[index] ?? "").trim();
       return acc;
     }, {});
   });
+}
+
+function buildDeterministicEventId(campaignId: string, row: Record<string, string>) {
+  return `csv-${createHash("sha256")
+    .update(`${campaignId}:${JSON.stringify(row)}`)
+    .digest("hex")
+    .slice(0, 24)}`;
 }
 
 export async function POST(request: Request) {
@@ -67,7 +122,7 @@ export async function POST(request: Request) {
 
       const result = await normalizeResponse({
         source: "csv",
-        externalEventId: row.external_event_id || `csv-${randomUUID()}`,
+        externalEventId: row.external_event_id || buildDeterministicEventId(campaignId, row),
         campaignId,
         startedAt: row.started_at || undefined,
         completedAt: row.completed_at || undefined,

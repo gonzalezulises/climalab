@@ -42,7 +42,7 @@ export async function analyzeBatchCampaigns(
 
     for (const campaignId of campaignIds) {
       try {
-        results.push(await runBatchAnalysisForCampaign(campaignId));
+        results.push(await runBatchAnalysisForCampaign(campaignId, triggerSource));
       } catch (error) {
         results.push({
           campaignId,
