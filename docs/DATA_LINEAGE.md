@@ -35,6 +35,7 @@ Las respuestas del survey web y de las ingestas alternativas convergen al mismo 
 
 - `analysis_runs`
 - `analysis_run_respondent_quality`
+- `analysis_run_snapshots`
 
 Cada corrida guarda:
 
@@ -71,6 +72,12 @@ Estas tablas representan el output analítico determinista más reciente por cam
 - `campaign_ai_insights`
 
 Las narrativas IA ya no comparten la misma superficie de almacenamiento que los analytics deterministas.
+
+### 8. ONA operational status
+
+- `campaign_ona_runs`
+
+El análisis de red mantiene un estado operativo independiente (`pending`, `completed`, `deferred`, `failed`) para distinguir la salud del runtime Python respecto del cálculo estadístico principal.
 
 ## Flujo
 

@@ -234,6 +234,23 @@ export async function e2eLineageCommand(opts: { skipCleanup?: boolean } = {}) {
       JSON.stringify(results)
     );
 
+    const { data: snapshots, error: snapshotsError } = await (supabase as any)
+      .from("analysis_run_snapshots")
+      .select("analysis_run_id, data")
+      .eq("campaign_id", campaignResult.campaignId)
+      .limit(1);
+
+    if (snapshotsError) {
+      throw new Error(snapshotsError.message);
+    }
+
+    pushAssertion(
+      assertions,
+      "analysis snapshots persisted for lineage flow",
+      (snapshots ?? []).length > 0,
+      JSON.stringify(snapshots)
+    );
+
     const passed = assertions.filter((assertion) => assertion.passed).length;
     console.log(chalk.green(`\n${passed}/${assertions.length} lineage checks passed`));
     for (const assertion of assertions) {

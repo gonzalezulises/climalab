@@ -117,6 +117,51 @@ export type Database = {
           },
         ]
       }
+      analysis_run_snapshots: {
+        Row: {
+          analysis_run_id: string
+          campaign_id: string
+          created_at: string
+          data: Json
+          id: string
+          logic_version: string
+          snapshot_type: string
+        }
+        Insert: {
+          analysis_run_id: string
+          campaign_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          logic_version: string
+          snapshot_type?: string
+        }
+        Update: {
+          analysis_run_id?: string
+          campaign_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          logic_version?: string
+          snapshot_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_run_snapshots_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: true
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_run_snapshots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_job_runs: {
         Row: {
           campaign_ids: string[]
@@ -244,6 +289,57 @@ export type Database = {
           },
           {
             foreignKeyName: "campaign_analytics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_ona_runs: {
+        Row: {
+          analysis_run_id: string | null
+          backend: string | null
+          campaign_id: string
+          created_at: string
+          details: Json
+          error_message: string | null
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id?: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ona_runs_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_ona_runs_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"

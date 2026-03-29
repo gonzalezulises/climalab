@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getReliabilityData } from "@/actions/analytics";
+import { getPipelineOperationalSummary } from "@/actions/pipeline-ops";
+import { getCampaignDataQuality } from "@/actions/data-quality";
+import { getLatestAnalysisComparison } from "@/actions/analysis-comparison";
+import { getSemanticResultFamilies } from "@/actions/semantic-results";
+import { getONAStatus } from "@/actions/ona";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlphaIndicator } from "@/components/results/AlphaIndicator";
@@ -15,16 +20,35 @@ function rwgStatus(rwg: number | null) {
 
 export default async function TechnicalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [campaignResult, resultsResult, reliabilityResult] = await Promise.all([
+  const [
+    campaignResult,
+    resultsResult,
+    reliabilityResult,
+    pipelineResult,
+    qualityResult,
+    comparisonResult,
+    semanticFamiliesResult,
+    onaStatusResult,
+  ] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getReliabilityData(id),
+    getPipelineOperationalSummary(id),
+    getCampaignDataQuality(id),
+    getLatestAnalysisComparison(id),
+    getSemanticResultFamilies(id),
+    getONAStatus(id),
   ]);
 
   if (!campaignResult.success) notFound();
   const campaign = campaignResult.data;
   const results = resultsResult.success ? resultsResult.data : [];
   const reliability = reliabilityResult.success ? reliabilityResult.data : [];
+  const pipeline = pipelineResult.success ? pipelineResult.data : null;
+  const quality = qualityResult.success ? qualityResult.data : null;
+  const comparison = comparisonResult.success ? comparisonResult.data : null;
+  const semanticFamilies = semanticFamiliesResult.success ? semanticFamiliesResult.data : [];
+  const onaStatus = onaStatusResult.success ? onaStatusResult.data : null;
 
   // Top 5 / Bottom 5 items
   const itemResults = results
@@ -114,6 +138,189 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Salud del pipeline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Estado general</span>
+              <Badge
+                className={
+                  pipeline?.health === "healthy"
+                    ? "bg-green-100 text-green-800"
+                    : pipeline?.health === "warning"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                }
+              >
+                {pipeline?.health ?? "N/D"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Dispatch</span>
+              <span>
+                {pipeline?.dispatch.delivered ?? 0} entregados / {pipeline?.dispatch.failed ?? 0}{" "}
+                fallidos
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Última lógica</span>
+              <span className="font-mono text-xs">
+                {pipeline?.analysis.latestLogicVersion ?? "—"}
+              </span>
+            </div>
+            {pipeline && pipeline.warnings.length > 0 && (
+              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-900">
+                {pipeline.warnings.join(" | ")}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Calidad de datos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Etiqueta</span>
+              <Badge
+                className={
+                  quality?.qualityLabel === "high"
+                    ? "bg-green-100 text-green-800"
+                    : quality?.qualityLabel === "medium"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                }
+              >
+                {quality?.qualityLabel ?? "N/D"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Respondentes válidos</span>
+              <span>{quality?.validRespondentPct ?? 0}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Duplicados de ingesta</span>
+              <span>{quality?.duplicateIngestEvents ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Completitud demográfica</span>
+              <span>{quality?.demographicCompletenessPct.department ?? 0}% dept.</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Estado ONA</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Estado</span>
+              <Badge
+                className={
+                  onaStatus?.status === "completed"
+                    ? "bg-green-100 text-green-800"
+                    : onaStatus?.status === "pending"
+                      ? "bg-blue-100 text-blue-800"
+                      : onaStatus?.status === "deferred"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                }
+              >
+                {onaStatus?.status ?? "N/D"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Backend</span>
+              <span>{onaStatus?.backend ?? "—"}</span>
+            </div>
+            {onaStatus?.errorMessage && (
+              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-900">
+                {onaStatus.errorMessage}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {(comparison || semanticFamilies.length > 0) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Comparativa de corridas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {comparison ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Cambio en muestra</span>
+                    <span>
+                      {comparison.sampleDelta >= 0 ? "+" : ""}
+                      {comparison.sampleDelta}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Cambio en tasa de respuesta</span>
+                    <span>
+                      {comparison.responseRateDelta >= 0 ? "+" : ""}
+                      {comparison.responseRateDelta}%
+                    </span>
+                  </div>
+                  <div className="space-y-1 pt-2">
+                    {comparison.dimensionChanges.slice(0, 5).map((change) => (
+                      <div key={change.code} className="flex items-center justify-between text-xs">
+                        <span>{change.code}</span>
+                        <span>
+                          {change.delta >= 0 ? "+" : ""}
+                          {change.delta.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  Aún no hay suficientes snapshots para comparar corridas.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Familias analíticas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {semanticFamilies.map((family) => (
+                <div key={family.family} className="rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-medium capitalize">{family.family}</span>
+                    <span>
+                      {family.avgScore.toFixed(2)} / {family.favorabilityPct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {family.dimensions.slice(0, 4).map((dimension) => (
+                      <div
+                        key={dimension.dimensionCode}
+                        className="flex items-center justify-between"
+                      >
+                        <span>{dimension.dimensionCode}</span>
+                        <span>{dimension.avgScore.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Demographics */}
       <TechnicalClient demographics={demographics} />

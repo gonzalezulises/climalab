@@ -43,9 +43,11 @@ export async function runBatchAnalysisForCampaign(
   campaignId: string,
   triggerSource: AnalysisRunTriggerSource = "batch"
 ) {
+  const startedAt = Date.now();
   const result = await calculateResults(campaignId, { triggerSource });
   return {
     campaignId,
+    durationMs: Date.now() - startedAt,
     success: result.success,
     error: result.success ? null : result.error,
   };

@@ -17,6 +17,7 @@ import { cleanupCommand } from "./commands/cleanup.js";
 import { verifyStatsCommand } from "./commands/verify-stats.js";
 import { e2eHttpCommand } from "./commands/e2e-http.js";
 import { e2eLineageCommand } from "./commands/e2e-lineage.js";
+import { e2eOpsCommand } from "./commands/e2e-ops.js";
 
 const program = new Command()
   .name("climalab-test")
@@ -176,6 +177,16 @@ program
   .option("--skip-cleanup", "Keep generated test data after run", false)
   .action(async (opts) => {
     await e2eLineageCommand({
+      skipCleanup: opts.skipCleanup,
+    });
+  });
+
+program
+  .command("e2e-ops")
+  .description("Run operational E2E verification for snapshots, semantic lineage, and ONA status")
+  .option("--skip-cleanup", "Keep generated test data after run", false)
+  .action(async (opts) => {
+    await e2eOpsCommand({
       skipCleanup: opts.skipCleanup,
     });
   });

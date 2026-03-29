@@ -81,6 +81,8 @@ Tablas nuevas:
 
 - `pipeline_dispatch_events`: cola/resultado de invocaciones del trigger hacia `process_response`
 - `batch_job_runs`: auditoría de ejecuciones del análisis batch
+- `analysis_run_snapshots`: snapshot comparable por corrida analítica
+- `campaign_ona_runs`: estado operativo del análisis de red
 
 Consultas útiles:
 
@@ -101,6 +103,13 @@ limit 20;
 ```sql
 select created_at, trigger_source, status, processed, succeeded, failed, error_message
 from batch_job_runs
+order by created_at desc
+limit 20;
+```
+
+```sql
+select created_at, analysis_run_id, logic_version
+from analysis_run_snapshots
 order by created_at desc
 limit 20;
 ```

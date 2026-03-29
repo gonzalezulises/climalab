@@ -14,6 +14,7 @@ export async function analyzeBatchCampaigns(
   triggerSource: BatchTriggerSource = "cron"
 ) {
   const admin = createAdminClient();
+  const runStartedMs = Date.now();
   const { error: refreshError } = await admin.rpc("refresh_pipeline_dispatch_events");
   const dispatchRefreshWarning = refreshError
     ? isMissingDispatchResponseStore(refreshError)
@@ -80,6 +81,8 @@ export async function analyzeBatchCampaigns(
           dispatchEventsRefreshedAt: startedAt,
           dispatchRefreshWarning,
           finishedAt,
+          durationMs: Date.now() - runStartedMs,
+          results,
         },
         finished_at: finishedAt,
       })
