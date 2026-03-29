@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { INGEST_CONTRACT_VERSION } from "@/lib/ingest-contract";
 import { normalizeResponse } from "@/lib/normalizeResponse";
 
 // ---------------------------------------------------------------------------
@@ -168,10 +169,18 @@ export async function POST(request: NextRequest) {
   try {
     const result = await normalizeResponse({
       source: "webhook",
+      contractVersion: INGEST_CONTRACT_VERSION,
       externalEventId: payload.data.responseId || payload.eventId,
+      externalSubjectId: payload.data.respondentId || payload.data.submissionId || undefined,
       campaignId,
+      mappingVersion: "tally_form_mapping_v1",
       startedAt: payload.data.createdAt,
       completedAt: payload.data.createdAt,
+      metadata: {
+        provider: "tally",
+        formId,
+        submissionId: payload.data.submissionId,
+      },
       demographics: {
         department,
         tenure,

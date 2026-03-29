@@ -1,6 +1,9 @@
 // @ts-nocheck
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const serviceRoleKey =
+  Deno.env.get("PROCESS_RESPONSE_SERVICE_ROLE_KEY") ??
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 const hookSecret = Deno.env.get("PROCESS_RESPONSE_HOOK_SECRET") ?? "";
 const textEncoder = new TextEncoder();
 
@@ -21,12 +24,20 @@ function safeEqual(left: string, right: string) {
 }
 
 async function querySupabase(path: string, init: RequestInit) {
+  const authHeaders: Record<string, string> = {
+    apikey: serviceRoleKey,
+    "Content-Type": "application/json",
+  };
+
+  // Secret keys should travel only in `apikey`; JWT-based legacy keys still need Authorization.
+  if (serviceRoleKey && !serviceRoleKey.startsWith("sb_secret_")) {
+    authHeaders.Authorization = `Bearer ${serviceRoleKey}`;
+  }
+
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
+      ...authHeaders,
       ...(init.headers ?? {}),
     },
   });

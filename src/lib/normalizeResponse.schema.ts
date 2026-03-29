@@ -3,10 +3,14 @@ import { zUuid } from "@/lib/validations/uuid";
 
 export const normalizedSubmissionSchema = z.object({
   source: z.enum(["webhook", "csv", "api"]),
+  contractVersion: z.string().trim().min(1).optional(),
   externalEventId: z.string().trim().min(1),
+  externalSubjectId: z.string().trim().min(1).optional().nullable(),
   campaignId: zUuid("ID de campaña inválido"),
+  mappingVersion: z.string().trim().min(1).optional().nullable(),
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional().default({}),
   demographics: z.object({
     department: z.string().trim().min(1).optional().nullable(),
     tenure: z.string().trim().min(1).optional().nullable(),

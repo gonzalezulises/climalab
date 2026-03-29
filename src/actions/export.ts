@@ -26,6 +26,9 @@ import {
   getHeatmapData,
   getBenchmarkData,
 } from "@/actions/analytics";
+import { getPipelineOperationalSummary } from "@/actions/pipeline-ops";
+import { getCampaignDataQuality } from "@/actions/data-quality";
+import { getSemanticResultFamilies } from "@/actions/semantic-results";
 import {
   getDashboardNarrative,
   getCommentAnalysis,
@@ -56,6 +59,9 @@ export async function generateExcelReport(
     commentsRes,
     reliabilityRes,
     heatmapRes,
+    pipelineRes,
+    qualityRes,
+    semanticFamiliesRes,
   ] = await Promise.all([
     getCampaign(campaignId),
     getCampaignResults(campaignId),
@@ -65,6 +71,9 @@ export async function generateExcelReport(
     getOpenResponses(campaignId),
     getReliabilityData(campaignId),
     getHeatmapData(campaignId),
+    getPipelineOperationalSummary(campaignId),
+    getCampaignDataQuality(campaignId),
+    getSemanticResultFamilies(campaignId),
   ]);
 
   if (!campaignRes.success) {
@@ -79,6 +88,9 @@ export async function generateExcelReport(
   const comments = commentsRes.success ? commentsRes.data : [];
   const reliability = reliabilityRes.success ? reliabilityRes.data : [];
   const heatmap = heatmapRes.success ? heatmapRes.data : [];
+  const pipeline = pipelineRes.success ? pipelineRes.data : null;
+  const quality = qualityRes.success ? qualityRes.data : null;
+  const semanticFamilies = semanticFamiliesRes.success ? semanticFamiliesRes.data : [];
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "ClimaLab";
@@ -111,6 +123,9 @@ export async function generateExcelReport(
     { field: "Muestra (n)", value: campaign.sample_n ?? 0 },
     { field: "Tasa de respuesta", value: `${campaign.response_rate ?? 0}%` },
     { field: "Margen de error", value: `±${campaign.margin_of_error ?? 0}%` },
+    { field: "Versión lógica", value: pipeline?.analysis.latestLogicVersion ?? "N/A" },
+    { field: "Salud del pipeline", value: pipeline?.health ?? "N/A" },
+    { field: "Calidad de datos", value: quality?.qualityLabel ?? "N/A" },
     {
       field: "Engagement global",
       value: engResult ? Number(engResult.avg_score).toFixed(2) : "N/A",
@@ -124,6 +139,12 @@ export async function generateExcelReport(
     summarySheet.addRow({
       field: CATEGORY_LABELS[cat.category] ?? cat.category,
       value: `${cat.avg_score.toFixed(2)} (${cat.favorability_pct}% favorable)`,
+    });
+  }
+  for (const family of semanticFamilies) {
+    summarySheet.addRow({
+      field: `Familia ${family.family}`,
+      value: `${family.avgScore.toFixed(2)} (${family.favorabilityPct}% favorable)`,
     });
   }
   styleHeaderRow(summarySheet);

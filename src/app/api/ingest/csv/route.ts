@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { assertIngestSecret } from "@/lib/ingest-auth";
+import { INGEST_CONTRACT_VERSION, resolveIngestContractVersion } from "@/lib/ingest-contract";
 import { normalizeResponse } from "@/lib/normalizeResponse";
 
 export function parseCsv(text: string) {
@@ -59,28 +60,107 @@ export function parseCsv(text: string) {
   }
 
   const headers = rows[0].map((value) => value.trim());
-  return rows.slice(1).map((row, rowIndex) => {
-    if (row.length > headers.length) {
-      throw new Error(`La fila ${rowIndex + 2} tiene más columnas que el encabezado`);
-    }
+  return {
+    headers,
+    rows: rows.slice(1).map((row, rowIndex) => {
+      if (row.length > headers.length) {
+        throw new Error(`La fila ${rowIndex + 2} tiene más columnas que el encabezado`);
+      }
 
-    return headers.reduce<Record<string, string>>((acc, header, index) => {
-      acc[header] = (row[index] ?? "").trim();
-      return acc;
-    }, {});
-  });
+      return headers.reduce<Record<string, string>>((acc, header, index) => {
+        acc[header] = (row[index] ?? "").trim();
+        return acc;
+      }, {});
+    }),
+  };
 }
 
-function buildDeterministicEventId(campaignId: string, row: Record<string, string>) {
-  return `csv-${createHash("sha256")
-    .update(`${campaignId}:${JSON.stringify(row)}`)
-    .digest("hex")
-    .slice(0, 24)}`;
+function validateCsvHeaders(headers: string[]) {
+  const allowedHeaders = new Set([
+    "external_event_id",
+    "external_subject_id",
+    "mapping_version",
+    "started_at",
+    "completed_at",
+    "department",
+    "tenure",
+    "gender",
+    "enps_score",
+    "open:strength",
+    "open:improvement",
+    "open:general",
+  ]);
+
+  const itemHeaders = headers.filter((header) => header.startsWith("item:"));
+  if (itemHeaders.length === 0) {
+    throw new Error("El CSV debe incluir al menos una columna item:<uuid>");
+  }
+
+  const invalidHeaders = headers.filter(
+    (header) => !allowedHeaders.has(header) && !header.startsWith("item:")
+  );
+
+  if (invalidHeaders.length > 0) {
+    throw new Error(`Encabezados CSV no soportados: ${invalidHeaders.join(", ")}`);
+  }
+}
+
+export function mapCsvRowToSubmission(input: {
+  row: Record<string, string>;
+  campaignId: string;
+  rowNumber: number;
+  contractVersion: string;
+}) {
+  return {
+    source: "csv" as const,
+    contractVersion: input.contractVersion,
+    externalEventId:
+      input.row.external_event_id || buildDeterministicEventId(input.campaignId, input.row),
+    externalSubjectId: input.row.external_subject_id || undefined,
+    campaignId: input.campaignId,
+    mappingVersion: input.row.mapping_version || undefined,
+    startedAt: input.row.started_at || undefined,
+    completedAt: input.row.completed_at || undefined,
+    metadata: {
+      ingestion_mode: "csv_upload",
+      row_number: input.rowNumber,
+    },
+    demographics: {
+      department: input.row.department || null,
+      tenure: input.row.tenure || null,
+      gender: input.row.gender || null,
+    },
+    responses: Object.entries(input.row)
+      .filter(([key, value]) => key.startsWith("item:") && value !== "")
+      .map(([key, value]) => ({
+        itemId: key.replace("item:", ""),
+        score: Number(value),
+      })),
+    openResponses: [
+      input.row["open:strength"]
+        ? { questionType: "strength" as const, text: input.row["open:strength"] }
+        : null,
+      input.row["open:improvement"]
+        ? { questionType: "improvement" as const, text: input.row["open:improvement"] }
+        : null,
+      input.row["open:general"]
+        ? { questionType: "general" as const, text: input.row["open:general"] }
+        : null,
+    ].filter(Boolean) as Array<{
+      questionType: "strength" | "improvement" | "general";
+      text: string;
+    }>,
+    enpsScore: input.row.enps_score ? Number(input.row.enps_score) : null,
+  };
 }
 
 export async function POST(request: Request) {
   try {
     assertIngestSecret(request);
+    const contractVersion = resolveIngestContractVersion({
+      headerVersion: request.headers.get("x-climalab-contract-version"),
+      bodyVersion: INGEST_CONTRACT_VERSION,
+    });
     const formData = await request.formData();
     const campaignId = String(formData.get("campaignId") ?? "").trim();
     const file = formData.get("file");
@@ -93,61 +173,57 @@ export async function POST(request: Request) {
       throw new Error("Debe adjuntar un archivo CSV");
     }
 
-    const rows = parseCsv(await file.text());
+    const parsed = parseCsv(await file.text());
+    validateCsvHeaders(parsed.headers);
     let imported = 0;
     let duplicates = 0;
+    const errors: Array<{ rowNumber: number; error: string }> = [];
 
-    for (const row of rows) {
-      const responses = Object.entries(row)
-        .filter(([key, value]) => key.startsWith("item:") && value !== "")
-        .map(([key, value]) => ({
-          itemId: key.replace("item:", ""),
-          score: Number(value),
-        }));
+    for (const [index, row] of parsed.rows.entries()) {
+      const rowNumber = index + 2;
 
-      const openResponses = [
-        row["open:strength"]
-          ? { questionType: "strength" as const, text: row["open:strength"] }
-          : null,
-        row["open:improvement"]
-          ? { questionType: "improvement" as const, text: row["open:improvement"] }
-          : null,
-        row["open:general"]
-          ? { questionType: "general" as const, text: row["open:general"] }
-          : null,
-      ].filter(Boolean) as Array<{
-        questionType: "strength" | "improvement" | "general";
-        text: string;
-      }>;
+      try {
+        const result = await normalizeResponse(
+          mapCsvRowToSubmission({
+            row,
+            campaignId,
+            rowNumber,
+            contractVersion,
+          })
+        );
 
-      const result = await normalizeResponse({
-        source: "csv",
-        externalEventId: row.external_event_id || buildDeterministicEventId(campaignId, row),
-        campaignId,
-        startedAt: row.started_at || undefined,
-        completedAt: row.completed_at || undefined,
-        demographics: {
-          department: row.department || null,
-          tenure: row.tenure || null,
-          gender: row.gender || null,
-        },
-        responses,
-        openResponses,
-        enpsScore: row.enps_score ? Number(row.enps_score) : null,
-      });
-
-      if (result.duplicate) {
-        duplicates++;
-      } else {
-        imported++;
+        if (result.duplicate) {
+          duplicates++;
+        } else {
+          imported++;
+        }
+      } catch (error) {
+        errors.push({
+          rowNumber,
+          error: error instanceof Error ? error.message : "No se pudo procesar la fila",
+        });
       }
     }
 
-    return NextResponse.json({ ok: true, imported, duplicates, total: rows.length });
+    return NextResponse.json({
+      ok: errors.length === 0,
+      contractVersion,
+      imported,
+      duplicates,
+      failed: errors.length,
+      total: parsed.rows.length,
+      errors,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "No se pudo procesar el CSV" },
       { status: 400 }
     );
   }
+}
+function buildDeterministicEventId(campaignId: string, row: Record<string, string>) {
+  return `csv-${createHash("sha256")
+    .update(`${campaignId}:${JSON.stringify(row)}`)
+    .digest("hex")
+    .slice(0, 24)}`;
 }

@@ -1,5 +1,6 @@
 import type { Json } from "@/types/database";
 import type { AnalysisRunTriggerSource, ScoredCampaignOutput } from "./types";
+import { buildAnalysisRunSnapshot } from "./snapshots";
 
 export const ANALYSIS_LOGIC_VERSION = "2026-03-29-lineage-v1";
 
@@ -106,6 +107,30 @@ export async function materializeAnalysisRun(
 
   if (error) {
     throw new Error(`Error materializando resultados: ${error.message}`);
+  }
+
+  const snapshot = buildAnalysisRunSnapshot({
+    campaignId: params.campaignId,
+    analysisRunId: params.analysisRunId,
+    logicVersion: ANALYSIS_LOGIC_VERSION,
+    output: params.output,
+  });
+
+  const { error: snapshotError } = await admin.from("analysis_run_snapshots").upsert(
+    [
+      {
+        analysis_run_id: params.analysisRunId,
+        campaign_id: params.campaignId,
+        logic_version: ANALYSIS_LOGIC_VERSION,
+        snapshot_type: "campaign_overview",
+        data: snapshot as unknown as Json,
+      },
+    ],
+    { onConflict: "analysis_run_id" }
+  );
+
+  if (snapshotError) {
+    throw new Error(`Error guardando snapshot: ${snapshotError.message}`);
   }
 
   const { error: updateError } = await admin.rpc("finalize_analysis_run", {

@@ -117,6 +117,51 @@ export type Database = {
           },
         ]
       }
+      analysis_run_snapshots: {
+        Row: {
+          analysis_run_id: string
+          campaign_id: string
+          created_at: string
+          data: Json
+          id: string
+          logic_version: string
+          snapshot_type: string
+        }
+        Insert: {
+          analysis_run_id: string
+          campaign_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          logic_version: string
+          snapshot_type?: string
+        }
+        Update: {
+          analysis_run_id?: string
+          campaign_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          logic_version?: string
+          snapshot_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_run_snapshots_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: true
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_run_snapshots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_job_runs: {
         Row: {
           campaign_ids: string[]
@@ -244,6 +289,57 @@ export type Database = {
           },
           {
             foreignKeyName: "campaign_analytics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_ona_runs: {
+        Row: {
+          analysis_run_id: string | null
+          backend: string | null
+          campaign_id: string
+          created_at: string
+          details: Json
+          error_message: string | null
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id?: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ona_runs_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_ona_runs_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -679,10 +775,14 @@ export type Database = {
       ingest_events: {
         Row: {
           campaign_id: string | null
+          contract_version: string
           created_at: string
           error_message: string | null
+          external_subject_id: string | null
           external_event_id: string
           id: string
+          mapping_version: string | null
+          metadata: Json
           payload_hash: string | null
           processed_at: string | null
           respondent_id: string | null
@@ -691,10 +791,14 @@ export type Database = {
         }
         Insert: {
           campaign_id?: string | null
+          contract_version?: string
           created_at?: string
           error_message?: string | null
+          external_subject_id?: string | null
           external_event_id: string
           id?: string
+          mapping_version?: string | null
+          metadata?: Json
           payload_hash?: string | null
           processed_at?: string | null
           respondent_id?: string | null
@@ -703,10 +807,14 @@ export type Database = {
         }
         Update: {
           campaign_id?: string | null
+          contract_version?: string
           created_at?: string
           error_message?: string | null
+          external_subject_id?: string | null
           external_event_id?: string
           id?: string
+          mapping_version?: string | null
+          metadata?: Json
           payload_hash?: string | null
           processed_at?: string | null
           respondent_id?: string | null
@@ -1032,6 +1140,66 @@ export type Database = {
           },
         ]
       }
+      pipeline_notifications: {
+        Row: {
+          alert_code: string
+          batch_job_run_id: string | null
+          campaign_id: string | null
+          channel: string
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json
+          recipient: string | null
+          sent_at: string | null
+          severity: string
+          status: string
+        }
+        Insert: {
+          alert_code: string
+          batch_job_run_id?: string | null
+          campaign_id?: string | null
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          recipient?: string | null
+          sent_at?: string | null
+          severity: string
+          status: string
+        }
+        Update: {
+          alert_code?: string
+          batch_job_run_id?: string | null
+          campaign_id?: string | null
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          recipient?: string | null
+          sent_at?: string | null
+          severity?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_notifications_batch_job_run_id_fkey"
+            columns: ["batch_job_run_id"]
+            isOneToOne: false
+            referencedRelation: "batch_job_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_notifications_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1248,9 +1416,13 @@ export type Database = {
         Args: {
           p_campaign_id: string
           p_completed_at?: string
+          p_contract_version?: string
           p_demographics?: Json
           p_enps_score?: number
+          p_external_subject_id?: string
           p_external_event_id: string
+          p_mapping_version?: string
+          p_metadata?: Json
           p_open_responses?: Json
           p_payload_hash?: string
           p_responses?: Json

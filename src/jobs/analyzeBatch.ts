@@ -1,11 +1,15 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildPipelineAlertEvents } from "@/lib/pipeline-alerts";
 import { isMissingDispatchResponseStore } from "@/lib/pipeline-errors";
+import { dispatchPipelineNotifications } from "@/lib/pipeline-notifications";
 import {
-  getCampaignsWithRecentResponses,
+  getCampaignBatchPlans,
+  refreshCampaignStats,
   runBatchAnalysisForCampaign,
 } from "@/lib/pipelineAnalysis";
+import { summarizePipelineOps } from "@/lib/pipeline-ops";
 
 type BatchTriggerSource = "cron" | "manual" | "response_hook";
 
@@ -14,6 +18,7 @@ export async function analyzeBatchCampaigns(
   triggerSource: BatchTriggerSource = "cron"
 ) {
   const admin = createAdminClient();
+  const runStartedMs = Date.now();
   const { error: refreshError } = await admin.rpc("refresh_pipeline_dispatch_events");
   const dispatchRefreshWarning = refreshError
     ? isMissingDispatchResponseStore(refreshError)
@@ -45,15 +50,36 @@ export async function analyzeBatchCampaigns(
   }
 
   try {
-    const campaignIds = await getCampaignsWithRecentResponses(hours);
+    const plans = await getCampaignBatchPlans(hours);
     const results = [];
 
-    for (const campaignId of campaignIds) {
+    for (const plan of plans) {
       try {
-        results.push(await runBatchAnalysisForCampaign(campaignId, triggerSource));
+        if (plan.mode === "skip") {
+          continue;
+        }
+
+        if (plan.mode === "incremental_stats_refresh") {
+          const startedAt = Date.now();
+          await refreshCampaignStats(plan.campaignId);
+          results.push({
+            campaignId: plan.campaignId,
+            durationMs: Date.now() - startedAt,
+            success: true,
+            error: null,
+            mode: plan.mode,
+          });
+          continue;
+        }
+
+        results.push({
+          ...(await runBatchAnalysisForCampaign(plan.campaignId, triggerSource)),
+          mode: plan.mode,
+        });
       } catch (error) {
         results.push({
-          campaignId,
+          campaignId: plan.campaignId,
+          mode: plan.mode,
           success: false,
           error: error instanceof Error ? error.message : "Fallo inesperado en campaña",
         });
@@ -64,8 +90,34 @@ export async function analyzeBatchCampaigns(
       processed: results.length,
       succeeded: results.filter((result) => result.success).length,
       failed: results.filter((result) => !result.success).length,
+      modes: {
+        incremental: results.filter((result) => result.mode === "incremental_stats_refresh").length,
+        full: results.filter((result) => result.mode === "full_recompute").length,
+      },
       results,
     };
+
+    const pipelineSummary = summarizePipelineOps({
+      dispatchEvents: dispatchRefreshWarning
+        ? [
+            {
+              status: "skipped",
+              reason: dispatchRefreshWarning,
+              createdAt: startedAt,
+            },
+          ]
+        : [],
+      batchRuns: [
+        {
+          status: summary.failed > 0 ? "failed" : "completed",
+          processed: summary.processed,
+          succeeded: summary.succeeded,
+          failed: summary.failed,
+          createdAt: startedAt,
+        },
+      ],
+      analysisRuns: [],
+    });
 
     const finishedAt = new Date().toISOString();
     const { error: updateRunError } = await admin
@@ -75,11 +127,15 @@ export async function analyzeBatchCampaigns(
         processed: summary.processed,
         succeeded: summary.succeeded,
         failed: summary.failed,
-        campaign_ids: campaignIds,
+        campaign_ids: plans.map((plan) => plan.campaignId),
         metadata: {
           dispatchEventsRefreshedAt: startedAt,
           dispatchRefreshWarning,
           finishedAt,
+          durationMs: Date.now() - runStartedMs,
+          modes: summary.modes,
+          pipelineSummary,
+          results,
         },
         finished_at: finishedAt,
       })
@@ -88,6 +144,16 @@ export async function analyzeBatchCampaigns(
     if (updateRunError) {
       throw new Error(updateRunError.message);
     }
+
+    const alerts = buildPipelineAlertEvents({
+      summary: pipelineSummary,
+      latestBatchDurationMs: Date.now() - runStartedMs,
+    });
+
+    await dispatchPipelineNotifications({
+      batchJobRunId: run.id,
+      alerts,
+    });
 
     return {
       runId: run.id,
@@ -102,6 +168,18 @@ export async function analyzeBatchCampaigns(
         finished_at: new Date().toISOString(),
       })
       .eq("id", run.id);
+
+    await dispatchPipelineNotifications({
+      batchJobRunId: run.id,
+      alerts: [
+        {
+          code: "batch_unhandled_failure",
+          severity: "critical",
+          message: error instanceof Error ? error.message : "Fallo inesperado en batch",
+          metadata: {},
+        },
+      ],
+    });
 
     throw error;
   }

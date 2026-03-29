@@ -417,14 +417,47 @@ export async function calculateResults(
   // Non-blocking ONA analysis (Python-dependent, fails gracefully)
   try {
     const { exec } = await import("child_process");
+    const insertedRun = await admin
+      .from("campaign_ona_runs")
+      .insert({
+        campaign_id: campaignId,
+        analysis_run_id: analysisRunId,
+        status: "pending",
+        backend: "uv/python3",
+        details: {
+          trigger_source: options?.triggerSource ?? (user ? "manual" : "batch"),
+        },
+      })
+      .select("id")
+      .single();
+
+    const onaRunId = insertedRun.data?.id as string | undefined;
     const script = `${process.cwd()}/scripts/ona-analysis.py`;
     // Try uv first (auto-resolves deps), fallback to python3
     const cmd = `uv run ${script} ${campaignId} 2>/dev/null || python3 ${script} ${campaignId}`;
     exec(cmd, { env: process.env }, (error: Error | null) => {
+      const nextStatus = error ? "deferred" : "completed";
       if (error) console.warn("ONA deferred:", error.message);
+
+      if (onaRunId) {
+        void admin
+          .from("campaign_ona_runs")
+          .update({
+            status: nextStatus,
+            error_message: error?.message ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", onaRunId);
+      }
     });
   } catch {
-    /* Python not available */
+    await admin.from("campaign_ona_runs").insert({
+      campaign_id: campaignId,
+      analysis_run_id: analysisRunId,
+      status: "deferred",
+      backend: "unavailable",
+      error_message: "python_runtime_unavailable",
+    });
   }
 
   revalidatePath(`/campaigns/${campaignId}`);

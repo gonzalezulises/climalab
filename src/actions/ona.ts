@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { normalizeONAStatus } from "@/lib/ona-status";
 import type { ActionResult } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -94,4 +95,36 @@ export async function getONAResults(campaignId: string): Promise<ActionResult<ON
 
   if (error) return { success: false, error: error.message };
   return { success: true, data: data.data as unknown as ONAResults };
+}
+
+export async function getONAStatus(campaignId: string): Promise<
+  ActionResult<{
+    status: ReturnType<typeof normalizeONAStatus>;
+    backend: string | null;
+    errorMessage: string | null;
+    updatedAt: string | null;
+  }>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("campaign_ona_runs")
+    .select("status, backend, error_message, updated_at")
+    .eq("campaign_id", campaignId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return {
+    success: true,
+    data: {
+      status: normalizeONAStatus(data?.status, data?.error_message),
+      backend: data?.backend ?? null,
+      errorMessage: data?.error_message ?? null,
+      updatedAt: data?.updated_at ?? null,
+    },
+  };
 }

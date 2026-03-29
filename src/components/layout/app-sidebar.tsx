@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, ClipboardList, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Building2, ClipboardList, BarChart3, Activity } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,7 @@ const navItems = [
   { title: "Organizaciones", href: "/organizations", icon: Building2 },
   { title: "Campañas", href: "/campaigns", icon: BarChart3 },
   { title: "Instrumentos", href: "/instruments", icon: ClipboardList },
+  { title: "Operaciones", href: "/operations", icon: Activity, superAdminOnly: true },
 ];
 
 export function AppSidebar({ profile }: { profile: Profile | null }) {
@@ -43,16 +44,18 @@ export function AppSidebar({ profile }: { profile: Profile | null }) {
           <SidebarGroupLabel>Navegacion</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems
+                .filter((item) => !item.superAdminOnly || profile?.role === "super_admin")
+                .map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
