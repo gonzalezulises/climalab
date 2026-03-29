@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { refreshCampaignStats } from "@/lib/pipelineAnalysis";
 import {
   normalizedSubmissionSchema,
   type NormalizedSubmissionInput,
@@ -57,6 +58,16 @@ export async function normalizeResponse(input: NormalizedSubmissionInput) {
 
   if (!result.ok) {
     throw new Error(result.error_message ?? "No se pudo procesar la ingesta");
+  }
+
+  try {
+    await refreshCampaignStats(parsed.campaignId);
+  } catch (error) {
+    console.error("Failed to refresh campaign stats after alternative ingest", {
+      campaignId: parsed.campaignId,
+      respondentId: result.respondent_id,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
   }
 
   return {

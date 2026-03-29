@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingDispatchResponseStore } from "@/lib/pipeline-errors";
 import {
   getCampaignsWithRecentResponses,
   runBatchAnalysisForCampaign,
@@ -14,7 +15,13 @@ export async function analyzeBatchCampaigns(
 ) {
   const admin = createAdminClient();
   const { error: refreshError } = await admin.rpc("refresh_pipeline_dispatch_events");
-  if (refreshError) {
+  const dispatchRefreshWarning = refreshError
+    ? isMissingDispatchResponseStore(refreshError)
+      ? refreshError.message
+      : null
+    : null;
+
+  if (refreshError && !dispatchRefreshWarning) {
     throw new Error(refreshError.message);
   }
 
@@ -27,6 +34,7 @@ export async function analyzeBatchCampaigns(
       status: "running",
       metadata: {
         dispatchEventsRefreshedAt: startedAt,
+        dispatchRefreshWarning,
       },
     })
     .select("id")
@@ -70,6 +78,7 @@ export async function analyzeBatchCampaigns(
         campaign_ids: campaignIds,
         metadata: {
           dispatchEventsRefreshedAt: startedAt,
+          dispatchRefreshWarning,
           finishedAt,
         },
         finished_at: finishedAt,
