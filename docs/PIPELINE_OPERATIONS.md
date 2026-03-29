@@ -79,6 +79,12 @@ Backfill controlado:
 - `POST /api/jobs/backfill-analysis`
 
 `GET` lista candidatos de backfill. `POST` ejecuta recálculo histórico por `campaignIds` o por selección automática.
+Parámetros útiles:
+
+- `limit`
+- `force`
+- `organizationId`
+- `batchSize` para escalonar el backfill total por lotes
 
 ## 5. Observabilidad
 
@@ -89,6 +95,7 @@ Tablas nuevas:
 - `pipeline_notifications`: intentos reales de alertas operativas por webhook/email/log
 - `analysis_run_snapshots`: snapshot comparable por corrida analítica
 - `campaign_ona_runs`: estado operativo del análisis de red
+- `backfill_run_metrics`: ejecución agregada, drift, calidad y telemetría del backfill histórico
 
 Consultas útiles:
 

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildPipelineAlertEvents } from "@/lib/pipeline-alerts";
 import { isMissingDispatchResponseStore } from "@/lib/pipeline-errors";
 import { dispatchPipelineNotifications } from "@/lib/pipeline-notifications";
+import { summarizePerformanceDurations } from "@/lib/performance-metrics";
 import {
   getCampaignBatchPlans,
   refreshCampaignStats,
@@ -96,6 +97,9 @@ export async function analyzeBatchCampaigns(
       },
       results,
     };
+    const performance = summarizePerformanceDurations(
+      results.map((result) => result.durationMs ?? 0).filter((value) => value > 0)
+    );
 
     const pipelineSummary = summarizePipelineOps({
       dispatchEvents: dispatchRefreshWarning
@@ -134,6 +138,7 @@ export async function analyzeBatchCampaigns(
           finishedAt,
           durationMs: Date.now() - runStartedMs,
           modes: summary.modes,
+          performance,
           pipelineSummary,
           results,
         },

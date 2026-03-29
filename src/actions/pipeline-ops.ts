@@ -86,6 +86,17 @@ export async function getPlatformOperationsOverview(): Promise<
       createdAt: string;
       recipient: string | null;
     }>;
+    latestBackfillRuns: Array<{
+      id: string;
+      status: string;
+      selected: number;
+      processed: number;
+      succeeded: number;
+      failed: number;
+      createdAt: string;
+      finishedAt: string | null;
+      summary: unknown;
+    }>;
     backfillCandidates: Array<{
       campaignId: string;
       campaignName: string;
@@ -103,6 +114,7 @@ export async function getPlatformOperationsOverview(): Promise<
     { data: snapshots, error: snapshotsError },
     { data: batchRuns, error: batchRunsError },
     { data: notifications, error: notificationsError },
+    backfillRunsResult,
   ] = await Promise.all([
     supabase.from("campaigns").select("id, name, status").in("status", ["closed", "archived"]),
     supabase
@@ -122,10 +134,22 @@ export async function getPlatformOperationsOverview(): Promise<
       .select("id, severity, channel, status, alert_code, created_at, recipient")
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("backfill_run_metrics")
+      .select(
+        "id, status, selected, processed, succeeded, failed, created_at, finished_at, summary"
+      )
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const firstError =
-    campaignsError ?? runsError ?? snapshotsError ?? batchRunsError ?? notificationsError;
+    campaignsError ??
+    runsError ??
+    snapshotsError ??
+    batchRunsError ??
+    notificationsError ??
+    backfillRunsResult.error;
   if (firstError) {
     return { success: false, error: firstError.message };
   }
@@ -180,6 +204,19 @@ export async function getPlatformOperationsOverview(): Promise<
         createdAt: notification.created_at,
         recipient: notification.recipient,
       })),
+      latestBackfillRuns: ((backfillRunsResult.data ?? []) as Array<Record<string, unknown>>).map(
+        (run) => ({
+          id: String(run.id),
+          status: String(run.status),
+          selected: Number(run.selected ?? 0),
+          processed: Number(run.processed ?? 0),
+          succeeded: Number(run.succeeded ?? 0),
+          failed: Number(run.failed ?? 0),
+          createdAt: String(run.created_at),
+          finishedAt: (run.finished_at as string | null) ?? null,
+          summary: run.summary ?? {},
+        })
+      ),
       backfillCandidates: backfillCandidates.map((candidate) => ({
         campaignId: candidate.campaignId,
         campaignName: candidate.campaignName,
