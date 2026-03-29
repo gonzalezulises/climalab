@@ -15,13 +15,13 @@ App / Vercel:
 Edge function `process_response`:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `PROCESS_RESPONSE_SERVICE_ROLE_KEY`
 - `PROCESS_RESPONSE_HOOK_SECRET`
 
 ## 2. Desplegar la edge function
 
 ```bash
-supabase functions deploy process_response
+supabase functions deploy process_response --no-verify-jwt
 supabase secrets set PROCESS_RESPONSE_HOOK_SECRET=change-me
 ```
 
@@ -33,6 +33,7 @@ La función espera:
 ## 3. Configurar secretos en Postgres Vault
 
 El trigger `trg_dispatch_process_response` lee secretos desde Vault con `get_pipeline_secret(...)`.
+También requiere la extensión `pg_net` habilitada para poder invocar la edge function desde Postgres.
 
 Ejemplo:
 
@@ -48,15 +49,10 @@ select vault.create_secret(
   'process_response_hook_secret',
   'Shared secret for process_response dispatch'
 );
-
-select vault.create_secret(
-  '<service-role-jwt>',
-  'process_response_function_jwt',
-  'JWT used by DB trigger to invoke process_response'
-);
 ```
 
-Si no guardas `process_response_function_jwt`, el trigger intenta usar `supabase_service_role_key` desde Vault.
+El trigger solo necesita `process_response_function_url` y `process_response_hook_secret`.
+La edge function se protege con `x-hook-secret` y usa `PROCESS_RESPONSE_SERVICE_ROLE_KEY` para refrescar `campaign_stats`.
 
 Para entornos locales con Postgres en contenedor, usa una URL alcanzable desde el contenedor, normalmente algo como:
 
