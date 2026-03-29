@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_BRAND_CONFIG } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,7 +146,6 @@ type Step = "welcome" | "demographics" | `dimension-${number}` | "open" | "thank
 export function SurveyClient({
   token,
   respondentId,
-  campaignId,
   organizationName,
   logoUrl,
   brandConfig: rawBrandConfig,
@@ -157,8 +156,23 @@ export function SurveyClient({
   respondentStatus,
   respondentDemographics,
 }: Props) {
-  const supabase = useMemo(() => createClient(), []);
   const brand = useMemo(() => ({ ...DEFAULT_BRAND_CONFIG, ...rawBrandConfig }), [rawBrandConfig]);
+
+  const postSurvey = useCallback(
+    async (path: string, body?: unknown) => {
+      const response = await fetch(`/api/survey/${token}/${path}`, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "La operación de encuesta falló");
+      }
+    },
+    [token]
+  );
 
   // Shuffle items within each dimension (stable by respondent token)
   const shuffledDimensions = useMemo(
@@ -228,17 +242,15 @@ export function SurveyClient({
     if (unsaved.length === 0) return;
 
     console.log(`Recovering ${unsaved.length} responses from localStorage`);
-    supabase
-      .from("responses")
-      .upsert(unsaved, { onConflict: "respondent_id,item_id" })
-      .then(({ error }) => {
-        if (error) {
-          console.error("Failed to recover backup responses:", error);
-        } else {
-          console.log("Backup responses recovered successfully");
-        }
-      });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    postSurvey("responses", {
+      items: unsaved.map((entry) => ({
+        itemId: entry.item_id,
+        score: entry.score,
+      })),
+    }).catch((error) => {
+      console.error("Failed to recover backup responses:", error);
+    });
+  }, [existingResponses, postSurvey, respondentId, token]);
 
   // Figure out which dimension step we can resume to
   useEffect(() => {
@@ -266,23 +278,17 @@ export function SurveyClient({
 
   // Mark respondent as in_progress on start
   const markInProgress = useCallback(async () => {
-    await supabase
-      .from("respondents")
-      .update({ status: "in_progress", started_at: new Date().toISOString() })
-      .eq("id", respondentId);
-  }, [supabase, respondentId]);
+    await postSurvey("start");
+  }, [postSurvey]);
 
   // Save demographics
   const saveDemographics = useCallback(async () => {
-    await supabase
-      .from("respondents")
-      .update({
-        department: department || null,
-        tenure: tenure || null,
-        gender: gender || null,
-      })
-      .eq("id", respondentId);
-  }, [supabase, respondentId, department, tenure, gender]);
+    await postSurvey("demographics", {
+      department,
+      tenure,
+      gender: gender || null,
+    });
+  }, [department, gender, postSurvey, tenure]);
 
   // Save dimension responses (upsert with retry)
   const saveDimensionResponses = useCallback(
@@ -299,16 +305,15 @@ export function SurveyClient({
       if (rows.length === 0) return;
 
       await retryAsync(async () => {
-        const { error } = await supabase.from("responses").upsert(rows, {
-          onConflict: "respondent_id,item_id",
+        await postSurvey("responses", {
+          items: rows.map((row) => ({
+            itemId: row.item_id,
+            score: row.score,
+          })),
         });
-        if (error) {
-          console.error("Error saving responses (will retry):", error);
-          throw new Error("No se pudieron guardar las respuestas");
-        }
       });
     },
-    [supabase, respondentId, shuffledDimensions, scores]
+    [postSurvey, respondentId, shuffledDimensions, scores]
   );
 
   // Save open responses + eNPS
@@ -342,28 +347,24 @@ export function SurveyClient({
     }
 
     if (rows.length > 0) {
-      await supabase.from("open_responses").insert(rows);
+      await postSurvey("complete", {
+        enpsScore,
+        openResponses: rows.map((row) => ({
+          questionType: row.question_type as "strength" | "improvement" | "general",
+          text: row.text,
+        })),
+      });
+      return;
     }
 
-    // Save eNPS score
-    if (enpsScore !== null) {
-      await supabase.from("respondents").update({ enps_score: enpsScore }).eq("id", respondentId);
-    }
-  }, [supabase, respondentId, openStrength, openImprovement, openGeneral, enpsScore]);
+    await postSurvey("complete", { enpsScore, openResponses: [] });
+  }, [enpsScore, openGeneral, openImprovement, openStrength, postSurvey, respondentId]);
 
   // Complete survey
   const completeSurvey = useCallback(async () => {
-    await supabase
-      .from("respondents")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", respondentId);
-
     // Clear localStorage backup — everything is persisted in DB
     clearBackup(token);
-  }, [supabase, respondentId, token]);
+  }, [token]);
 
   // Navigation handlers
   const handleStart = async () => {
@@ -398,6 +399,7 @@ export function SurveyClient({
     } else {
       setStep(allowComments ? "open" : "thanks");
       if (!allowComments) {
+        await postSurvey("complete", { enpsScore: null, openResponses: [] });
         await completeSurvey();
       }
     }
@@ -413,10 +415,13 @@ export function SurveyClient({
 
   const handleOpenNext = async () => {
     setSaving(true);
-    await saveOpenResponses();
-    await completeSurvey();
-    setSaving(false);
-    setStep("thanks");
+    try {
+      await saveOpenResponses();
+      await completeSurvey();
+      setStep("thanks");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Check if all items in a dimension are answered
@@ -451,7 +456,14 @@ export function SurveyClient({
         {step === "welcome" && (
           <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-6">
             {logoUrl && (
-              <img src={logoUrl} alt={organizationName} className="h-16 object-contain" />
+              <Image
+                src={logoUrl}
+                alt={organizationName}
+                width={240}
+                height={64}
+                unoptimized
+                className="h-16 w-auto object-contain"
+              />
             )}
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-gray-900">Encuesta de Clima Organizacional</h1>

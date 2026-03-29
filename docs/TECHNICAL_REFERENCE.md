@@ -1570,3 +1570,14 @@ Además corrige `unnest(departments)` → `jsonb_array_elements(departments)` ya
 - Martinolli, G. et al. (2023). Encuesta de Clima Organizacional VI (ECO VI). Universidad de Buenos Aires.
 - Patlán, J. & Flores, R. (2013). Desarrollo y validación de la escala multidimensional de clima organizacional (EMCO). _Acta de Investigación Psicológica, 3_(1), 1067-1084.
 - Traag, V. A., Waltman, L., & van Eck, N. J. (2019). From Louvain to Leiden: guaranteeing well-connected communities. _Scientific Reports, 9_, 5233.
+
+## 14. Data Lineage (v4.2)
+
+- `analysis_runs` registra cada corrida analítica con `trigger_source`, `logic_version` y `input_snapshot`
+- `analysis_run_respondent_quality` persiste la calidad analítica por respondent sin mutar `respondents.status`
+- `campaign_instruments` es el mapeo canónico de instrumento base + módulos por campaña
+- `dimension_taxonomy` persiste la categoría analítica, incluyendo `modulos`
+- `campaign_results` y `campaign_stats` incluyen `analysis_run_id`, `instrument_id`, `instrument_type` y `dimension_id`
+- `campaign_ai_insights` separa outputs IA de `campaign_analytics`
+
+Referencia detallada: `docs/DATA_LINEAGE.md`

@@ -9,35 +9,34 @@ import { Button } from "@/components/ui/button";
 import type { Campaign } from "@/types";
 import { Play, Lock, Calculator } from "lucide-react";
 
-export function CampaignActions({
-  campaign,
-  participantCount,
-}: {
-  campaign: Campaign;
-  participantCount: number;
-}) {
+export function CampaignActions({ campaign }: { campaign: Campaign }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleActivate = async () => {
     setLoading(true);
 
-    // Create Tally form first
-    toast.info("Creando formulario en Tally...");
+    let tallyReady = false;
+    toast.info("Preparando canal de encuesta...");
     const tallyResult = await createTallyForm(campaign.id);
-    if (!tallyResult.success) {
-      toast.error(tallyResult.error);
-      setLoading(false);
-      return;
+    if (tallyResult.success) {
+      tallyReady = true;
+    } else if (tallyResult.error !== "TALLY_API_KEY no configurada") {
+      toast.warning(
+        `Tally no quedó listo: ${tallyResult.error}. La campaña se activará con el flujo web.`
+      );
     }
 
-    // Then activate the campaign
     const result = await updateCampaignStatus({
       id: campaign.id,
       status: "active",
     });
     if (result.success) {
-      toast.success("Campaña activada — formulario de Tally listo");
+      toast.success(
+        tallyReady
+          ? "Campaña activada — formulario de Tally listo"
+          : "Campaña activada — flujo web nativo disponible"
+      );
       router.refresh();
     } else {
       toast.error(result.error);

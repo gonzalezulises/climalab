@@ -3,14 +3,18 @@ import { execSync } from "child_process";
 import { resolve } from "path";
 import { existsSync } from "fs";
 
-// Load env: testing-agent/.env > ../../.env.local > environment
+// Load env with fallback/override order:
+// 1. repo .env.local
+// 2. testing-agent/.env
+// 3. process environment
 const agentEnv = resolve(import.meta.dirname, "../../.env");
 const rootEnv = resolve(import.meta.dirname, "../../../.env.local");
 
-if (existsSync(agentEnv)) {
-  config({ path: agentEnv });
-} else if (existsSync(rootEnv)) {
+if (existsSync(rootEnv)) {
   config({ path: rootEnv });
+}
+if (existsSync(agentEnv)) {
+  config({ path: agentEnv, override: false });
 }
 
 const DEFAULT_URL = "http://127.0.0.1:54321";
@@ -42,13 +46,23 @@ export function setCliOverrides(overrides: { url?: string; key?: string }) {
   cachedConfig = null; // Reset cache
 }
 
-let cachedConfig: { supabaseUrl: string; supabaseServiceKey: string } | null = null;
+let cachedConfig: {
+  supabaseUrl: string;
+  supabaseServiceKey: string;
+  appBaseUrl: string;
+  ingestApiSecret: string;
+  cronSecret: string;
+} | null = null;
 
 export function getConfig() {
   if (cachedConfig) return cachedConfig;
 
   const supabaseUrl = cliOverrides.url || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
   let supabaseServiceKey = cliOverrides.key || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const appBaseUrl =
+    process.env.CLIMALAB_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const ingestApiSecret = process.env.INGEST_API_SECRET || "";
+  const cronSecret = process.env.CRON_SECRET || "";
 
   if (!supabaseServiceKey) {
     const cliKey = getServiceKeyFromCLI();
@@ -61,6 +75,6 @@ export function getConfig() {
     }
   }
 
-  cachedConfig = { supabaseUrl, supabaseServiceKey };
+  cachedConfig = { supabaseUrl, supabaseServiceKey, appBaseUrl, ingestApiSecret, cronSecret };
   return cachedConfig;
 }

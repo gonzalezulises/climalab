@@ -4,35 +4,6 @@ import { getCategoryScores } from "@/actions/analytics";
 import { DimensionsClient } from "./dimensions-client";
 import { SEGMENT_TYPE_LABELS } from "@/lib/constants";
 
-// Map dimension codes to categories (matches seed)
-const dimCategory: Record<string, string> = {
-  ORG: "bienestar",
-  PRO: "bienestar",
-  SEG: "bienestar",
-  BAL: "bienestar",
-  CUI: "bienestar",
-  DEM: "bienestar",
-  LID: "direccion",
-  AUT: "direccion",
-  COM: "direccion",
-  CON: "direccion",
-  ROL: "direccion",
-  CMP: "compensacion",
-  REC: "compensacion",
-  BEN: "compensacion",
-  EQA: "compensacion",
-  NDI: "compensacion",
-  COH: "cultura",
-  INN: "cultura",
-  RES: "cultura",
-  DES: "cultura",
-  APR: "cultura",
-  ENG: "engagement",
-  CAM: "modulos",
-  CLI: "modulos",
-  DIG: "modulos",
-};
-
 export default async function DimensionsPage({
   params,
   searchParams,
@@ -70,7 +41,7 @@ export default async function DimensionsPage({
       fav: Number(r.favorability_pct),
       std: Number(r.std_score),
       n: r.respondent_count ?? 0,
-      category: dimCategory[r.dimension_code!] ?? "otro",
+      category: (r.metadata as { analytics_category?: string })?.analytics_category ?? "otro",
     }));
 
   // Items are always global (no per-segment items)

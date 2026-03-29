@@ -295,13 +295,6 @@ function styleHeaderRow(sheet: ExcelJS.Worksheet) {
 // ---------------------------------------------------------------------------
 // DOCX helpers
 // ---------------------------------------------------------------------------
-const BORDER_NONE = {
-  top: { style: BorderStyle.NONE, size: 0 },
-  bottom: { style: BorderStyle.NONE, size: 0 },
-  left: { style: BorderStyle.NONE, size: 0 },
-  right: { style: BorderStyle.NONE, size: 0 },
-} as const;
-
 const BORDER_LIGHT = {
   top: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
   bottom: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
@@ -346,29 +339,6 @@ function kpiParagraph(label: string, value: string, color: string): Paragraph {
     children: [
       new TextRun({ text: `${label}: `, size: 20, font: "Calibri" }),
       new TextRun({ text: value, bold: true, size: 22, color, font: "Calibri" }),
-    ],
-  });
-}
-
-function makeHeaderCell(text: string): TableCell {
-  return new TableCell({
-    shading: { type: ShadingType.SOLID, color: "E2E8F0" },
-    borders: BORDER_LIGHT,
-    children: [
-      new Paragraph({
-        children: [new TextRun({ text, bold: true, size: 18, font: "Calibri" })],
-      }),
-    ],
-  });
-}
-
-function makeCell(text: string): TableCell {
-  return new TableCell({
-    borders: BORDER_LIGHT,
-    children: [
-      new Paragraph({
-        children: [new TextRun({ text, size: 18, font: "Calibri" })],
-      }),
     ],
   });
 }

@@ -1,7 +1,5 @@
 import { z } from "zod";
-
-const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-const zUuid = (msg?: string) => z.string().regex(uuidRegex, msg ?? "UUID inválido");
+import { zUuid } from "@/lib/validations/uuid";
 
 export const createBusinessIndicatorSchema = z.object({
   campaign_id: zUuid("ID de campaña inválido"),

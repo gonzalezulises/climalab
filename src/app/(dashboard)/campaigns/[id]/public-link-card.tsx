@@ -11,6 +11,11 @@ export function PublicLinkCard({ campaignId }: { campaignId: string }) {
   const [copied, setCopied] = useState(false);
   const [formUrl, setFormUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [nativeUrl, setNativeUrl] = useState("");
+
+  useEffect(() => {
+    setNativeUrl(`${window.location.origin}/survey/campaign/${campaignId}`);
+  }, [campaignId]);
 
   useEffect(() => {
     getTallyFormUrl(campaignId).then((result) => {
@@ -22,8 +27,9 @@ export function PublicLinkCard({ campaignId }: { campaignId: string }) {
   }, [campaignId]);
 
   const handleCopy = async () => {
-    if (!formUrl) return;
-    await navigator.clipboard.writeText(formUrl);
+    const url = formUrl ?? nativeUrl;
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -44,16 +50,12 @@ export function PublicLinkCard({ campaignId }: { campaignId: string }) {
     );
   }
 
-  if (!formUrl) {
-    return null;
-  }
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Link className="h-4 w-4" />
-          Enlace de encuesta (Tally)
+          {formUrl ? "Enlace de encuesta (Tally)" : "Enlace de encuesta"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -62,16 +64,21 @@ export function PublicLinkCard({ campaignId }: { campaignId: string }) {
           automáticamente en ClimaLab.
         </p>
         <div className="flex gap-2">
-          <Input value={formUrl} readOnly className="font-mono text-sm" />
+          <Input value={formUrl ?? nativeUrl} readOnly className="font-mono text-sm" />
           <Button variant="outline" size="icon" onClick={handleCopy} title="Copiar enlace">
             {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
           </Button>
-          <Button variant="outline" size="icon" asChild title="Abrir en Tally">
-            <a href={formUrl} target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="icon" asChild title="Abrir encuesta">
+            <a href={formUrl ?? nativeUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
         </div>
+        {!formUrl && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tally no está configurado para esta campaña; se muestra el flujo web nativo.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

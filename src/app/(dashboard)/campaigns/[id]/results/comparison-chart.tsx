@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -36,28 +36,29 @@ export function ComparisonChart({
   >(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!selectedId) {
+  const handleChange = async (value: string) => {
+    setSelectedId(value);
+    if (!value) {
       setData(null);
       return;
     }
+
     setLoading(true);
-    compareCampaigns(currentCampaignId, selectedId).then((result) => {
-      if (result.success) {
-        const merged = result.data.current.map((c) => {
-          const prev = result.data.previous.find((p) => p.code === c.code);
-          return {
-            dimension: c.name,
-            current: c.avg,
-            previous: prev?.avg ?? 0,
-            delta: prev ? +(c.avg - prev.avg).toFixed(2) : 0,
-          };
-        });
-        setData(merged);
-      }
-      setLoading(false);
-    });
-  }, [selectedId, currentCampaignId]);
+    const result = await compareCampaigns(currentCampaignId, value);
+    if (result.success) {
+      const merged = result.data.current.map((c) => {
+        const prev = result.data.previous.find((p) => p.code === c.code);
+        return {
+          dimension: c.name,
+          current: c.avg,
+          previous: prev?.avg ?? 0,
+          delta: prev ? +(c.avg - prev.avg).toFixed(2) : 0,
+        };
+      });
+      setData(merged);
+    }
+    setLoading(false);
+  };
 
   if (previousCampaigns.length === 0) return null;
 
@@ -69,8 +70,8 @@ export function ComparisonChart({
             <CardTitle className="text-base">Comparación con medición anterior</CardTitle>
             <CardDescription>Selecciona una campaña anterior para comparar</CardDescription>
           </div>
-          <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger className="w-64">
+          <Select value={selectedId} onValueChange={handleChange}>
+            <SelectTrigger className="w-64" disabled={loading}>
               <SelectValue placeholder="Selecciona campaña" />
             </SelectTrigger>
             <SelectContent>
