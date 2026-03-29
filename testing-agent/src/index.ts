@@ -18,6 +18,7 @@ import { verifyStatsCommand } from "./commands/verify-stats.js";
 import { e2eHttpCommand } from "./commands/e2e-http.js";
 import { e2eLineageCommand } from "./commands/e2e-lineage.js";
 import { e2eOpsCommand } from "./commands/e2e-ops.js";
+import { e2eProdSmokeCommand } from "./commands/e2e-prod-smoke.js";
 
 const program = new Command()
   .name("climalab-test")
@@ -188,6 +189,16 @@ program
   .action(async (opts) => {
     await e2eOpsCommand({
       skipCleanup: opts.skipCleanup,
+    });
+  });
+
+program
+  .command("e2e-prod-smoke")
+  .description("Run production smoke checks for site reachability, batch, and direct ingest auth")
+  .option("--env-file <path>", "Environment file to load before running the smoke checks")
+  .action(async (opts) => {
+    await e2eProdSmokeCommand({
+      envFile: opts.envFile,
     });
   });
 

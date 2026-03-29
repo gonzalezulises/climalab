@@ -46,6 +46,13 @@ export function setCliOverrides(overrides: { url?: string; key?: string }) {
   cachedConfig = null; // Reset cache
 }
 
+export function loadEnvFile(path: string, override = true) {
+  if (existsSync(path)) {
+    config({ path, override });
+    cachedConfig = null;
+  }
+}
+
 let cachedConfig: {
   supabaseUrl: string;
   supabaseServiceKey: string;
@@ -54,17 +61,21 @@ let cachedConfig: {
   cronSecret: string;
 } | null = null;
 
-export function getConfig() {
+export function getConfig(options: { allowFallbackKey?: boolean } = {}) {
   if (cachedConfig) return cachedConfig;
 
+  const allowFallbackKey = options.allowFallbackKey ?? true;
   const supabaseUrl = cliOverrides.url || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
   let supabaseServiceKey = cliOverrides.key || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   const appBaseUrl =
-    process.env.CLIMALAB_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    process.env.CLIMALAB_APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
   const ingestApiSecret = process.env.INGEST_API_SECRET || "";
   const cronSecret = process.env.CRON_SECRET || "";
 
-  if (!supabaseServiceKey) {
+  if (!supabaseServiceKey && allowFallbackKey) {
     const cliKey = getServiceKeyFromCLI();
     if (cliKey) {
       supabaseServiceKey = cliKey;
