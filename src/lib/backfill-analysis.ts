@@ -1,4 +1,5 @@
 import { ANALYSIS_LOGIC_VERSION } from "@/lib/analysis-engine/materialize";
+import type { CampaignDataQualitySummary } from "@/lib/data-quality";
 
 export type BackfillCandidate = {
   campaignId: string;
@@ -21,7 +22,7 @@ export type BackfillExecutionResult = {
   error: string | null;
   durationMs: number;
   driftSeverity: "none" | "low" | "medium" | "high";
-  qualityLabel: "high" | "medium" | "low";
+  quality: CampaignDataQualitySummary;
 };
 
 export function buildBackfillExecutionSummary(input: {
@@ -52,7 +53,7 @@ export function buildBackfillExecutionSummary(input: {
 
   for (const result of input.results) {
     driftCounts[result.driftSeverity] += 1;
-    qualityCounts[result.qualityLabel] += 1;
+    qualityCounts[result.quality.qualityLabel] += 1;
   }
 
   const durations = input.results.map((result) => result.durationMs);

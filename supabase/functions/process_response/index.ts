@@ -1,4 +1,10 @@
-// @ts-nocheck
+declare const Deno: {
+  env: {
+    get(name: string): string | undefined;
+  };
+  serve(handler: (request: Request) => Response | Promise<Response>): void;
+};
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey =
   Deno.env.get("PROCESS_RESPONSE_SERVICE_ROLE_KEY") ??
@@ -6,6 +12,21 @@ const serviceRoleKey =
   "";
 const hookSecret = Deno.env.get("PROCESS_RESPONSE_HOOK_SECRET") ?? "";
 const textEncoder = new TextEncoder();
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
+
+type ProcessResponsePayload = {
+  record?: {
+    respondent_id?: string;
+  };
+};
+
+type RespondentLookupRow = {
+  campaign_id: string | null;
+  status: string | null;
+  completed_at: string | null;
+};
 
 function safeEqual(left: string, right: string) {
   const leftBytes = textEncoder.encode(left);
@@ -23,7 +44,7 @@ function safeEqual(left: string, right: string) {
   return diff === 0;
 }
 
-async function querySupabase(path: string, init: RequestInit) {
+async function querySupabaseJson<T extends JsonValue>(path: string, init: RequestInit): Promise<T> {
   const authHeaders: Record<string, string> = {
     apikey: serviceRoleKey,
     "Content-Type": "application/json",
@@ -47,15 +68,19 @@ async function querySupabase(path: string, init: RequestInit) {
     throw new Error(message || `Supabase REST error (${response.status})`);
   }
 
-  return response;
+  return (await response.json()) as T;
 }
 
-Deno.serve(async (request) => {
+function jsonResponse(body: JsonValue, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method !== "POST") {
-    return new Response(JSON.stringify({ ok: false, error: "Método no permitido" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ ok: false, error: "Método no permitido" }, 405);
   }
 
   try {
@@ -65,32 +90,21 @@ Deno.serve(async (request) => {
 
     const providedSecret = request.headers.get("x-hook-secret") ?? "";
     if (!safeEqual(providedSecret, hookSecret)) {
-      return new Response(JSON.stringify({ ok: false, error: "Hook secret inválida" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ ok: false, error: "Hook secret inválida" }, 401);
     }
 
-    const payload = await request.json();
-    const record = payload.record as { respondent_id?: string } | undefined;
+    const payload = (await request.json()) as ProcessResponsePayload;
+    const record = payload.record;
     const respondentId = record?.respondent_id;
 
     if (!respondentId) {
-      return new Response(JSON.stringify({ ok: false, error: "respondent_id requerido" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ ok: false, error: "respondent_id requerido" }, 400);
     }
 
-    const respondentResponse = await querySupabase(
+    const respondents = await querySupabaseJson<RespondentLookupRow[]>(
       `respondents?id=eq.${respondentId}&select=campaign_id,status,completed_at`,
       { method: "GET" }
     );
-    const respondents = (await respondentResponse.json()) as Array<{
-      campaign_id: string;
-      status: string | null;
-      completed_at: string | null;
-    }>;
     const respondent = respondents[0];
 
     if (!respondent?.campaign_id) {
@@ -98,45 +112,32 @@ Deno.serve(async (request) => {
     }
 
     if (respondent.status !== "completed" || !respondent.completed_at) {
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           ok: true,
           skipped: true,
           reason: "respondent_incomplete",
           campaignId: respondent.campaign_id,
-        }),
-        {
-          status: 202,
-          headers: { "Content-Type": "application/json" },
-        }
+        },
+        202
       );
     }
 
-    const refreshResponse = await querySupabase("rpc/refresh_campaign_stats", {
+    const refreshedRows = await querySupabaseJson<number>("rpc/refresh_campaign_stats", {
       method: "POST",
       body: JSON.stringify({
         p_campaign_id: respondent.campaign_id,
       }),
     });
-    const refreshedRows = await refreshResponse.json();
 
-    return new Response(
-      JSON.stringify({ ok: true, campaignId: respondent.campaign_id, refreshedRows }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return jsonResponse({ ok: true, campaignId: respondent.campaign_id, refreshedRows }, 200);
   } catch (error) {
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         ok: false,
         error: error instanceof Error ? error.message : "Edge function error",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      },
+      500
     );
   }
 });

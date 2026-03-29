@@ -1,8 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { ANALYSIS_LOGIC_VERSION } from "@/lib/analysis-engine/materialize";
 import { buildBackfillExecutionSummary, selectBackfillCandidates } from "@/lib/backfill-analysis";
+import { buildCampaignDataQuality } from "@/lib/data-quality";
 
 describe("selectBackfillCandidates", () => {
+  const highQuality = buildCampaignDataQuality({
+    respondentsTotal: 20,
+    validRespondents: 18,
+    disqualifiedRespondents: 1,
+    duplicateIngestEvents: 0,
+    failedIngestEvents: 0,
+    missingDepartment: 0,
+    missingTenure: 0,
+    missingGender: 0,
+  });
+  const mediumQuality = buildCampaignDataQuality({
+    respondentsTotal: 20,
+    validRespondents: 15,
+    disqualifiedRespondents: 1,
+    duplicateIngestEvents: 1,
+    failedIngestEvents: 0,
+    missingDepartment: 0,
+    missingTenure: 0,
+    missingGender: 0,
+  });
   const baseCandidate = {
     campaignStatus: "closed",
     latestCompletedAt: "2026-03-29T12:00:00Z",
@@ -91,7 +112,7 @@ describe("selectBackfillCandidates", () => {
           error: null,
           durationMs: 1200,
           driftSeverity: "high",
-          qualityLabel: "medium",
+          quality: mediumQuality,
         },
         {
           campaignId: "2",
@@ -101,7 +122,7 @@ describe("selectBackfillCandidates", () => {
           error: "boom",
           durationMs: 300,
           driftSeverity: "low",
-          qualityLabel: "high",
+          quality: highQuality,
         },
       ],
     });

@@ -8,12 +8,11 @@ import {
   type BackfillExecutionResult,
 } from "@/lib/backfill-analysis";
 import { classifyBackfillDriftFromComparison, summarizeBackfillDrift } from "@/lib/backfill-drift";
-import { buildCampaignDataQuality } from "@/lib/data-quality";
 import { buildBackfillAlertEvents } from "@/lib/pipeline-alerts";
 import { dispatchPipelineNotifications } from "@/lib/pipeline-notifications";
 import { summarizePerformanceDurations } from "@/lib/performance-metrics";
-import { buildStatisticalHealthSummary } from "@/lib/statistical-health";
-import { normalizeONAStatus } from "@/lib/ona-status";
+import { loadCampaignQuality, loadStatisticalHealth } from "@/lib/campaign-quality";
+import { buildCampaignDataQuality } from "@/lib/data-quality";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateResults } from "@/actions/campaigns";
 import {
@@ -21,117 +20,23 @@ import {
   type AnalysisRunSnapshot,
 } from "@/lib/analysis-engine/snapshots";
 
+const EMPTY_CAMPAIGN_QUALITY = buildCampaignDataQuality({
+  respondentsTotal: 0,
+  validRespondents: 0,
+  disqualifiedRespondents: 0,
+  duplicateIngestEvents: 0,
+  failedIngestEvents: 0,
+  missingDepartment: 0,
+  missingTenure: 0,
+  missingGender: 0,
+});
+
 function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
-}
-
-async function loadCampaignQuality(
-  admin: ReturnType<typeof createAdminClient>,
-  campaignId: string
-) {
-  const latestRunResult = await admin
-    .from("analysis_runs")
-    .select("id")
-    .eq("campaign_id", campaignId)
-    .eq("status", "completed")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latestRunResult.error) {
-    throw new Error(latestRunResult.error.message);
-  }
-
-  const [respondentsResult, ingestEventsResult, qualityResult] = await Promise.all([
-    admin
-      .from("respondents")
-      .select("department, tenure, gender", { count: "exact" })
-      .eq("campaign_id", campaignId),
-    admin.from("ingest_events").select("status, error_message").eq("campaign_id", campaignId),
-    latestRunResult.data?.id
-      ? admin
-          .from("analysis_run_respondent_quality")
-          .select("quality_status")
-          .eq("analysis_run_id", latestRunResult.data.id)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  const firstError = respondentsResult.error ?? ingestEventsResult.error ?? qualityResult.error;
-  if (firstError) {
-    throw new Error(firstError.message);
-  }
-
-  const respondents = respondentsResult.data ?? [];
-  const qualityRows = qualityResult.data ?? [];
-  const ingestEvents = ingestEventsResult.data ?? [];
-
-  return buildCampaignDataQuality({
-    respondentsTotal: respondentsResult.count ?? respondents.length,
-    validRespondents: qualityRows.filter((row) => row.quality_status === "valid").length,
-    disqualifiedRespondents: qualityRows.filter((row) => row.quality_status === "disqualified")
-      .length,
-    duplicateIngestEvents: ingestEvents.filter((row) => row.error_message?.includes("duplicate"))
-      .length,
-    failedIngestEvents: ingestEvents.filter((row) => row.status === "failed").length,
-    missingDepartment: respondents.filter((row) => !row.department).length,
-    missingTenure: respondents.filter((row) => !row.tenure).length,
-    missingGender: respondents.filter((row) => !row.gender).length,
-  });
-}
-
-async function loadStatisticalHealth(
-  admin: ReturnType<typeof createAdminClient>,
-  campaignId: string,
-  quality: ReturnType<typeof buildCampaignDataQuality>
-) {
-  const [reliabilityResult, rwgResult, onaResult] = await Promise.all([
-    admin
-      .from("campaign_analytics")
-      .select("data")
-      .eq("campaign_id", campaignId)
-      .eq("analysis_type", "reliability")
-      .maybeSingle(),
-    admin
-      .from("campaign_results")
-      .select("dimension_code, metadata")
-      .eq("campaign_id", campaignId)
-      .eq("result_type", "dimension")
-      .eq("segment_type", "global"),
-    admin
-      .from("campaign_ona_runs")
-      .select("status, error_message")
-      .eq("campaign_id", campaignId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  const reliabilityRows = Array.isArray(reliabilityResult.data?.data)
-    ? (reliabilityResult.data?.data as Array<{ dimension_code?: string; alpha?: number | null }>)
-    : [];
-
-  const rwgRows = (rwgResult.data ?? []).map((row) => ({
-    dimensionCode: row.dimension_code ?? "unknown",
-    rwg: ((row.metadata as { rwg?: number | null } | null)?.rwg ?? null) as number | null,
-  }));
-
-  return buildStatisticalHealthSummary({
-    qualityLabel: quality.qualityLabel,
-    validRespondentPct: quality.validRespondentPct,
-    respondentCoveragePct: quality.respondentCoveragePct,
-    duplicateIngestEvents: quality.duplicateIngestEvents,
-    failedIngestEvents: quality.failedIngestEvents,
-    reliability: reliabilityRows.map((row) => ({
-      dimensionCode: row.dimension_code ?? "unknown",
-      alpha: row.alpha ?? null,
-    })),
-    rwg: rwgRows,
-    onaStatus: normalizeONAStatus(onaResult.data?.status, onaResult.data?.error_message),
-  });
 }
 
 async function loadLatestComparison(
@@ -312,7 +217,7 @@ export async function backfillCampaignAnalyses(input: {
             error: result.error,
             durationMs: Date.now() - startedAt,
             driftSeverity: "none",
-            qualityLabel: "low",
+            quality: EMPTY_CAMPAIGN_QUALITY,
           });
           continue;
         }
@@ -334,7 +239,7 @@ export async function backfillCampaignAnalyses(input: {
           error: null,
           durationMs: Date.now() - startedAt,
           driftSeverity: drift.severity,
-          qualityLabel: quality.qualityLabel,
+          quality,
         });
       }
     }
@@ -358,11 +263,7 @@ export async function backfillCampaignAnalyses(input: {
         .filter((result) => result.success)
         .map(async (result) => ({
           campaignId: result.campaignId,
-          summary: await loadStatisticalHealth(
-            admin,
-            result.campaignId,
-            await loadCampaignQuality(admin, result.campaignId)
-          ),
+          summary: await loadStatisticalHealth(admin, result.campaignId, result.quality),
         }))
     );
 
