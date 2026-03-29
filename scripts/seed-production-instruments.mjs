@@ -341,7 +341,10 @@ async function main() {
   ];
 
   for (const table of tables) {
-    const { error, count } = await supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000"); // delete all
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all
     if (error) {
       // Try gte for tables that might have different PK
       const { error: err2 } = await supabase.from(table).delete().gte("created_at", "1970-01-01");

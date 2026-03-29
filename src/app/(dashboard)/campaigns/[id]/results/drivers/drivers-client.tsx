@@ -17,7 +17,6 @@ import {
   Label,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, Zap } from "lucide-react";
 import { CsvDownloadButton } from "@/components/results/csv-download-button";

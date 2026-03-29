@@ -12,7 +12,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { generateTrendsNarrative } from "@/actions/ai-insights";
@@ -47,13 +46,7 @@ type Props = {
   initialNarrative: TrendsNarrative | null;
 };
 
-export function TrendsClient({
-  campaignId,
-  organizationId,
-  campaigns,
-  series,
-  initialNarrative,
-}: Props) {
+export function TrendsClient({ organizationId, campaigns, series, initialNarrative }: Props) {
   const allCodes = Object.keys(series);
   const [selected, setSelected] = useState<string[]>(["ENG"]);
   const [narrative, setNarrative] = useState<TrendsNarrative | null>(initialNarrative);

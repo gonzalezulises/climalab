@@ -34,6 +34,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      batch_job_runs: {
+        Row: {
+          campaign_ids: string[]
+          created_at: string
+          error_message: string | null
+          failed: number
+          finished_at: string | null
+          hours_window: number
+          id: string
+          metadata: Json
+          processed: number
+          status: string
+          succeeded: number
+          trigger_source: string
+        }
+        Insert: {
+          campaign_ids?: string[]
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          hours_window?: number
+          id?: string
+          metadata?: Json
+          processed?: number
+          status?: string
+          succeeded?: number
+          trigger_source: string
+        }
+        Update: {
+          campaign_ids?: string[]
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          hours_window?: number
+          id?: string
+          metadata?: Json
+          processed?: number
+          status?: string
+          succeeded?: number
+          trigger_source?: string
+        }
+        Relationships: []
+      }
       business_indicators: {
         Row: {
           campaign_id: string
@@ -162,6 +207,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_results_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_stats: {
+        Row: {
+          avg_score: number | null
+          campaign_id: string
+          dimension_code: string
+          favorability_pct: number | null
+          last_response_at: string | null
+          response_count: number
+          respondent_count: number
+          segment_key: string
+          segment_type: string
+          updated_at: string
+        }
+        Insert: {
+          avg_score?: number | null
+          campaign_id: string
+          dimension_code: string
+          favorability_pct?: number | null
+          last_response_at?: string | null
+          response_count?: number
+          respondent_count?: number
+          segment_key?: string
+          segment_type?: string
+          updated_at?: string
+        }
+        Update: {
+          avg_score?: number | null
+          campaign_id?: string
+          dimension_code?: string
+          favorability_pct?: number | null
+          last_response_at?: string | null
+          response_count?: number
+          respondent_count?: number
+          segment_key?: string
+          segment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_stats_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -299,6 +391,60 @@ export type Database = {
             columns: ["instrument_id"]
             isOneToOne: false
             referencedRelation: "instruments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingest_events: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          error_message: string | null
+          external_event_id: string
+          id: string
+          payload_hash: string | null
+          processed_at: string | null
+          respondent_id: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_event_id: string
+          id?: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          respondent_id?: string | null
+          source: string
+          status?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_event_id?: string
+          id?: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          respondent_id?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingest_events_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "respondents"
             referencedColumns: ["id"]
           },
         ]
@@ -545,6 +691,66 @@ export type Database = {
           },
         ]
       }
+      pipeline_dispatch_events: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          delivered_at: string | null
+          event_type: string
+          hook_name: string
+          id: string
+          reason: string | null
+          request_id: number | null
+          respondent_id: string | null
+          response_body: string | null
+          response_status: number | null
+          status: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          hook_name: string
+          id?: string
+          reason?: string | null
+          request_id?: number | null
+          respondent_id?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          hook_name?: string
+          id?: string
+          reason?: string | null
+          request_id?: number | null
+          respondent_id?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_dispatch_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_dispatch_events_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "respondents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -697,6 +903,7 @@ export type Database = {
           item_id: string
           respondent_id: string
           score: number | null
+          source: string
         }
         Insert: {
           answered_at?: string
@@ -704,6 +911,7 @@ export type Database = {
           item_id: string
           respondent_id: string
           score?: number | null
+          source?: string
         }
         Update: {
           answered_at?: string
@@ -711,6 +919,7 @@ export type Database = {
           item_id?: string
           respondent_id?: string
           score?: number | null
+          source?: string
         }
         Relationships: [
           {
@@ -745,6 +954,26 @@ export type Database = {
       get_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      refresh_campaign_stats: {
+        Args: { p_campaign_id: string }
+        Returns: number
+      }
+      refresh_pipeline_dispatch_events: {
+        Args: never
+        Returns: number
+      }
+      replace_campaign_materialization: {
+        Args: {
+          p_analytics: Json
+          p_campaign_id: string
+          p_margin_of_error: number
+          p_population_n: number
+          p_response_rate: number
+          p_results: Json
+          p_sample_n: number
+        }
+        Returns: undefined
       }
     }
     Enums: {
@@ -893,4 +1122,3 @@ export const Constants = {
     },
   },
 } as const
-

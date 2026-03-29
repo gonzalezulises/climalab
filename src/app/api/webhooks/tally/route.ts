@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "crypto";
-import type { Database } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeResponse } from "@/lib/normalizeResponse";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,13 +60,14 @@ function verifySignature(payload: string, signature: string, secret: string): bo
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  // Verify signature if secret is configured
   const webhookSecret = process.env.TALLY_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const signature = request.headers.get("tally-signature") ?? "";
-    if (!verifySignature(rawBody, signature, webhookSecret)) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "TALLY_WEBHOOK_SECRET no configurada" }, { status: 503 });
+  }
+
+  const signature = request.headers.get("tally-signature") ?? "";
+  if (!verifySignature(rawBody, signature, webhookSecret)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let payload: TallyWebhookPayload;
@@ -82,11 +83,7 @@ export async function POST(request: NextRequest) {
 
   const { formId, fields } = payload.data;
 
-  // Use service role to bypass RLS
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createAdminClient();
 
   // Load mappings for this form
   const { data: mappings, error: mapError } = await supabase
@@ -168,54 +165,39 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create respondent
-  const { data: respondent, error: respError } = await supabase
-    .from("respondents")
-    .insert({
-      campaign_id: campaignId,
-      status: "completed",
-      department,
-      tenure,
-      gender,
-      enps_score: enpsScore,
-      started_at: payload.data.createdAt,
-      completed_at: payload.data.createdAt,
-    })
-    .select("id")
-    .single();
+  try {
+    const result = await normalizeResponse({
+      source: "webhook",
+      externalEventId: payload.data.responseId || payload.eventId,
+      campaignId,
+      startedAt: payload.data.createdAt,
+      completedAt: payload.data.createdAt,
+      demographics: {
+        department,
+        tenure,
+        gender,
+      },
+      responses: responses.map((entry) => ({
+        itemId: entry.item_id,
+        score: entry.score,
+      })),
+      openResponses: openResponses.map((entry) => ({
+        questionType: entry.question_type as "strength" | "improvement" | "general",
+        text: entry.text,
+      })),
+      enpsScore,
+    });
 
-  if (respError || !respondent) {
-    console.error("Failed to create respondent:", respError);
-    return NextResponse.json({ error: "Failed to create respondent" }, { status: 500 });
-  }
-
-  // Insert responses
-  if (responses.length > 0) {
-    const responseRows = responses.map((r) => ({
-      respondent_id: respondent.id,
-      item_id: r.item_id,
-      score: r.score,
-    }));
-
-    const { error: insertError } = await supabase.from("responses").insert(responseRows);
-    if (insertError) {
-      console.error("Failed to insert responses:", insertError);
+    if (result.duplicate) {
+      return NextResponse.json({ ok: true, duplicate: true });
     }
+  } catch (error) {
+    console.error("Failed to normalize Tally response:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to ingest Tally response" },
+      { status: 500 }
+    );
   }
 
-  // Insert open responses
-  if (openResponses.length > 0) {
-    const openRows = openResponses.map((r) => ({
-      respondent_id: respondent.id,
-      question_type: r.question_type,
-      text: r.text,
-    }));
-
-    const { error: openError } = await supabase.from("open_responses").insert(openRows);
-    if (openError) {
-      console.error("Failed to insert open responses:", openError);
-    }
-  }
-
-  return NextResponse.json({ ok: true, respondentId: respondent.id });
+  return NextResponse.json({ ok: true });
 }

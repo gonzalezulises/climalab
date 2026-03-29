@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -52,9 +53,12 @@ export function ResultsSidebar({
     <aside className="w-56 border-r bg-muted/30 p-4 print:hidden">
       <div className="mb-4">
         {orgLogoUrl && (
-          <img
+          <Image
             src={orgLogoUrl}
             alt={orgName ?? ""}
+            width={140}
+            height={32}
+            unoptimized
             className="h-8 w-auto max-w-[140px] object-contain mb-2"
           />
         )}

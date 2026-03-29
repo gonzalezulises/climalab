@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import {
   createCampaignSchema,
@@ -15,6 +16,12 @@ import {
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
 import type { Json } from "@/types/database";
 import { mean, stdDev, favorability, rwg, cronbachAlpha, pearson } from "@/lib/statistics";
+import {
+  computeMarginOfError,
+  computeResponseRate,
+  roundPercentage,
+  roundScore,
+} from "@/lib/calculations";
 import { rateLimit } from "@/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
@@ -346,6 +353,7 @@ export async function compareCampaigns(
 // ---------------------------------------------------------------------------
 export async function calculateResults(campaignId: string): Promise<ActionResult<void>> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -354,8 +362,13 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
   }
 
+  // Server-to-server callers (batch/jobs) have no authenticated session, so
+  // we must bypass RLS for the calculation reads while keeping the regular
+  // authenticated path unchanged for dashboard-triggered recalculations.
+  const reader = user ? supabase : admin;
+
   // 1. Fetch campaign + organization
-  const { data: campaign, error: campaignError } = await supabase
+  const { data: campaign, error: campaignError } = await reader
     .from("campaigns")
     .select("*, organizations(employee_count, departments)")
     .eq("id", campaignId)
@@ -367,7 +380,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
 
   // 2. Fetch instrument with dimensions and items (base + modules)
   const allInstrumentIds = [campaign.instrument_id, ...(campaign.module_instrument_ids ?? [])];
-  const { data: dimensions, error: dimError } = await supabase
+  const { data: dimensions, error: dimError } = await reader
     .from("dimensions")
     .select("*, items(*)")
     .in("instrument_id", allInstrumentIds)
@@ -410,7 +423,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
   }
 
   // 3. Fetch all respondents for the campaign
-  const { data: respondents, error: respError } = await supabase
+  const { data: respondents, error: respError } = await reader
     .from("respondents")
     .select("*")
     .eq("campaign_id", campaignId)
@@ -426,7 +439,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
 
   // 4. Fetch all responses
   const respondentIds = respondents.map((r) => r.id);
-  const { data: allResponses, error: responseError } = await supabase
+  const { data: allResponses, error: responseError } = await reader
     .from("responses")
     .select("*")
     .in("respondent_id", respondentIds);
@@ -465,7 +478,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       validRespondentIds.add(respondent.id);
     } else {
       // Mark as disqualified
-      await supabase.from("respondents").update({ status: "disqualified" }).eq("id", respondent.id);
+      await admin.from("respondents").update({ status: "disqualified" }).eq("id", respondent.id);
     }
   }
 
@@ -564,9 +577,9 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       dimension_code: code,
       segment_key: "global",
       segment_type: "global",
-      avg_score: Math.round(mean(allDimScores) * 100) / 100,
-      std_score: Math.round(stdDev(allDimScores) * 100) / 100,
-      favorability_pct: Math.round(favorability(allDimScores) * 10) / 10,
+      avg_score: roundScore(mean(allDimScores)),
+      std_score: roundScore(stdDev(allDimScores)),
+      favorability_pct: roundPercentage(favorability(allDimScores)),
       response_count: allDimScores.length,
       respondent_count: respondentCount,
       metadata: { dimension_name: dimensionNameMap.get(code) ?? code, rwg: rwgValue } as Json,
@@ -625,9 +638,9 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
           dimension_code: code,
           segment_key: segValue,
           segment_type: segType,
-          avg_score: Math.round(mean(scores) * 100) / 100,
-          std_score: Math.round(stdDev(scores) * 100) / 100,
-          favorability_pct: Math.round(favorability(scores) * 10) / 10,
+          avg_score: roundScore(mean(scores)),
+          std_score: roundScore(stdDev(scores)),
+          favorability_pct: roundPercentage(favorability(scores)),
           response_count: scores.length,
           respondent_count: respondentCount,
           metadata: { dimension_name: dimensionNameMap.get(code) ?? code, rwg: rwgValue } as Json,
@@ -639,7 +652,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
   // 9. Calculate per-item results (global)
   const itemScoresGlobal = new Map<string, { scores: number[]; respondentCount: number }>();
 
-  for (const [respondentId, rd] of respondentData) {
+  for (const [respondentId] of respondentData) {
     const responses = respondentResponseMap.get(respondentId);
     if (!responses) continue;
 
@@ -678,9 +691,9 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       dimension_code: itemInfo.dimension_code,
       segment_key: itemId,
       segment_type: "global",
-      avg_score: Math.round(mean(data.scores) * 100) / 100,
-      std_score: Math.round(stdDev(data.scores) * 100) / 100,
-      favorability_pct: Math.round(favorability(data.scores) * 10) / 10,
+      avg_score: roundScore(mean(data.scores)),
+      std_score: roundScore(stdDev(data.scores)),
+      favorability_pct: roundPercentage(favorability(data.scores)),
       response_count: data.scores.length,
       respondent_count: data.respondentCount,
       metadata: {
@@ -713,29 +726,28 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       dimension_code: null,
       segment_key: "global",
       segment_type: "global",
-      avg_score: Math.round(mean(engagementScores) * 100) / 100,
-      std_score: Math.round(stdDev(engagementScores) * 100) / 100,
-      favorability_pct:
-        Math.round(favorability(engagementScores.map((s) => Math.round(s))) * 10) / 10,
+      avg_score: roundScore(mean(engagementScores)),
+      std_score: roundScore(stdDev(engagementScores)),
+      favorability_pct: roundPercentage(favorability(engagementScores.map((s) => Math.round(s)))),
       response_count: engagementScores.length,
       respondent_count: total,
       metadata: {
         profiles: {
           ambassadors: {
             count: profiles.ambassadors,
-            pct: Math.round((profiles.ambassadors / total) * 1000) / 10,
+            pct: roundPercentage((profiles.ambassadors / total) * 100),
           },
           committed: {
             count: profiles.committed,
-            pct: Math.round((profiles.committed / total) * 1000) / 10,
+            pct: roundPercentage((profiles.committed / total) * 100),
           },
           neutral: {
             count: profiles.neutral,
-            pct: Math.round((profiles.neutral / total) * 1000) / 10,
+            pct: roundPercentage((profiles.neutral / total) * 100),
           },
           disengaged: {
             count: profiles.disengaged,
-            pct: Math.round((profiles.disengaged / total) * 1000) / 10,
+            pct: roundPercentage((profiles.disengaged / total) * 100),
           },
         },
       } as Json,
@@ -743,7 +755,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
   }
 
   // 10b. Calculate eNPS
-  const { data: enpsData } = await supabase
+  const { data: enpsData } = await admin
     .from("respondents")
     .select("enps_score")
     .eq("campaign_id", campaignId)
@@ -765,16 +777,16 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
       segment_type: "global",
       avg_score: enpsValue,
       std_score: 0,
-      favorability_pct: Math.round((promoters / enpsTotal) * 1000) / 10,
+      favorability_pct: roundPercentage((promoters / enpsTotal) * 100),
       response_count: enpsTotal,
       respondent_count: enpsTotal,
       metadata: {
-        promoters: { count: promoters, pct: Math.round((promoters / enpsTotal) * 1000) / 10 },
+        promoters: { count: promoters, pct: roundPercentage((promoters / enpsTotal) * 100) },
         passives: {
           count: enpsTotal - promoters - detractors,
-          pct: Math.round(((enpsTotal - promoters - detractors) / enpsTotal) * 1000) / 10,
+          pct: roundPercentage(((enpsTotal - promoters - detractors) / enpsTotal) * 100),
         },
-        detractors: { count: detractors, pct: Math.round((detractors / enpsTotal) * 1000) / 10 },
+        detractors: { count: detractors, pct: roundPercentage((detractors / enpsTotal) * 100) },
       } as Json,
     });
   }
@@ -789,45 +801,12 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     org?.employee_count ??
     0;
   const sampleN = validRespondentIds.size;
-  const responseRate = populationN > 0 ? Math.round((sampleN / populationN) * 10000) / 100 : 0;
-
-  // Margin of error: 1.96 * sqrt(0.25 / n) * sqrt((N-n)/(N-1)) * 100
-  let marginOfError = 0;
-  if (sampleN > 0 && populationN > 1) {
-    const fpcCorrection = Math.sqrt((populationN - sampleN) / (populationN - 1));
-    marginOfError = Math.round(1.96 * Math.sqrt(0.25 / sampleN) * fpcCorrection * 100 * 100) / 100;
-  }
-
-  // Update campaign with ficha técnica
-  await supabase
-    .from("campaigns")
-    .update({
-      population_n: populationN,
-      sample_n: sampleN,
-      response_rate: responseRate,
-      margin_of_error: marginOfError,
-    })
-    .eq("id", campaignId);
-
-  // 13. Delete previous results and insert new ones
-  await supabase.from("campaign_results").delete().eq("campaign_id", campaignId);
-
-  // Insert in batches of 50
-  for (let i = 0; i < results.length; i += 50) {
-    const batch = results.slice(i, i + 50);
-    const { error: insertError } = await supabase.from("campaign_results").insert(batch);
-
-    if (insertError) {
-      return { success: false, error: `Error guardando resultados: ${insertError.message}` };
-    }
-  }
+  const responseRate = computeResponseRate(sampleN, populationN);
+  const marginOfError = computeMarginOfError(sampleN, populationN);
 
   // =========================================================================
-  // 14. Advanced analytics → campaign_analytics table
+  // 13. Advanced analytics → campaign_analytics table
   // =========================================================================
-
-  // Delete previous analytics
-  await supabase.from("campaign_analytics").delete().eq("campaign_id", campaignId);
 
   const analytics: Array<{ campaign_id: string; analysis_type: string; data: Json }> = [];
 
@@ -918,7 +897,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
         dimension_code: itemInfo.dimension_code,
         item_id: itemId,
         item_text: itemTextMap.get(itemId) ?? "",
-        value: Math.round(fav * 10) / 10,
+        value: roundPercentage(fav),
         threshold: 60,
         message: `Ítem con favorabilidad crítica (${Math.round(fav)}%) en ${dimensionNameMap.get(itemInfo.dimension_code) ?? itemInfo.dimension_code}`,
       });
@@ -929,7 +908,7 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
         dimension_code: itemInfo.dimension_code,
         item_id: itemId,
         item_text: itemTextMap.get(itemId) ?? "",
-        value: Math.round(fav * 10) / 10,
+        value: roundPercentage(fav),
         threshold: 70,
         message: `Ítem requiere atención (${Math.round(fav)}%) en ${dimensionNameMap.get(itemInfo.dimension_code) ?? itemInfo.dimension_code}`,
       });
@@ -994,8 +973,8 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     if (allScores.length > 0) {
       categoryScores.push({
         category: cat,
-        avg_score: Math.round(mean(allScores) * 100) / 100,
-        favorability_pct: Math.round(favorability(allScores) * 10) / 10,
+        avg_score: roundScore(mean(allScores)),
+        favorability_pct: roundPercentage(favorability(allScores)),
         dimension_count: codes.length,
       });
     }
@@ -1058,10 +1037,21 @@ export async function calculateResults(campaignId: string): Promise<ActionResult
     data: reliabilityData as unknown as Json,
   });
 
-  // Insert analytics in batches
-  for (let i = 0; i < analytics.length; i += 10) {
-    const batch = analytics.slice(i, i + 10);
-    await supabase.from("campaign_analytics").insert(batch);
+  const { error: materializationError } = await admin.rpc("replace_campaign_materialization", {
+    p_campaign_id: campaignId,
+    p_population_n: populationN,
+    p_sample_n: sampleN,
+    p_response_rate: responseRate,
+    p_margin_of_error: marginOfError,
+    p_results: results as unknown as Json,
+    p_analytics: analytics as unknown as Json,
+  });
+
+  if (materializationError) {
+    return {
+      success: false,
+      error: `Error materializando resultados: ${materializationError.message}`,
+    };
   }
 
   // Non-blocking ONA analysis (Python-dependent, fails gracefully)

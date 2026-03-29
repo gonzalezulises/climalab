@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult, CampaignAnalytics } from "@/types";
+import type { ActionResult } from "@/types";
 
 // ---------------------------------------------------------------------------
 // hasONAData — lightweight check for ONA results (no JSONB fetched)

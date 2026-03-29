@@ -3,9 +3,8 @@ import { getCampaigns } from "@/actions/campaigns";
 import { getOrganizations } from "@/actions/organizations";
 import { getInstruments } from "@/actions/instruments";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Plus } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { CreateCampaignDialog } from "./create-campaign-dialog";
 
 const STATUS_LABELS: Record<

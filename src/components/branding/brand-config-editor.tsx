@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { DEFAULT_BRAND_CONFIG } from "@/lib/constants";
@@ -108,9 +109,12 @@ export function BrandConfigEditor({
           {/* Header */}
           <div className="px-4 py-5 text-center" style={{ background: brand.primary_color }}>
             {logoUrl && (
-              <img
+              <Image
                 src={logoUrl}
                 alt="Logo"
+                width={160}
+                height={32}
+                unoptimized
                 className="h-8 mx-auto mb-2 object-contain"
                 style={{ filter: "brightness(0) invert(1)" }}
               />

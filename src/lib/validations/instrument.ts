@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+import { zUuid } from "@/lib/validations/uuid";
 
 export const createInstrumentSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres").max(100, "Máximo 100 caracteres"),
@@ -16,7 +15,7 @@ export const createInstrumentSchema = z.object({
 });
 
 export const updateItemSchema = z.object({
-  id: z.string().regex(uuidRegex, "UUID inválido"),
+  id: zUuid(),
   text: z.string().min(5, "Mínimo 5 caracteres").max(500, "Máximo 500 caracteres"),
   is_reverse: z.boolean(),
   is_anchor: z.boolean(),

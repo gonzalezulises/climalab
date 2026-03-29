@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   RadarChart,
   PolarGrid,
@@ -89,30 +89,34 @@ export function DashboardClient({
   const [compData, setCompData] = useState<
     { dimension: string; current: number; previous: number; delta: number }[] | null
   >(null);
-  const [narrative, setNarrative] = useState<DashboardNarrative | null>(initialNarrative);
+  const [compLoading, setCompLoading] = useState(false);
+  const [narrative] = useState<DashboardNarrative | null>(initialNarrative);
   const [isGenerating, startGeneration] = useTransition();
   const [aiError, setAiError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedPrevId) {
+  const handleComparisonChange = async (value: string) => {
+    setSelectedPrevId(value);
+    if (!value) {
       setCompData(null);
       return;
     }
-    compareCampaigns(campaignId, selectedPrevId).then((result) => {
-      if (result.success) {
-        const merged = result.data.current.map((c) => {
-          const prev = result.data.previous.find((p) => p.code === c.code);
-          return {
-            dimension: c.name,
-            current: c.avg,
-            previous: prev?.avg ?? 0,
-            delta: prev ? +(c.avg - prev.avg).toFixed(2) : 0,
-          };
-        });
-        setCompData(merged);
-      }
-    });
-  }, [selectedPrevId, campaignId]);
+
+    setCompLoading(true);
+    const result = await compareCampaigns(campaignId, value);
+    if (result.success) {
+      const merged = result.data.current.map((c) => {
+        const prev = result.data.previous.find((p) => p.code === c.code);
+        return {
+          dimension: c.name,
+          current: c.avg,
+          previous: prev?.avg ?? 0,
+          delta: prev ? +(c.avg - prev.avg).toFixed(2) : 0,
+        };
+      });
+      setCompData(merged);
+    }
+    setCompLoading(false);
+  };
 
   const radarData = dimensionResults.map((d) => ({
     dimension: d.code,
@@ -438,7 +442,7 @@ export function DashboardClient({
                     outerRadius={110}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, value }) => `${value}%`}
+                    label={({ value }) => `${value}%`}
                   >
                     {donutData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
@@ -580,8 +584,8 @@ export function DashboardClient({
                 <CardTitle className="text-base">Comparación wave-over-wave</CardTitle>
                 <CardDescription>Compara con una medición anterior</CardDescription>
               </div>
-              <Select value={selectedPrevId} onValueChange={setSelectedPrevId}>
-                <SelectTrigger className="w-64">
+              <Select value={selectedPrevId} onValueChange={handleComparisonChange}>
+                <SelectTrigger className="w-64" disabled={compLoading}>
                   <SelectValue placeholder="Selecciona campaña" />
                 </SelectTrigger>
                 <SelectContent>

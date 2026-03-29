@@ -112,7 +112,7 @@ export function ResultsCharts({
                   outerRadius={110}
                   paddingAngle={2}
                   dataKey="value"
-                  label={({ name, value }) => `${value}%`}
+                  label={({ value }) => `${value}%`}
                 >
                   {donutData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />

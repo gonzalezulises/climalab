@@ -1,9 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { Database } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+
+function ErrorPage({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full text-center space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">Encuesta no disponible</h1>
+        <p className="text-gray-600">{message}</p>
+      </div>
+    </div>
+  );
+}
 
 export default async function PublicSurveyPage({
   params,
@@ -12,10 +22,7 @@ export default async function PublicSurveyPage({
 }) {
   const { campaignId } = await params;
 
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createAdminClient();
 
   // Validate campaign exists and is active
   const { data: campaign } = await supabase
@@ -46,7 +53,6 @@ export default async function PublicSurveyPage({
   const existingToken = cookieStore.get(cookieKey)?.value;
 
   if (existingToken) {
-    // Verify respondent still exists and isn't completed
     const { data: existing } = await supabase
       .from("respondents")
       .select("token, status")
@@ -61,36 +67,6 @@ export default async function PublicSurveyPage({
     }
   }
 
-  // Create anonymous respondent
-  const { data: respondent, error } = await supabase
-    .from("respondents")
-    .insert({ campaign_id: campaignId })
-    .select("token")
-    .single();
-
-  if (error || !respondent) {
-    return <ErrorPage message="Error al crear tu sesión de encuesta. Intenta de nuevo." />;
-  }
-
-  // Set cookie to remember this respondent (expires in 90 days)
-  cookieStore.set(cookieKey, respondent.token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 90,
-    path: "/",
-  });
-
-  redirect(`/survey/${respondent.token}`);
-}
-
-function ErrorPage({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Encuesta no disponible</h1>
-        <p className="text-gray-600">{message}</p>
-      </div>
-    </div>
-  );
+  // Redirect to the API route handler that creates the respondent and sets the cookie
+  redirect(`/survey/campaign/${campaignId}/join`);
 }

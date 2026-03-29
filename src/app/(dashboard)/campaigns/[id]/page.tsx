@@ -109,7 +109,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               </Button>
             </Link>
           )}
-          <CampaignActions campaign={campaign} participantCount={participants.length} />
+          <CampaignActions campaign={campaign} />
         </div>
       </div>
 

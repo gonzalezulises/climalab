@@ -8,7 +8,6 @@
 // The main project lacks "type": "module" in package.json, so tsx treats
 // statistics.ts as CJS when resolved outside the testing-agent scope.
 // We use dynamic import to handle the CJS→ESM interop correctly.
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -44,12 +43,6 @@ interface Assertion {
   passed: boolean;
   expected: string;
   actual: string;
-}
-
-function approxEqual(a: number | null, b: number | null, tolerance: number): boolean {
-  if (a === null && b === null) return true;
-  if (a === null || b === null) return false;
-  return Math.abs(a - b) <= tolerance;
 }
 
 export async function verifyStatsCommand(): Promise<void> {

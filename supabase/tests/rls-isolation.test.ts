@@ -651,19 +651,17 @@ describe("RLS Multi-Tenant Isolation", () => {
   describe("Acceso anónimo — sin autenticación", () => {
     const anonClient = createClient(SUPABASE_URL, ANON_KEY);
 
-    it("puede leer organizaciones (para branding de survey)", async () => {
-      // Anon CAN read orgs (needed for survey branding)
+    it("no puede leer organizaciones directamente", async () => {
       const { data } = await anonClient.from("organizations").select("id");
-      expect(data!.length).toBeGreaterThanOrEqual(1);
+      expect(data).toHaveLength(0);
     });
 
-    it("puede leer campañas activas (para survey)", async () => {
+    it("no puede leer campañas activas directamente", async () => {
       const { data } = await anonClient
         .from("campaigns")
         .select("id, status")
         .eq("status", "active");
-      expect(data!.length).toBeGreaterThanOrEqual(1);
-      expect(data!.every((c) => c.status === "active")).toBe(true);
+      expect(data).toHaveLength(0);
     });
 
     it("no puede leer campañas con status draft", async () => {
@@ -897,15 +895,13 @@ describe("RLS Multi-Tenant Isolation", () => {
     });
 
     it("no puede insertar una organización (requiere super_admin)", async () => {
-      const { error } = await clientOrphan
-        .from("organizations")
-        .insert({
-          name: "Org Injected by Orphan",
-          slug: "orphan-inject",
-          employee_count: 10,
-          country: "PA",
-          industry: "Test",
-        });
+      const { error } = await clientOrphan.from("organizations").insert({
+        name: "Org Injected by Orphan",
+        slug: "orphan-inject",
+        employee_count: 10,
+        country: "PA",
+        industry: "Test",
+      });
       expect(error).not.toBeNull();
     });
 
@@ -1011,7 +1007,7 @@ describe("RLS Multi-Tenant Isolation", () => {
     it("acceso concurrente de 3 usuarios a datos de Org A no degrada", async () => {
       const start = Date.now();
 
-      const [r1, r2, _r3] = await Promise.all([
+      const [r1, r2] = await Promise.all([
         clientOrgA.from("participants").select("id").eq("campaign_id", campaignAId),
         clientA2.from("participants").select("id").eq("campaign_id", campaignAId),
         clientA3.from("participants").select("id").eq("campaign_id", campaignAId),

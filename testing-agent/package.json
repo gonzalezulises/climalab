@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "tsx src/index.ts run-full --respondents 60 --seed 42",
+    "test:e2e:http": "tsx src/index.ts e2e-http",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

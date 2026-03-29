@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -98,9 +99,12 @@ export function LogoUpload({
 
       {currentUrl ? (
         <div className="flex items-center gap-4">
-          <img
+          <Image
             src={currentUrl}
             alt="Logo"
+            width={200}
+            height={64}
+            unoptimized
             className="h-16 w-auto max-w-[200px] rounded border object-contain bg-white p-1"
           />
           <Button variant="outline" size="sm" onClick={handleDelete} disabled={uploading}>

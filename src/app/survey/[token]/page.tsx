@@ -1,14 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SurveyClient } from "./survey-client";
 
 export const dynamic = "force-dynamic";
 
 async function getSurveyData(token: string) {
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createAdminClient();
 
   // Fetch respondent by token
   const { data: respondent, error: respondentError } = await supabase

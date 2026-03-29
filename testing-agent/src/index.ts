@@ -15,6 +15,7 @@ import { calculateCommand } from "./commands/calculate.js";
 import { verifyCommand } from "./commands/verify.js";
 import { cleanupCommand } from "./commands/cleanup.js";
 import { verifyStatsCommand } from "./commands/verify-stats.js";
+import { e2eHttpCommand } from "./commands/e2e-http.js";
 
 const program = new Command()
   .name("climalab-test")
@@ -156,6 +157,16 @@ program
   )
   .action(async () => {
     await verifyStatsCommand();
+  });
+
+program
+  .command("e2e-http")
+  .description("Run API/CLI end-to-end verification for survey, ingest, and batch flows")
+  .option("--skip-cleanup", "Keep generated test data after run", false)
+  .action(async (opts) => {
+    await e2eHttpCommand({
+      skipCleanup: opts.skipCleanup,
+    });
   });
 
 program.parse();
