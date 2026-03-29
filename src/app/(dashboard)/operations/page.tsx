@@ -156,6 +156,46 @@ export default async function OperationsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Últimas corridas de backfill</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {data.latestBackfillRuns.length === 0 ? (
+            <p className="text-muted-foreground">Sin corridas de backfill registradas.</p>
+          ) : (
+            data.latestBackfillRuns.map((run) => {
+              const summary = (run.summary ?? {}) as {
+                driftSummary?: { materialChanges?: number };
+                performance?: { outlierCount?: number; maxMs?: number };
+                attentionNeededCampaigns?: string[];
+              };
+              return (
+                <div key={run.id} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{run.id}</p>
+                    <Badge variant="outline">{run.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    seleccionadas {run.selected} · procesadas {run.processed} · exitosas{" "}
+                    {run.succeeded} · fallidas {run.failed}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    drift material {summary.driftSummary?.materialChanges ?? 0} · outliers{" "}
+                    {summary.performance?.outlierCount ?? 0} · pico{" "}
+                    {summary.performance?.maxMs ?? 0}
+                    ms
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    campañas con atención requerida {summary.attentionNeededCampaigns?.length ?? 0}
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Últimas corridas batch</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">

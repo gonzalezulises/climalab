@@ -207,6 +207,54 @@ export type Database = {
         }
         Relationships: []
       }
+      backfill_run_metrics: {
+        Row: {
+          batch_size: number
+          created_at: string
+          error_message: string | null
+          failed: number
+          finished_at: string | null
+          id: string
+          processed: number
+          selected: number
+          status: string
+          succeeded: number
+          summary: Json
+          target_logic_version: string
+          trigger_source: string
+        }
+        Insert: {
+          batch_size?: number
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          selected?: number
+          status?: string
+          succeeded?: number
+          summary?: Json
+          target_logic_version: string
+          trigger_source: string
+        }
+        Update: {
+          batch_size?: number
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          selected?: number
+          status?: string
+          succeeded?: number
+          summary?: Json
+          target_logic_version?: string
+          trigger_source?: string
+        }
+        Relationships: []
+      }
       business_indicators: {
         Row: {
           campaign_id: string

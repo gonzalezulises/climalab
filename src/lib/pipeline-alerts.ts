@@ -101,6 +101,60 @@ export function buildPipelineAlertEvents(input: {
   return dedupePipelineAlertEvents(alerts);
 }
 
+export function buildBackfillAlertEvents(input: {
+  processed: number;
+  failed: number;
+  driftCounts: {
+    none: number;
+    low: number;
+    medium: number;
+    high: number;
+  };
+  qualityCounts: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+}) {
+  const alerts: PipelineAlertEvent[] = [];
+
+  if (input.failed > 0) {
+    alerts.push({
+      code: "backfill_failures_detected",
+      severity: "critical",
+      message: "El backfill histórico terminó con campañas fallidas.",
+      metadata: {
+        failed: input.failed,
+        processed: input.processed,
+      },
+    });
+  }
+
+  if (input.driftCounts.high > 0) {
+    alerts.push({
+      code: "backfill_high_drift_detected",
+      severity: "warning",
+      message: "El backfill detectó campañas con drift alto frente a corridas previas.",
+      metadata: {
+        highDriftCampaigns: input.driftCounts.high,
+      },
+    });
+  }
+
+  if (input.qualityCounts.low > 0) {
+    alerts.push({
+      code: "backfill_low_quality_detected",
+      severity: "warning",
+      message: "El backfill detectó campañas con calidad de datos baja.",
+      metadata: {
+        lowQualityCampaigns: input.qualityCounts.low,
+      },
+    });
+  }
+
+  return dedupePipelineAlertEvents(alerts);
+}
+
 export function dedupePipelineAlertEvents(events: PipelineAlertEvent[]) {
   const seen = new Set<string>();
   return events.filter((event) => {

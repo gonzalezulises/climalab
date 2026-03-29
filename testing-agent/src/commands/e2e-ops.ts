@@ -218,6 +218,26 @@ export async function e2eOpsCommand(opts: { skipCleanup?: boolean } = {}) {
       JSON.stringify(backfillBody)
     );
 
+    const { data: backfillRuns, error: backfillRunsError } = await (supabase as any)
+      .from("backfill_run_metrics")
+      .select("status, processed, succeeded, failed, summary")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (backfillRunsError) throw new Error(backfillRunsError.message);
+    const backfillSummary = (backfillRuns?.[0]?.summary ?? {}) as {
+      driftSummary?: { total?: number };
+      performance?: { totalMs?: number };
+    };
+    pushAssertion(
+      assertions,
+      "backfill metrics persisted",
+      (backfillRuns ?? []).length > 0 &&
+        backfillRuns?.[0]?.status === "completed" &&
+        typeof backfillSummary.driftSummary?.total === "number" &&
+        typeof backfillSummary.performance?.totalMs === "number",
+      JSON.stringify(backfillRuns)
+    );
+
     const passed = assertions.filter((assertion) => assertion.passed).length;
     console.log(chalk.green(`\n${passed}/${assertions.length} ops checks passed`));
     for (const assertion of assertions) {

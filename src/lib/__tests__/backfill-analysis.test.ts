@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ANALYSIS_LOGIC_VERSION } from "@/lib/analysis-engine/materialize";
-import { selectBackfillCandidates } from "@/lib/backfill-analysis";
+import { buildBackfillExecutionSummary, selectBackfillCandidates } from "@/lib/backfill-analysis";
 
 describe("selectBackfillCandidates", () => {
   const baseCandidate = {
@@ -59,5 +59,61 @@ describe("selectBackfillCandidates", () => {
     );
 
     expect(selected).toHaveLength(1);
+  });
+
+  it("builds an aggregate summary for full backfill runs", () => {
+    const summary = buildBackfillExecutionSummary({
+      targetLogicVersion: ANALYSIS_LOGIC_VERSION,
+      selected: [
+        {
+          ...baseCandidate,
+          campaignId: "1",
+          campaignName: "Alpha",
+          latestLogicVersion: null,
+          hasSnapshot: false,
+          reason: "never_analyzed",
+        },
+        {
+          ...baseCandidate,
+          campaignId: "2",
+          campaignName: "Beta",
+          latestLogicVersion: "legacy",
+          hasSnapshot: true,
+          reason: "stale_logic_version",
+        },
+      ],
+      results: [
+        {
+          campaignId: "1",
+          campaignName: "Alpha",
+          reason: "never_analyzed",
+          success: true,
+          error: null,
+          durationMs: 1200,
+          driftSeverity: "high",
+          qualityLabel: "medium",
+        },
+        {
+          campaignId: "2",
+          campaignName: "Beta",
+          reason: "stale_logic_version",
+          success: false,
+          error: "boom",
+          durationMs: 300,
+          driftSeverity: "low",
+          qualityLabel: "high",
+        },
+      ],
+    });
+
+    expect(summary.processed).toBe(2);
+    expect(summary.succeeded).toBe(1);
+    expect(summary.failed).toBe(1);
+    expect(summary.reasonCounts.never_analyzed).toBe(1);
+    expect(summary.reasonCounts.stale_logic_version).toBe(1);
+    expect(summary.driftCounts.high).toBe(1);
+    expect(summary.qualityCounts.medium).toBe(1);
+    expect(summary.duration.totalMs).toBe(1500);
+    expect(summary.duration.maxMs).toBe(1200);
   });
 });

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     const result = await backfillCampaignAnalyses({
       campaignIds: Array.isArray(body.campaignIds) ? body.campaignIds : undefined,
       limit: typeof body.limit === "number" ? body.limit : undefined,
+      batchSize: typeof body.batchSize === "number" ? body.batchSize : undefined,
       force: body.force === true,
       organizationId: typeof body.organizationId === "string" ? body.organizationId : undefined,
     });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPipelineAlertEvents } from "@/lib/pipeline-alerts";
+import { buildBackfillAlertEvents, buildPipelineAlertEvents } from "@/lib/pipeline-alerts";
 
 describe("buildPipelineAlertEvents", () => {
   it("builds critical alerts for missing secrets and failed batch runs", () => {
@@ -70,5 +70,29 @@ describe("buildPipelineAlertEvents", () => {
     });
 
     expect(alerts).toEqual([]);
+  });
+
+  it("builds backfill alerts for drift and low quality campaigns", () => {
+    const alerts = buildBackfillAlertEvents({
+      processed: 3,
+      failed: 1,
+      driftCounts: {
+        none: 0,
+        low: 1,
+        medium: 1,
+        high: 1,
+      },
+      qualityCounts: {
+        high: 1,
+        medium: 1,
+        low: 1,
+      },
+    });
+
+    expect(alerts.map((alert) => alert.code)).toEqual([
+      "backfill_failures_detected",
+      "backfill_high_drift_detected",
+      "backfill_low_quality_detected",
+    ]);
   });
 });

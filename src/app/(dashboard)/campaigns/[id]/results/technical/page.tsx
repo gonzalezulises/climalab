@@ -211,6 +211,25 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
               <span className="text-muted-foreground">Completitud demográfica</span>
               <span>{quality?.demographicCompletenessPct.department ?? 0}% dept.</span>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Salud estadística</span>
+              <Badge
+                className={
+                  quality?.statisticalHealth.health === "healthy"
+                    ? "bg-green-100 text-green-800"
+                    : quality?.statisticalHealth.health === "watch"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                }
+              >
+                {quality?.statisticalHealth.health ?? "N/D"}
+              </Badge>
+            </div>
+            {quality?.statisticalHealth.warnings?.length ? (
+              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-900">
+                {quality.statisticalHealth.warnings.join(" | ")}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
