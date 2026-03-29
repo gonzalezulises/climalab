@@ -11,6 +11,8 @@ type Assertion = {
   details?: string;
 };
 
+const INGEST_CONTRACT_VERSION = "2026-03-29";
+
 type ItemRow = {
   id: string;
   text: string;
@@ -118,7 +120,10 @@ export async function e2eLineageCommand(opts: { skipCleanup?: boolean } = {}) {
 
     const firstCsvResponse = await fetch(`${appBaseUrl}/api/ingest/csv`, {
       method: "POST",
-      headers: { "x-api-key": ingestApiSecret },
+      headers: {
+        "x-api-key": ingestApiSecret,
+        "x-climalab-contract-version": INGEST_CONTRACT_VERSION,
+      },
       body: formData,
     });
     const firstCsvBody = await parseJsonResponse(firstCsvResponse);
@@ -135,7 +140,10 @@ export async function e2eLineageCommand(opts: { skipCleanup?: boolean } = {}) {
 
     const secondCsvResponse = await fetch(`${appBaseUrl}/api/ingest/csv`, {
       method: "POST",
-      headers: { "x-api-key": ingestApiSecret },
+      headers: {
+        "x-api-key": ingestApiSecret,
+        "x-climalab-contract-version": INGEST_CONTRACT_VERSION,
+      },
       body: secondFormData,
     });
     const secondCsvBody = await parseJsonResponse(secondCsvResponse);
@@ -148,7 +156,7 @@ export async function e2eLineageCommand(opts: { skipCleanup?: boolean } = {}) {
 
     const { data: ingestEvents, error: ingestEventsError } = await supabase
       .from("ingest_events")
-      .select("status, respondent_id")
+      .select("status, respondent_id, contract_version")
       .eq("campaign_id", campaignResult.campaignId)
       .eq("source", "csv");
 
@@ -160,6 +168,13 @@ export async function e2eLineageCommand(opts: { skipCleanup?: boolean } = {}) {
       assertions,
       "csv ingest event completed once",
       (ingestEvents ?? []).length === 1 && ingestEvents?.[0]?.status === "completed",
+      JSON.stringify(ingestEvents)
+    );
+
+    pushAssertion(
+      assertions,
+      "csv lineage persists ingest contract version",
+      (ingestEvents ?? []).every((event) => event.contract_version === INGEST_CONTRACT_VERSION),
       JSON.stringify(ingestEvents)
     );
 

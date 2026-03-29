@@ -3,6 +3,8 @@ import "server-only";
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { refreshCampaignStats } from "@/lib/pipelineAnalysis";
+import { INGEST_CONTRACT_VERSION, sanitizeMetadata } from "@/lib/ingest-contract";
+import type { Json } from "@/types/database";
 import {
   normalizedSubmissionSchema,
   type NormalizedSubmissionInput,
@@ -37,6 +39,10 @@ export async function normalizeResponse(input: NormalizedSubmissionInput) {
     })),
     p_enps_score: parsed.enpsScore ?? undefined,
     p_payload_hash: payloadHash,
+    p_contract_version: parsed.contractVersion ?? INGEST_CONTRACT_VERSION,
+    p_external_subject_id: parsed.externalSubjectId ?? undefined,
+    p_mapping_version: parsed.mappingVersion ?? undefined,
+    p_metadata: sanitizeMetadata(parsed.metadata) as Json,
   });
 
   if (isUniqueViolation(error)) {

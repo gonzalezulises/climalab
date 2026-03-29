@@ -16,6 +16,13 @@ Este documento describe el linaje técnico actual de ClimaLab desde la captura d
 
 Las respuestas del survey web y de las ingestas alternativas convergen al mismo modelo raw. `responses.source` identifica el canal (`web`, `webhook`, `csv`, `api`).
 
+`ingest_events` ahora también conserva:
+
+- `contract_version`
+- `external_subject_id`
+- `mapping_version`
+- `metadata`
+
 ### 2. Campaign instrument mapping
 
 - `campaigns.instrument_id`
@@ -97,9 +104,14 @@ El análisis de red mantiene un estado operativo independiente (`pending`, `comp
 
 `/api/jobs/analyze-batch` -> `calculateResults()` -> `analysis_runs` -> `campaign_results` + `campaign_analytics`
 
+### Backfill histórico
+
+`/api/jobs/backfill-analysis` -> selección de campañas sin snapshot / sin corrida / lógica desactualizada -> `calculateResults()`
+
 ## Reglas clave
 
 - Un resultado de dimensión debe poder rastrearse a `analysis_run_id`, `instrument_id`, `instrument_type` y `dimension_id`.
 - Los módulos son instrumentos de primera clase en el linaje, no solo convenciones de `dimension_code`.
 - La ingesta alternativa debe ser atómica e idempotente.
+- El contrato de ingestión debe ser versionado y persistido para conciliación futura.
 - Las narrativas IA no deben mezclarse con analytics deterministas.

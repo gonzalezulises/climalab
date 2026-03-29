@@ -6,6 +6,8 @@ App / Vercel:
 
 - `INGEST_API_SECRET`
 - `CRON_SECRET`
+- `PIPELINE_ALERT_WEBHOOK_URL`
+- `PIPELINE_ALERT_EMAIL_TO`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -75,12 +77,20 @@ El endpoint acepta:
 - opcional `?hours=24`
 - opcional `?source=cron|manual|response_hook`
 
+Backfill controlado:
+
+- `GET /api/jobs/backfill-analysis`
+- `POST /api/jobs/backfill-analysis`
+
+`GET` lista candidatos de backfill. `POST` ejecuta recálculo histórico por `campaignIds` o por selección automática.
+
 ## 5. Observabilidad
 
 Tablas nuevas:
 
 - `pipeline_dispatch_events`: cola/resultado de invocaciones del trigger hacia `process_response`
 - `batch_job_runs`: auditoría de ejecuciones del análisis batch
+- `pipeline_notifications`: intentos reales de alertas operativas por webhook/email/log
 - `analysis_run_snapshots`: snapshot comparable por corrida analítica
 - `campaign_ona_runs`: estado operativo del análisis de red
 
@@ -108,6 +118,13 @@ limit 20;
 ```
 
 ```sql
+select created_at, severity, channel, status, alert_code, recipient
+from pipeline_notifications
+order by created_at desc
+limit 20;
+```
+
+```sql
 select created_at, analysis_run_id, logic_version
 from analysis_run_snapshots
 order by created_at desc
@@ -130,10 +147,15 @@ Se espera ver:
 - respuestas `web` guardadas
 - `ingest_events` en `completed`
 - al menos un `batch_job_runs` en `completed`
+- `pipeline_notifications` en `sent`, `failed` o `skipped`
 - `campaign_results` y `campaign_analytics` materializados para la campaña de prueba
+- `analysis_run_snapshots` guardados para la campaña
+- `GET /api/jobs/backfill-analysis` devolviendo candidatos o vacío controlado
 
 ## 7. Notas operativas
 
 - El trigger de `responses` solo despacha para fuentes no `web` y respondentes ya `completed`.
 - El survey web sigue refrescando `campaign_stats` al completar la encuesta, para evitar recálculos parciales durante un llenado en progreso.
 - Si faltan secretos de Vault, el trigger no rompe la escritura: registra `pipeline_dispatch_events.status = 'skipped'` con razón `missing_pipeline_secret`.
+- Las alertas operativas activas salen por webhook o email solo si configuras `PIPELINE_ALERT_WEBHOOK_URL` y/o `PIPELINE_ALERT_EMAIL_TO`. Si no, quedan registradas como `log/skipped`.
+- La heurística batch usa `incremental_stats_refresh` para campañas activas con lógica vigente y `full_recompute` para cierres, lógica desactualizada o backfills.

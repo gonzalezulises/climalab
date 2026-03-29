@@ -12,6 +12,8 @@ type Assertion = {
   details?: string;
 };
 
+const INGEST_CONTRACT_VERSION = "2026-03-29";
+
 type ItemRow = {
   id: string;
   text: string;
@@ -98,10 +100,13 @@ export async function e2eOpsCommand(opts: { skipCleanup?: boolean } = {}) {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ingestApiSecret,
+        "x-climalab-contract-version": INGEST_CONTRACT_VERSION,
       },
       body: JSON.stringify({
         externalEventId: ingestEventId,
+        externalSubjectId: "ops-subject-001",
         campaignId: campaignResult.campaignId,
+        mappingVersion: "ops-direct-v1",
         demographics: {
           department: "Ops",
           tenure: "1-3",
@@ -117,6 +122,21 @@ export async function e2eOpsCommand(opts: { skipCleanup?: boolean } = {}) {
       "direct ingest works for ops flow",
       ingestResponse.ok && ingestBody.ok === true,
       JSON.stringify(ingestBody)
+    );
+
+    const { data: ingestRows, error: ingestRowsError } = await supabase
+      .from("ingest_events")
+      .select("contract_version, external_subject_id, mapping_version")
+      .eq("external_event_id", ingestEventId)
+      .limit(1);
+    if (ingestRowsError) throw new Error(ingestRowsError.message);
+    pushAssertion(
+      assertions,
+      "ingest contract metadata persisted",
+      ingestRows?.[0]?.contract_version === INGEST_CONTRACT_VERSION &&
+        ingestRows?.[0]?.external_subject_id === "ops-subject-001" &&
+        ingestRows?.[0]?.mapping_version === "ops-direct-v1",
+      JSON.stringify(ingestRows)
     );
 
     await supabase
@@ -178,6 +198,24 @@ export async function e2eOpsCommand(opts: { skipCleanup?: boolean } = {}) {
       "ona run status persisted",
       (onaRuns ?? []).length > 0,
       JSON.stringify(onaRuns)
+    );
+
+    const backfillResponse = await fetch(`${appBaseUrl}/api/jobs/backfill-analysis`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cronSecret}`,
+      },
+      body: JSON.stringify({
+        campaignIds: [campaignResult.campaignId],
+      }),
+    });
+    const backfillBody = parseJsonResponse(await backfillResponse.text());
+    pushAssertion(
+      assertions,
+      "backfill route runs manually",
+      backfillResponse.ok && backfillBody.ok === true && backfillBody.processed === 1,
+      JSON.stringify(backfillBody)
     );
 
     const passed = assertions.filter((assertion) => assertion.passed).length;

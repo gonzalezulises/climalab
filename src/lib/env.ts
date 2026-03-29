@@ -17,6 +17,8 @@ const envSchema = z.object({
   TALLY_WEBHOOK_SECRET: z.string().optional(),
   INGEST_API_SECRET: z.string().optional(),
   CRON_SECRET: z.string().optional(),
+  PIPELINE_ALERT_WEBHOOK_URL: z.string().url().optional(),
+  PIPELINE_ALERT_EMAIL_TO: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
