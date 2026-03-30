@@ -21,14 +21,24 @@ function percentage(success: number, total: number) {
   return round((success / total) * 100);
 }
 
+const SLO_TARGETS: Record<string, { latencyLimit: number; healthyTarget: number }> = {
+  dispatch: { latencyLimit: 500, healthyTarget: 95 },
+  batch: { latencyLimit: 5000, healthyTarget: 99 },
+  ai: { latencyLimit: 8000, healthyTarget: 99 },
+  ona: { latencyLimit: 12000, healthyTarget: 99 },
+};
+const WATCH_LATENCY_MULTIPLIER = 1.5;
+const WATCH_MIN_SUCCESS_RATE = 95;
+
 function classifyDomain(domain: string, successRate: number, avgLatencyMs: number) {
-  const latencyLimit =
-    domain === "dispatch" ? 500 : domain === "batch" ? 5000 : domain === "ai" ? 8000 : 12000;
+  const target = SLO_TARGETS[domain] ?? SLO_TARGETS.ona!;
 
-  const healthyTarget = domain === "dispatch" ? 95 : 99;
-
-  if (successRate >= healthyTarget && avgLatencyMs <= latencyLimit) return "healthy";
-  if (successRate >= 95 && avgLatencyMs <= latencyLimit * 1.5) return "watch";
+  if (successRate >= target.healthyTarget && avgLatencyMs <= target.latencyLimit) return "healthy";
+  if (
+    successRate >= WATCH_MIN_SUCCESS_RATE &&
+    avgLatencyMs <= target.latencyLimit * WATCH_LATENCY_MULTIPLIER
+  )
+    return "watch";
   return "critical";
 }
 

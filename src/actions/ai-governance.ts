@@ -15,6 +15,13 @@ import { summarizeAiGovernance } from "@/lib/ai/governance";
 import { listCampaignAiEvidence } from "@/lib/excellence/store";
 import type { ActionResult } from "@/types";
 
+function safeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+  return [];
+}
+
 export async function getCampaignAiGovernance(campaignId: string): Promise<
   ActionResult<{
     summary: ReturnType<typeof summarizeAiGovernance>;
@@ -89,14 +96,8 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
             schemaVersion: insight.schema_version,
             generatedAt: insight.generated_at,
             publishedAt: insight.published_at,
-            warnings: Array.isArray(insight.warnings)
-              ? insight.warnings.filter((entry): entry is string => typeof entry === "string")
-              : [],
-            validationErrors: Array.isArray(insight.validation_errors)
-              ? insight.validation_errors.filter(
-                  (entry): entry is string => typeof entry === "string"
-                )
-              : [],
+            warnings: safeStringArray(insight.warnings),
+            validationErrors: safeStringArray(insight.validation_errors),
             claimCount: governance?.claims.length ?? 0,
             summary: governance?.summary ?? null,
           };
@@ -106,19 +107,11 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
           insightType: row.insight_type,
           claimKey: row.claim_key,
           claimText: row.claim_text,
-          evidence: Array.isArray(row.evidence)
-            ? row.evidence.filter((entry): entry is string => typeof entry === "string")
-            : [],
-          metricRefs: Array.isArray(row.metric_refs)
-            ? row.metric_refs.filter((entry): entry is string => typeof entry === "string")
-            : [],
-          dimensionCodes: Array.isArray(row.dimension_codes)
-            ? row.dimension_codes.filter((entry): entry is string => typeof entry === "string")
-            : [],
+          evidence: safeStringArray(row.evidence),
+          metricRefs: safeStringArray(row.metric_refs),
+          dimensionCodes: safeStringArray(row.dimension_codes),
           confidenceLabel: row.confidence_label,
-          policyWarnings: Array.isArray(row.policy_warnings)
-            ? row.policy_warnings.filter((entry): entry is string => typeof entry === "string")
-            : [],
+          policyWarnings: safeStringArray(row.policy_warnings),
         })),
         events: events.map((event) => ({
           id: event.id,

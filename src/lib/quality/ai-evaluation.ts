@@ -178,10 +178,13 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
     }
 
     const coverageScore = computeCoverageScore(texts, supportedMentions);
+    const EVIDENCE_BASE_SCORE = 60;
+    const EVIDENCE_SCORE_PER_CLAIM = 20;
+    const NO_EVIDENCE_SCORE = 25;
     const evidenceCoverageScore =
       insight.evidenceClaimCount && insight.evidenceClaimCount > 0
-        ? Math.min(100, 60 + insight.evidenceClaimCount * 20)
-        : 25;
+        ? Math.min(100, EVIDENCE_BASE_SCORE + insight.evidenceClaimCount * EVIDENCE_SCORE_PER_CLAIM)
+        : NO_EVIDENCE_SCORE;
     if (!insight.evidenceClaimCount) {
       warnings.push("missing_evidence");
     }

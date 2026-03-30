@@ -203,8 +203,8 @@ export async function generateGovernedInsight(
     analysisRunId: input.analysisRunId ?? null,
     insightType: input.insightType,
     governance: {
-      claims: claims.map((claim, index) => ({
-        key: `${input.insightType}_${index + 1}`,
+      claims: claims.map((claim) => ({
+        key: `${input.insightType}_${createHash("sha256").update(claim.statement).digest("hex").slice(0, 8)}`,
         statement: claim.statement,
         evidence: claim.metricRefs,
         dimensionCodes: claim.dimensionCodes,

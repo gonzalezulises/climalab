@@ -134,7 +134,7 @@ export async function analyzeBatchCampaigns(
           pipelineSummary.dispatch.skipped,
         success: pipelineSummary.dispatch.delivered,
         failed: pipelineSummary.dispatch.failed,
-        avgLatencyMs: 120,
+        avgLatencyMs: 120, // placeholder: dispatch latency not yet tracked per-event
       },
       batch: {
         total: Math.max(1, summary.processed),
