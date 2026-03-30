@@ -12,7 +12,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Validation**: Zod + react-hook-form
 - **i18n**: next-intl (Spanish only)
 - **Email**: Resend (transactional branded emails)
-- **ONA**: Python (igraph + matplotlib), invoked via `uv run`
+- **Statistical API**: Python FastAPI service on DGX (ONA, CFA, invariance, HLM) at `stats.rizo.ma`
 - **AI**: Triple backend — OpenAI (GPT-4o, priority) → Anthropic API (Claude Haiku 4.5) → Ollama native fallback
 - **Export**: docx (Word/DOCX), exceljs (Excel)
 
@@ -31,17 +31,17 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels, DEFAULT_BRAND_CONFIG
 - `src/lib/score-utils.ts` — Centralized score classification (classifyFavorability, favToHex, SEVERITY_LABELS) with Rizoma-aligned colors
-- `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson)
+- `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson, welchTTest, welchTTestFromStats, bootstrapCI, cohensD, segmentSignificance)
 - `src/lib/email.ts` — Multi-type branded email sender (Resend)
 - `src/lib/env.ts` — Zod-validated environment variables
 - `src/lib/rate-limit.ts` — Rate limiting utility
-- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders, participants)
+- `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders, participants, statistical-validation)
 - `src/types/` — Database types (generated) and derived types (BrandConfig)
 - `supabase/migrations/` — SQL migrations (20 files)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
-- `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (invokes ONA at end)
-- `scripts/ona-analysis.py` — Python (igraph) perceptual network analysis engine with Leiden + stability analysis (PEP 723 inline deps, runs via `uv run` or `python3`)
+- `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (includes wave comparison enrichment)
+- `services/statistical-api/` — FastAPI service (ONA, CFA, invariance, HLM) deployed on DGX via Cloudflare Tunnel at `stats.rizo.ma`
 - `messages/` — i18n translation files
 - `docs/TECHNICAL_REFERENCE.md` — Comprehensive audit documentation (Spanish)
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
@@ -98,15 +98,66 @@ Implementation in `src/lib/statistics.ts` and `src/lib/score-utils.ts`:
 - **eNPS**: 0-10 scale. Promoters ≥9, passives 7-8, detractors ≤6
 - **Favorability**: % responses ≥4 on 5-point Likert
 - **Engagement profiles**: ambassadors (≥4.5), committed (4.0-4.49), neutral (3.0-3.99), disengaged (<3.0)
+- **Welch t-test**: Wave-over-wave significance (min n=15 per wave). Also `welchTTestFromStats` from aggregates.
+- **Bootstrap CI**: Confidence intervals for difference of means (min n=10, seeded PRNG for reproducibility)
+- **Cohen's d**: Effect size classification (negligible <0.2, small 0.2-0.5, medium 0.5-0.8, large ≥0.8)
+- **Segment significance**: Wrapper combining Welch + bootstrap (if n<30) + Cohen's d
 
-## ONA — Perceptual Network Analysis
+## Statistical API — Python Service on DGX
+
+FastAPI service at `stats.rizo.ma` (Cloudflare Tunnel → DGX Docker container port 8787). All heavy Python computation runs here, called via `fetch()` from Next.js server actions.
+
+- **Service**: `services/statistical-api/` (FastAPI, uvicorn, Docker)
+- **Endpoints**: `POST /ona`, `POST /cfa`, `POST /invariance`, `POST /hlm`, `GET /health`
+- **Auth**: Bearer token via `STATISTICAL_API_SECRET`
+- **Action**: `src/actions/statistical-validation.ts` → `fetch(STATISTICAL_ENGINE_URL + endpoint)`
+- **Auto-trigger**: After `calculateResults()`, CFA (n≥100) and HLM (n≥50) fire automatically (non-blocking)
+- **UI buttons**: Technical page has manual execution buttons for CFA, invariance, HLM
+
+### ONA — Perceptual Network Analysis
 
 Cosine-similarity graph from respondent dimension vectors (NOT sociometric). Python igraph + Leiden + NMI stability.
 
-- **Script**: `scripts/ona-analysis.py` (PEP 723, `uv run`)
-- **Action**: `src/actions/ona.ts` → `campaign_analytics` where `analysis_type = 'ona_network'`
+- **Engine**: `services/statistical-api/engine/ona.py`
+- **Action**: `src/actions/ona.ts` → reads from `campaign_analytics` where `analysis_type = 'ona_network'`
+- **Invocation**: Fire-and-forget from `calculateResults()` via `fetch(STATISTICAL_ENGINE_URL/ona)`
 - **Results**: 9 sections in `/campaigns/[id]/results/network/`
 - **Min respondents**: 10. Stability: >0.80 robust, 0.50-0.80 moderate, <0.50 weak
+
+### CFA — Confirmatory Factor Analysis
+
+Validates the 22-factor structure of Core v4.0 using semopy (DWLS estimator).
+
+- **Engine**: `services/statistical-api/engine/cfa.py`
+- **Min respondents**: 100 (campaign), 500 (cross-org)
+- **Output**: Fit indices (CFI, RMSEA, SRMR), factor loadings, problematic items, discriminant issues
+- **Storage**: `campaign_analytics` with `analysis_type = 'cfa_campaign'`
+
+### Measurement Invariance
+
+Tests if the survey measures the same constructs across groups (department, tenure, gender). Progressive: configural → metric → scalar. Chen (2007) criteria (ΔCFI ≤ 0.010, ΔRMSEA ≤ 0.015).
+
+- **Engine**: `services/statistical-api/engine/invariance.py`
+- **Min respondents**: 75 per group, ≥2 groups
+- **Storage**: `campaign_analytics` with `analysis_type = 'invariance_campaign'`
+
+### HLM — Hierarchical Linear Modeling
+
+Null intercept-only model per dimension. Decomposes variance into individual vs departmental (ICC). statsmodels REML estimator.
+
+- **Engine**: `services/statistical-api/engine/hlm.py`
+- **Min respondents**: 50, ≥3 departments with ≥10 each
+- **ICC thresholds**: <0.05 negligible, 0.05-0.15 bajo, 0.15-0.30 moderado, >0.30 alto
+- **Storage**: `campaign_analytics` with `analysis_type = 'hlm_campaign'`
+
+### Wave-over-Wave Significance
+
+Computed in TypeScript during `calculateResults()`. Stored in `campaign_results.metadata.wave_comparison`.
+
+- **Builder**: `src/lib/analysis-engine/wave-comparison.ts` → `enrichResultsWithWaveComparison()`
+- **Method**: Welch t-test from aggregates + Cohen's d effect size
+- **UI**: Significance badges on trends page (↑ green / ↓ red / ≈ gray), full table in ficha técnica
+- **Shared**: Same function used by `calculateResults()` and `seed-results.ts`
 
 ## Branding, Email & Business Indicators
 
@@ -187,7 +238,10 @@ Server action: `src/actions/export.ts`. Formats:
    - Pearson correlation matrix → engagement drivers → automatic alerts → category scores
    - Ficha técnica (population, sample, response rate, margin of error with FPC)
    - Reliability data (alpha per dimension) → campaign_analytics
-   - ONA perceptual analysis (Python/igraph, Leiden + NMI stability, non-blocking) → campaign_analytics
+   - Wave-over-wave significance (Welch t-test + Cohen's d vs previous campaign) → campaign_results.metadata
+   - ONA perceptual analysis → `fetch(stats.rizo.ma/ona)` fire-and-forget → campaign_analytics
+   - CFA (if n≥100) → `fetch(stats.rizo.ma/cfa)` fire-and-forget → campaign_analytics
+   - HLM (if n≥50) → `fetch(stats.rizo.ma/hlm)` fire-and-forget → campaign_analytics
 7. Admin views results dashboard (11 sub-pages: dashboard, dimensions, trends, segments, benchmarks, drivers, alerts, comments, network, technical, export)
 8. AI Insights (optional, requires AI provider): narrative summaries on dashboard, drivers, alerts, segments, comments, trends; AI-powered executive report export
 9. Export: branded DOCX, Excel, CSV, AI report
@@ -214,6 +268,11 @@ Required for production:
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key
 - `RESEND_API_KEY` — Resend API key for transactional emails
 - `RESEND_FROM_EMAIL` — Sender email (e.g., "ClimaLab <noreply@climalab.app>")
+
+Optional (Statistical API — required for ONA, CFA, HLM, invariance):
+
+- `STATISTICAL_ENGINE_URL` — Statistical API URL (e.g., `https://stats.rizo.ma`). If not set, ONA/CFA/HLM are deferred.
+- `STATISTICAL_API_SECRET` — Bearer token for statistical API auth
 
 Optional (AI — at least one required for AI insights):
 

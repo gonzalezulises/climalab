@@ -29,6 +29,9 @@
 | Reporte de calidad por campaña + matriz de desempeño IA      | Implementado                 | 94c136e                      |
 | Gobernanza de IA (contratos, versiones, estados, AI ops)     | Implementado                 | codex/ai-governance          |
 | Foundations 10/10 (baselines, evidencia IA, SLOs, capacidad) | Implementado                 | codex/ten-out-of-ten-program |
+| Robustez estadística (CFA, invariancia, HLM, significancia)  | Implementado                 | 4579b0f + a3c1e36            |
+| Statistical API en DGX (FastAPI, Cloudflare Tunnel)          | Implementado                 | a3c1e36 + 6b91f24            |
+| Significancia wave-over-wave + IC en trends/ficha técnica    | Implementado                 | 4579b0f + c9e8a5a            |
 | Pulsos automatizados                                         | Pendiente                    | —                            |
 | Reportes PDF con marca blanca                                | Implementado (branding v4.4) | 97554e3                      |
 | CFA / Invariancia                                            | Horizonte 2                  | —                            |
@@ -98,21 +101,20 @@
 
 ### Pendiente inmediato
 
-- Validar en producción las nuevas foundations 10/10 y la migración `000039`
 - Correr backfill real para poblar baselines estadísticos en campañas históricas
+- Verificar CFA/HLM/ONA en producción con campaña real (n≥100)
 
 ### Pendiente
 
-- Pulsos automatizados (programacion periodica de 22 items ancla)
+- Pulsos automatizados (programación periódica de 22 ítems ancla)
 - Recordatorios automáticos por cron (programación periódica)
 - Onboarding wizard multi-paso para nuevas organizaciones
 - Alertas operativas conectadas a un canal real (Slack/email/webhook) y playbooks de respuesta
-- Backfill histórico real en producción con revisión de drift y thresholds
-- Rotación final manual fuera de credenciales legacy donde aún aplique en infraestructura externa
-- Baseline formal de performance/capacidad para campañas grandes
 - Regression suite ampliada para prompts gold y comparación entre modelos
 - Reglas editoriales más finas por insight type (aprobación automática vs manual)
 - Alertas activas ligadas a presupuestos de error de SLO y no solo a fallos aislados
+- CFA/invariancia cross-org (requiere pool multi-tenant con n≥500)
+- HLM 3 niveles cross-org (individuo → departamento → organización)
 
 ### Próximos pasos recomendados (siguientes 90 días)
 
@@ -120,25 +122,23 @@
 2. Activar notificaciones operativas reales para fallos de ingest, batch, dispatch y ONA
 3. Medir tiempos y costo de `calculateResults()` para definir qué más pasar a incremental
 4. Cerrar pulsos automatizados y recordatorios por cron como siguientes features de negocio
-5. Preparar la siguiente capa analítica: comparativas longitudinales más claras y validación CFA/invariancia
-6. Endurecer la gobernanza de IA con fixtures gold, diffs entre regeneraciones y score de evidencia más estricto
-7. Consolidar longitudinal e invariancia como siguiente ola metodológica sobre baselines ya persistidos
+5. Endurecer la gobernanza de IA con fixtures gold, diffs entre regeneraciones y score de evidencia más estricto
 
 ---
 
 ## Horizonte 2: Analítico (6–18 meses)
 
-### Análisis Factorial Confirmatorio (CFA)
+### ~~Análisis Factorial Confirmatorio (CFA)~~ ✅ Implementado (v5.2)
 
-- Validación empírica de la estructura de 22 dimensiones
-- Evaluación de ajuste del modelo (CFI, RMSEA, SRMR)
-- Identificación de ítems con cargas factoriales bajas
+- ~~Validación empírica de la estructura de 22 dimensiones~~ → `services/statistical-api/engine/cfa.py`
+- ~~Evaluación de ajuste del modelo (CFI, RMSEA, SRMR)~~ → Auto-trigger si n≥100
+- ~~Identificación de ítems con cargas factoriales bajas~~ → Flag `low_loading` < 0.40
 
-### Invariancia de Medición
+### ~~Invariancia de Medición~~ ✅ Implementado (v5.2)
 
-- Invariancia configural, métrica y escalar
-- Habilitar comparaciones válidas entre organizaciones
-- Establecer normas regionales por industria y tamaño
+- ~~Invariancia configural, métrica y escalar~~ → `services/statistical-api/engine/invariance.py`
+- ~~Habilitar comparaciones válidas entre organizaciones~~ → Pendiente cross-org (n≥500)
+- Establecer normas regionales por industria y tamaño — Pendiente (requiere volumen de datos)
 
 ### Normas Regionales
 
@@ -153,21 +153,21 @@
 - Identificación de líderes informales, silos de comunicación, redes de influencia
 - Combinación con ONA perceptual para diagnóstico integral
 
-### Mejoras Estadísticas
+### ~~Mejoras Estadísticas~~ ✅ Implementado (v5.2)
 
-- Intervalos de confianza para diferencias entre segmentos
-- Pruebas de significancia para cambios wave-over-wave
-- Análisis de sensibilidad para tamaño de efecto
+- ~~Intervalos de confianza para diferencias entre segmentos~~ → `bootstrapCI()` + `segmentSignificance()`
+- ~~Pruebas de significancia para cambios wave-over-wave~~ → `welchTTestFromStats()` + badges en trends
+- ~~Análisis de sensibilidad para tamaño de efecto~~ → `cohensD()` con clasificación negligible/small/medium/large
 
 ---
 
 ## Horizonte 3: Avanzado (18–36 meses)
 
-### Modelado Multinivel (HLM)
+### ~~Modelado Multinivel (HLM)~~ ✅ Implementado (v5.2, 2 niveles)
 
-- Separar varianza individual, de equipo y organizacional
-- Efectos cross-level entre liderazgo y engagement
-- Control por variables de composición grupal
+- ~~Separar varianza individual, de equipo y organizacional~~ → ICC per dimension, auto-trigger si n≥50
+- Efectos cross-level entre liderazgo y engagement — Pendiente (requiere modelos con predictores)
+- HLM 3 niveles (individuo → departamento → organización) — Pendiente (requiere cross-org n≥200)
 
 ### Análisis de Texto (NLP)
 

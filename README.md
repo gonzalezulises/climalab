@@ -44,8 +44,8 @@ Los módulos se combinan con el instrumento base (Core o Pulso) al crear una cam
 
 ```
 src/
-├── actions/          # 13 Server Actions (campaigns, organizations, instruments, analytics,
-│                     #   ai-insights, ona, export, reminders, participants, business-indicators, auth)
+├── actions/          # 14 Server Actions (campaigns, organizations, instruments, analytics,
+│                     #   ai-insights, ona, export, reminders, participants, business-indicators, auth, statistical-validation)
 ├── app/
 │   ├── (auth)/       # Login (magic link)
 │   ├── (dashboard)/  # Admin: organizations, campaigns, instruments, results (11 sub-páginas)
@@ -64,8 +64,14 @@ supabase/
 
 scripts/
 ├── generate-demo-seed.mjs  # Generador PRNG determinista (mulberry32)
-├── seed-results.ts          # Cálculo offline de resultados para datos demo
-└── ona-analysis.py          # ONA perceptual (igraph, Leiden, NMI stability, graph image)
+└── seed-results.ts          # Cálculo offline de resultados para datos demo (incluye wave comparison)
+
+services/
+└── statistical-api/        # FastAPI (Python) — ONA, CFA, invariancia, HLM
+    ├── engine/             # Módulos de análisis (ona.py, cfa.py, invariance.py, hlm.py, data.py)
+    ├── main.py             # Endpoints HTTP + auth + CORS
+    ├── Dockerfile          # Deploy en DGX vía Cloudflare Tunnel (stats.rizo.ma)
+    └── requirements.txt    # igraph, semopy, statsmodels, pandas, numpy, scipy, matplotlib
 
 testing-agent/              # CLI standalone para testing E2E del pipeline
 └── src/                    # Genera orgs, empleados, respuestas; calcula resultados; verifica
@@ -101,7 +107,7 @@ npm run dev
 4. **Activar** — la encuesta queda disponible en `/survey/[token]`, se envían emails de invitación con marca de la org
 5. **Recordatorios** — botón manual envía emails de recordatorio a participantes pendientes
 6. **Monitorear** — panel en vivo con auto-refresh cada 30s
-7. **Cerrar y calcular** — motor estadístico computa resultados (base + módulos) + ONA perceptual
+7. **Cerrar y calcular** — motor estadístico computa resultados + significancia wave-over-wave + auto-trigger ONA/CFA/HLM en DGX
 8. **Resultados** — 11 sub-páginas: dashboard, dimensiones (cards expandibles con texto completo), tendencias, segmentos, benchmarks, drivers, alertas, comentarios, red ONA, ficha técnica, exportar
 9. **Insights IA** — análisis cualitativos generados por IA (OpenAI → Anthropic → Ollama): narrativas, drivers, alertas, segmentos, tendencias
 10. **Exportar** — DOCX ejecutivo con branding, Excel completo, CSV, reporte IA
@@ -114,6 +120,12 @@ npm run dev
 - rwg(j) — acuerdo intergrupal por dimensión (James et al. 1984)
 - Alfa de Cronbach — confiabilidad interna por dimensión
 - Correlación de Pearson — matriz entre dimensiones, drivers de engagement
+- Welch t-test — significancia wave-over-wave (n≥15 por wave)
+- Bootstrap CI — intervalos de confianza para diferencia de medias (n≥10)
+- Cohen's d — tamaño de efecto (negligible/small/medium/large)
+- CFA (semopy, DWLS) — validación factorial de 22 dimensiones (n≥100)
+- Invariancia de medición — configural/métrica/escalar por grupo (n≥75 por grupo)
+- HLM (statsmodels, REML) — ICC por dimensión, varianza individual vs departamental (n≥50)
 - Umbral de anonimato: no reportar segmentos con < 5 respondentes
 - eNPS: promotores (9-10) - detractores (0-6) / total × 100
 - Perfiles de engagement: Embajadores (≥4.5), Comprometidos (4.0-4.49), Neutrales (3.0-3.99), Desvinculados (<3.0)
