@@ -1,17 +1,5 @@
-import {
-  mean,
-  stdDev,
-  welchTTest,
-  welchTTestFromStats,
-  bootstrapCI,
-  cohensD,
-} from "@/lib/statistics";
-
-type WaveComparisonInput = {
-  currentScores: number[];
-  previousScores: number[];
-  previousCampaignId: string;
-};
+import { welchTTestFromStats, cohensD } from "@/lib/statistics";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type WaveComparisonMetadata = {
   previous_campaign_id: string;
@@ -73,41 +61,67 @@ export function buildWaveComparisonFromStats(
   };
 }
 
-export function buildWaveComparisonMetadata(
-  input: WaveComparisonInput
-): WaveComparisonMetadata | null {
-  if (input.previousScores.length === 0 || input.currentScores.length === 0) return null;
+/**
+ * Enriches dimension results with wave comparison metadata by finding
+ * the previous campaign for the same organization.
+ */
+export async function enrichResultsWithWaveComparison(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
+  campaignId: string,
+  organizationId: string,
+  results: Array<{
+    result_type: string;
+    segment_type: string | null;
+    dimension_code: string | null;
+    avg_score: number | null;
+    std_score: number | null;
+    respondent_count: number | null;
+    metadata: unknown;
+  }>
+): Promise<void> {
+  const { data: prevCampaign } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .in("status", ["closed", "archived"])
+    .neq("id", campaignId)
+    .order("ends_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
 
-  const prevAvg = mean(input.previousScores);
-  const currAvg = mean(input.currentScores);
-  const welch = welchTTest(input.currentScores, input.previousScores);
-  const bootstrap = bootstrapCI(input.currentScores, input.previousScores);
-  const effectSize = cohensD(
-    currAvg,
-    prevAvg,
-    stdDev(input.currentScores),
-    stdDev(input.previousScores),
-    input.currentScores.length,
-    input.previousScores.length
+  if (!prevCampaign) return;
+
+  const { data: prevResults } = await supabase
+    .from("campaign_results")
+    .select("dimension_code, avg_score, std_score, respondent_count")
+    .eq("campaign_id", prevCampaign.id)
+    .eq("result_type", "dimension")
+    .eq("segment_type", "global");
+
+  if (!prevResults || prevResults.length === 0) return;
+
+  const prevByDim = new Map(
+    prevResults.filter((r) => r.dimension_code != null).map((r) => [r.dimension_code!, r] as const)
   );
 
-  return {
-    previous_campaign_id: input.previousCampaignId,
-    previous_avg: ROUND(prevAvg),
-    current_avg: ROUND(currAvg),
-    delta: ROUND(currAvg - prevAvg),
-    welch: welch
-      ? { t: welch.t, df: welch.df, p_value: welch.pValue, significant: welch.significant }
-      : null,
-    bootstrap: bootstrap
-      ? {
-          lower: bootstrap.lower,
-          upper: bootstrap.upper,
-          mean_diff: bootstrap.meanDiff,
-          significant: bootstrap.significant,
+  for (const row of results) {
+    if (row.result_type === "dimension" && row.segment_type === "global" && row.dimension_code) {
+      const prev = prevByDim.get(row.dimension_code);
+      if (prev && prev.avg_score != null && row.avg_score != null) {
+        const wc = buildWaveComparisonFromStats({
+          currentAvg: row.avg_score,
+          currentStd: row.std_score ?? 0.5,
+          currentN: row.respondent_count ?? 0,
+          previousAvg: Number(prev.avg_score),
+          previousStd: Number(prev.std_score) || 0.5,
+          previousN: prev.respondent_count ?? 0,
+          previousCampaignId: prevCampaign.id,
+        });
+        if (wc) {
+          row.metadata = { ...(row.metadata as Record<string, unknown>), wave_comparison: wc };
         }
-      : null,
-    effect_size: { d: effectSize.d, label: effectSize.label },
-    method: "welch_t",
-  };
+      }
+    }
+  }
 }

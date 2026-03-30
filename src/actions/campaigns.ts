@@ -25,7 +25,7 @@ import {
   updateCampaignConfigOperation,
   updateCampaignStatusOperation,
 } from "@/lib/campaigns/operations";
-import { buildWaveComparisonFromStats } from "@/lib/analysis-engine/wave-comparison";
+import { enrichResultsWithWaveComparison } from "@/lib/analysis-engine/wave-comparison";
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
 import { env } from "@/lib/env";
 import type { Json } from "@/types/database";
@@ -153,59 +153,12 @@ export async function calculateResults(
       .single();
 
     if (campaignForOrg?.organization_id) {
-      const { data: prevCampaign } = await admin
-        .from("campaigns")
-        .select("id")
-        .eq("organization_id", campaignForOrg.organization_id)
-        .in("status", ["closed", "archived"])
-        .neq("id", campaignId)
-        .order("ends_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (prevCampaign) {
-        const { data: prevResults } = await admin
-          .from("campaign_results")
-          .select("dimension_code, avg_score, std_score, respondent_count")
-          .eq("campaign_id", prevCampaign.id)
-          .eq("result_type", "dimension")
-          .eq("segment_type", "global");
-
-        if (prevResults && prevResults.length > 0) {
-          const prevByDim = new Map(
-            prevResults
-              .filter((r) => r.dimension_code != null)
-              .map((r) => [r.dimension_code!, r] as const)
-          );
-
-          for (const row of output.results) {
-            if (
-              row.result_type === "dimension" &&
-              row.segment_type === "global" &&
-              row.dimension_code
-            ) {
-              const prev = prevByDim.get(row.dimension_code);
-              if (prev && prev.avg_score != null && row.avg_score != null) {
-                const wc = buildWaveComparisonFromStats({
-                  currentAvg: row.avg_score,
-                  currentStd: row.std_score ?? 0.5,
-                  currentN: row.respondent_count ?? 0,
-                  previousAvg: Number(prev.avg_score),
-                  previousStd: Number(prev.std_score) || 0.5,
-                  previousN: prev.respondent_count ?? 0,
-                  previousCampaignId: prevCampaign.id,
-                });
-                if (wc) {
-                  row.metadata = {
-                    ...(row.metadata as Record<string, unknown>),
-                    wave_comparison: wc,
-                  } as Json;
-                }
-              }
-            }
-          }
-        }
-      }
+      await enrichResultsWithWaveComparison(
+        admin as never,
+        campaignId,
+        campaignForOrg.organization_id,
+        output.results
+      );
     }
 
     await persistRespondentQuality(admin as never, analysisRunId, output.respondentQuality);
