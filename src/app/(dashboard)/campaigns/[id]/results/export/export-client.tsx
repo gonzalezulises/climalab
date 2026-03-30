@@ -10,7 +10,7 @@ import {
   getCommentAnalysis,
   getDriverInsights,
 } from "@/actions/ai-insights";
-import { generateExcelReport, generateDocxReport } from "@/actions/export";
+import { generateExcelReport, generateDocxReport, generateResponsesCsv } from "@/actions/export";
 import type { DashboardNarrative, CommentAnalysis, DriverInsights } from "@/actions/ai-insights";
 
 type Props = {
@@ -42,6 +42,7 @@ export function ExportClient({
   const [isPending, startTransition] = useTransition();
   const [xlsxPending, startXlsxTransition] = useTransition();
   const [docxPending, startDocxTransition] = useTransition();
+  const [responsesCsvPending, startResponsesCsvTransition] = useTransition();
 
   function downloadXlsx() {
     startXlsxTransition(async () => {
@@ -119,6 +120,22 @@ export function ExportClient({
     a.download = `${campaignName.replace(/\s+/g, "_")}_datos.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadResponsesCsv() {
+    startResponsesCsvTransition(async () => {
+      const result = await generateResponsesCsv(campaignId);
+      if (!result.success) return;
+
+      const { csv, filename } = result.data;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   return (
@@ -203,6 +220,33 @@ export function ExportClient({
             </Button>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileDown className="h-5 w-5" /> Respuestas Individuales
+            </CardTitle>
+            <CardDescription>
+              Una fila por respondente con todas las respuestas individuales (scores 1-5),
+              demografía y eNPS. Compatible con SPSS, R y Excel.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={downloadResponsesCsv}
+              variant="outline"
+              className="w-full"
+              disabled={responsesCsvPending}
+            >
+              {responsesCsvPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4 mr-2" />
+              )}
+              Descargar CSV Individual
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
