@@ -1,4 +1,15 @@
-import { mean, stdDev, favorability, rwg, cronbachAlpha, pearson } from "@/lib/statistics";
+import {
+  mean,
+  stdDev,
+  favorability,
+  rwg,
+  cronbachAlpha,
+  pearson,
+  welchTTest,
+  bootstrapCI,
+  cohensD,
+  segmentSignificance,
+} from "@/lib/statistics";
 
 // ============================================================
 // Helper functions replicating logic from campaigns.ts
@@ -465,5 +476,145 @@ describe("anonymity threshold (formula verification)", () => {
   it("accepts segments with more than 5 respondents", () => {
     expect(passesAnonymityThreshold(6)).toBe(true);
     expect(passesAnonymityThreshold(100)).toBe(true);
+  });
+});
+
+// ============================================================
+// 11. welchTTest
+// ============================================================
+describe("welchTTest", () => {
+  it("detects significant difference between two samples", () => {
+    const group1 = [2.1, 2.3, 2.5, 2.2, 2.4, 2.6, 2.0, 2.3, 2.1, 2.5, 2.2, 2.4, 2.3, 2.5, 2.1];
+    const group2 = [4.1, 4.3, 4.5, 4.2, 4.4, 4.6, 4.0, 4.3, 4.1, 4.5, 4.2, 4.4, 4.3, 4.5, 4.1];
+    const result = welchTTest(group1, group2);
+    expect(result).not.toBeNull();
+    expect(result!.significant).toBe(true);
+    expect(result!.pValue).toBeLessThan(0.05);
+    expect(result!.t).toBeLessThan(0);
+    expect(result!.df).toBeGreaterThan(0);
+  });
+
+  it("returns non-significant for similar samples", () => {
+    const group1 = [3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2];
+    const group2 = [3.1, 3.0, 3.2, 3.1, 3.0, 3.2, 3.1, 3.0, 3.2, 3.1, 3.0, 3.2, 3.1, 3.0, 3.2];
+    const result = welchTTest(group1, group2);
+    expect(result).not.toBeNull();
+    expect(result!.significant).toBe(false);
+    expect(result!.pValue).toBeGreaterThan(0.05);
+  });
+
+  it("returns null when n < 15 in either sample", () => {
+    const small = [3.0, 3.1, 3.2, 3.0, 3.1];
+    const large = [3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2];
+    expect(welchTTest(small, large)).toBeNull();
+    expect(welchTTest(large, small)).toBeNull();
+  });
+
+  it("handles identical samples", () => {
+    const same = [3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2];
+    const result = welchTTest(same, [...same]);
+    expect(result).not.toBeNull();
+    expect(result!.significant).toBe(false);
+    expect(result!.t).toBeCloseTo(0, 1);
+  });
+});
+
+// ============================================================
+// 12. bootstrapCI
+// ============================================================
+describe("bootstrapCI", () => {
+  it("detects significant difference (CI excludes 0)", () => {
+    const group1 = [2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.0, 2.1, 2.2, 2.3];
+    const group2 = [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.0, 4.1, 4.2, 4.3];
+    const result = bootstrapCI(group1, group2, { seed: 42 });
+    expect(result).not.toBeNull();
+    expect(result!.significant).toBe(true);
+    expect(result!.lower).toBeLessThan(0);
+    expect(result!.upper).toBeLessThan(0);
+  });
+
+  it("returns non-significant when CI includes 0", () => {
+    const group1 = [3.0, 3.1, 2.9, 3.2, 2.8, 3.0, 3.1, 2.9, 3.2, 2.8];
+    const group2 = [3.1, 3.0, 3.2, 2.9, 3.1, 3.0, 3.1, 2.9, 3.2, 2.8];
+    const result = bootstrapCI(group1, group2, { seed: 42 });
+    expect(result).not.toBeNull();
+    expect(result!.significant).toBe(false);
+  });
+
+  it("returns null when n < 10 in either sample", () => {
+    const small = [3.0, 3.1, 3.2];
+    const large = [3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0, 3.1, 3.2, 3.0];
+    expect(bootstrapCI(small, large)).toBeNull();
+  });
+
+  it("is reproducible with same seed", () => {
+    const a = [2.0, 2.5, 3.0, 3.5, 4.0, 2.0, 2.5, 3.0, 3.5, 4.0];
+    const b = [3.0, 3.5, 4.0, 4.5, 5.0, 3.0, 3.5, 4.0, 4.5, 5.0];
+    const r1 = bootstrapCI(a, b, { seed: 123 });
+    const r2 = bootstrapCI(a, b, { seed: 123 });
+    expect(r1!.lower).toBe(r2!.lower);
+    expect(r1!.upper).toBe(r2!.upper);
+  });
+});
+
+// ============================================================
+// 13. cohensD
+// ============================================================
+describe("cohensD", () => {
+  it("classifies negligible effect (d < 0.2)", () => {
+    const result = cohensD(3.0, 3.05, 0.5, 0.5, 30, 30);
+    expect(result.label).toBe("negligible");
+    expect(Math.abs(result.d)).toBeLessThan(0.2);
+  });
+
+  it("classifies small effect (0.2 <= d < 0.5)", () => {
+    const result = cohensD(3.0, 3.2, 0.5, 0.5, 30, 30);
+    expect(result.label).toBe("small");
+  });
+
+  it("classifies medium effect (0.5 <= d < 0.8)", () => {
+    const result = cohensD(3.0, 3.5, 0.7, 0.7, 30, 30);
+    expect(result.label).toBe("medium");
+  });
+
+  it("classifies large effect (d >= 0.8)", () => {
+    const result = cohensD(2.5, 4.0, 0.8, 0.8, 30, 30);
+    expect(result.label).toBe("large");
+  });
+
+  it("returns 0 when pooled sd is 0", () => {
+    const result = cohensD(3.0, 3.0, 0, 0, 30, 30);
+    expect(result.d).toBe(0);
+    expect(result.label).toBe("negligible");
+  });
+});
+
+// ============================================================
+// 14. segmentSignificance
+// ============================================================
+describe("segmentSignificance", () => {
+  it("returns welch + effectSize for large samples, no bootstrap", () => {
+    const a = Array.from({ length: 40 }, (_, i) => 2.0 + (i % 10) * 0.1);
+    const b = Array.from({ length: 40 }, (_, i) => 4.0 + (i % 10) * 0.1);
+    const result = segmentSignificance(a, b);
+    expect(result).not.toBeNull();
+    expect(result!.welch).not.toBeNull();
+    expect(result!.effectSize).toBeDefined();
+    expect(result!.bootstrap).toBeNull();
+  });
+
+  it("includes bootstrap when either sample n < 30", () => {
+    const a = Array.from({ length: 20 }, (_, i) => 2.0 + (i % 10) * 0.1);
+    const b = Array.from({ length: 20 }, (_, i) => 4.0 + (i % 10) * 0.1);
+    const result = segmentSignificance(a, b);
+    expect(result).not.toBeNull();
+    expect(result!.welch).not.toBeNull();
+    expect(result!.bootstrap).not.toBeNull();
+  });
+
+  it("returns null when either sample is too small", () => {
+    const small = [3.0, 3.1, 3.2];
+    const large = Array.from({ length: 30 }, () => 3.0);
+    expect(segmentSignificance(small, large)).toBeNull();
   });
 });

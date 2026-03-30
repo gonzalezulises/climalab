@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getCategoryScores } from "@/actions/analytics";
+import { getCampaignHLM } from "@/actions/statistical-validation";
 import { DimensionsClient } from "./dimensions-client";
 import { SEGMENT_TYPE_LABELS } from "@/lib/constants";
 
@@ -13,15 +14,32 @@ export default async function DimensionsPage({
 }) {
   const { id } = await params;
   const { segment_type, segment_key } = await searchParams;
-  const [campaignResult, resultsResult, categoriesResult] = await Promise.all([
+  const [campaignResult, resultsResult, categoriesResult, hlmResult] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
     getCategoryScores(id),
+    getCampaignHLM(id),
   ]);
   if (!campaignResult.success) notFound();
 
   const results = resultsResult.success ? resultsResult.data : [];
   const categories = categoriesResult.success ? categoriesResult.data : [];
+
+  const hlmData = hlmResult.success
+    ? (hlmResult.data as {
+        dimensions?: Array<{
+          code: string;
+          icc: number;
+          icc_label: string;
+        }>;
+      } | null)
+    : null;
+  const iccMap: Record<string, { icc: number; label: string }> = {};
+  if (hlmData?.dimensions) {
+    for (const dim of hlmData.dimensions) {
+      iccMap[dim.code] = { icc: dim.icc, label: dim.icc_label };
+    }
+  }
 
   const hasSegmentFilter = segment_type && segment_key;
   const segType = hasSegmentFilter ? segment_type : "global";
@@ -71,6 +89,7 @@ export default async function DimensionsPage({
         dimensionResults={dimensionResults}
         itemResults={itemResults}
         categories={categories}
+        iccMap={iccMap}
       />
     </>
   );

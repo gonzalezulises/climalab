@@ -19,6 +19,7 @@ import {
 import { replaceCampaignAiEvidence } from "@/lib/excellence/store";
 import { getAiProviderMetadata, hasConfiguredAiProvider } from "@/lib/ai/provider";
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
+import { getCampaignHLM, getCampaignInvariance } from "@/actions/statistical-validation";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import type { ActionResult } from "@/types";
 
@@ -28,6 +29,45 @@ export type DriverInsights = DriverInsightsContract;
 export type AlertContext = AlertContextContract;
 export type SegmentProfiles = SegmentProfilesContract;
 export type TrendsNarrative = TrendsNarrativeContract;
+
+async function buildStatisticalContext(campaignId: string): Promise<string> {
+  const parts: string[] = [];
+
+  const [hlmResult, invarianceResult] = await Promise.all([
+    getCampaignHLM(campaignId),
+    getCampaignInvariance(campaignId),
+  ]);
+
+  if (hlmResult.success && hlmResult.data) {
+    const hlm = hlmResult.data as {
+      dimensions?: Array<{ code: string; icc: number; icc_label: string }>;
+    };
+    const highIcc = hlm.dimensions?.filter((d) => d.icc_label === "alto") ?? [];
+    if (highIcc.length > 0) {
+      parts.push(
+        `CONTEXTO ESTADÍSTICO (HLM): Las siguientes dimensiones presentan alta varianza entre departamentos (ICC alto): ${highIcc.map((d) => `${d.code} (ICC=${d.icc.toFixed(3)})`).join(", ")}. Esto indica que la percepción de estas dimensiones varía significativamente según el departamento.`
+      );
+    }
+  }
+
+  if (invarianceResult.success && invarianceResult.data.length > 0) {
+    const failures = (
+      invarianceResult.data as Array<{
+        grouping_variable?: string;
+        levels?: Array<{ level: string; passed: boolean }>;
+      }>
+    ).filter((g) => g.levels?.some((l) => !l.passed));
+
+    if (failures.length > 0) {
+      const failedVars = failures.map((g) => g.grouping_variable ?? "desconocida").join(", ");
+      parts.push(
+        `ADVERTENCIA ESTADÍSTICA: La invariancia de medición no se cumple para la(s) variable(s): ${failedVars}. Las comparaciones directas entre estos grupos deben interpretarse con cautela.`
+      );
+    }
+  }
+
+  return parts.join("\n\n");
+}
 
 async function getLatestAnalysisRunId(campaignId: string) {
   const supabase = await createClient();
@@ -204,11 +244,14 @@ ${
     : "Ninguna"
 }`;
 
+  const statContext = await buildStatisticalContext(campaignId);
+  const enrichedContent = statContext ? `${userContent}\n\n${statContext}` : userContent;
+
   const result = await generateGovernedInsight({
     campaignId,
     analysisRunId: await getLatestAnalysisRunId(campaignId),
     insightType: "dashboard_narrative",
-    userContent,
+    userContent: enrichedContent,
     dimensions: dimensions
       .filter((dimension) => Boolean(dimension.code))
       .map((dimension) => ({
@@ -260,12 +303,15 @@ export async function interpretDrivers(campaignId: string): Promise<ActionResult
     return { success: false, error: "No hay datos de drivers" };
   }
 
-  const userContent = `Drivers de engagement (ordenados por correlación):
+  let userContent = `Drivers de engagement (ordenados por correlación):
 ${drivers.map((d) => `- ${d.name} (${d.code}): r=${d.r.toFixed(3)}, score actual=${(dimScores.get(d.code) ?? 0).toFixed(2)}`).join("\n")}
 
 Score de engagement global: ${(dimScores.get("ENG") ?? 0).toFixed(2)} de 5.0
 
 Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
+
+  const statContext = await buildStatisticalContext(campaignId);
+  if (statContext) userContent += `\n\n${statContext}`;
 
   const result = await generateGovernedInsight({
     campaignId,
@@ -303,10 +349,13 @@ export async function contextualizeAlerts(campaignId: string): Promise<ActionRes
     return { success: false, error: "No hay alertas" };
   }
 
-  const userContent = `Alertas detectadas en la encuesta de clima organizacional:
+  let userContent = `Alertas detectadas en la encuesta de clima organizacional:
 ${alerts.map((a, i) => `${i}. [${a.severity}] ${a.message} (valor: ${a.value}, umbral: ${a.threshold})`).join("\n")}
 
 Para cada alerta, genera una hipótesis de causa raíz y una recomendación concreta.`;
+
+  const statContext = await buildStatisticalContext(campaignId);
+  if (statContext) userContent += `\n\n${statContext}`;
 
   const result = await generateGovernedInsight({
     campaignId,
@@ -380,6 +429,9 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
     }
     userContent += "\n";
   }
+
+  const statContext = await buildStatisticalContext(campaignId);
+  if (statContext) userContent += `\n${statContext}`;
 
   const result = await generateGovernedInsight({
     campaignId,

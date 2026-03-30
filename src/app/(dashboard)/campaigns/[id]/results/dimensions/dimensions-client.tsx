@@ -34,7 +34,15 @@ type CategoryScore = {
   favorability_pct: number;
 };
 
-function DimensionCard({ dim, items }: { dim: DimensionResult; items: ItemResult[] }) {
+function DimensionCard({
+  dim,
+  items,
+  icc,
+}: {
+  dim: DimensionResult;
+  items: ItemResult[];
+  icc?: { icc: number; label: string };
+}) {
   const [expanded, setExpanded] = useState(false);
   const cls = classifyFavorability(dim.fav);
   return (
@@ -46,6 +54,20 @@ function DimensionCard({ dim, items }: { dim: DimensionResult; items: ItemResult
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{dim.name}</CardTitle>
           <div className="flex items-center gap-1.5">
+            {icc && (
+              <span
+                className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                  icc.label === "alto"
+                    ? "bg-purple-100 text-purple-700"
+                    : icc.label === "moderado"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-600"
+                }`}
+                title={`ICC: ${icc.icc.toFixed(3)} — Varianza entre departamentos ${icc.label}`}
+              >
+                ICC {icc.label}
+              </span>
+            )}
             <Badge className={cls.bg}>{cls.label}</Badge>
             <ChevronDown
               className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -120,10 +142,12 @@ export function DimensionsClient({
   dimensionResults,
   itemResults,
   categories,
+  iccMap = {},
 }: {
   dimensionResults: DimensionResult[];
   itemResults: ItemResult[];
   categories: CategoryScore[];
+  iccMap?: Record<string, { icc: number; label: string }>;
 }) {
   const [view, setView] = useState<"category" | "level" | "topbottom">("category");
 
@@ -148,6 +172,7 @@ export function DimensionsClient({
               key={dim.code}
               dim={dim}
               items={itemResults.filter((i) => i.code === dim.code).sort((a, b) => b.avg - a.avg)}
+              icc={iccMap[dim.code]}
             />
           ))}
       </div>

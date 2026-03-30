@@ -178,3 +178,167 @@ export function pearson(xArr: number[], yArr: number[]): { r: number; pValue: nu
   const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - (0.416 * (t * t)) / df) : 1;
   return { r: Math.round(r * 1000) / 1000, pValue: Math.round(pValue * 10000) / 10000, n };
 }
+
+// ============================================================
+// Welch's t-test (unequal variances)
+// ============================================================
+
+const WELCH_MIN_N = 15;
+
+export type WelchResult = {
+  t: number;
+  df: number;
+  pValue: number;
+  significant: boolean;
+};
+
+export function welchTTest(sample1: number[], sample2: number[]): WelchResult | null {
+  const n1 = sample1.length;
+  const n2 = sample2.length;
+  if (n1 < WELCH_MIN_N || n2 < WELCH_MIN_N) return null;
+
+  const m1 = mean(sample1);
+  const m2 = mean(sample2);
+  const v1 = sample1.reduce((s, x) => s + (x - m1) ** 2, 0) / (n1 - 1);
+  const v2 = sample2.reduce((s, x) => s + (x - m2) ** 2, 0) / (n2 - 1);
+
+  const se = Math.sqrt(v1 / n1 + v2 / n2);
+  if (se === 0) return { t: 0, df: n1 + n2 - 2, pValue: 1, significant: false };
+
+  const t = (m1 - m2) / se;
+  const num = (v1 / n1 + v2 / n2) ** 2;
+  const den = (v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1);
+  const df = den > 0 ? num / den : n1 + n2 - 2;
+  const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - (0.416 * (t * t)) / df) : 1;
+  const pRounded = Math.round(Math.min(1, pValue) * 10000) / 10000;
+
+  return {
+    t: Math.round(t * 1000) / 1000,
+    df: Math.round(df * 10) / 10,
+    pValue: pRounded,
+    significant: pRounded < 0.05,
+  };
+}
+
+// ============================================================
+// Bootstrap confidence interval for mean difference
+// ============================================================
+
+const BOOTSTRAP_MIN_N = 10;
+const BOOTSTRAP_DEFAULT_ITERATIONS = 2000;
+
+export type BootstrapResult = {
+  lower: number;
+  upper: number;
+  meanDiff: number;
+  significant: boolean;
+};
+
+function mulberry32(seed: number) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function bootstrapCI(
+  sample1: number[],
+  sample2: number[],
+  options?: { iterations?: number; alpha?: number; seed?: number }
+): BootstrapResult | null {
+  if (sample1.length < BOOTSTRAP_MIN_N || sample2.length < BOOTSTRAP_MIN_N) return null;
+
+  const iterations = options?.iterations ?? BOOTSTRAP_DEFAULT_ITERATIONS;
+  const alpha = options?.alpha ?? 0.05;
+  const rng = options?.seed != null ? mulberry32(options.seed) : Math.random;
+
+  const diffs: number[] = [];
+  for (let i = 0; i < iterations; i++) {
+    let sum1 = 0;
+    for (let j = 0; j < sample1.length; j++) {
+      sum1 += sample1[Math.floor(rng() * sample1.length)];
+    }
+    let sum2 = 0;
+    for (let j = 0; j < sample2.length; j++) {
+      sum2 += sample2[Math.floor(rng() * sample2.length)];
+    }
+    diffs.push(sum1 / sample1.length - sum2 / sample2.length);
+  }
+
+  diffs.sort((a, b) => a - b);
+  const lowerIdx = Math.floor((alpha / 2) * iterations);
+  const upperIdx = Math.floor((1 - alpha / 2) * iterations) - 1;
+
+  const lower = Math.round(diffs[lowerIdx] * 1000) / 1000;
+  const upper = Math.round(diffs[upperIdx] * 1000) / 1000;
+  const meanDiff = Math.round(mean(diffs) * 1000) / 1000;
+  const significant = lower > 0 || upper < 0;
+
+  return { lower, upper, meanDiff, significant };
+}
+
+// ============================================================
+// Cohen's d — effect size
+// ============================================================
+
+export type EffectSizeLabel = "negligible" | "small" | "medium" | "large";
+
+export type CohensDResult = {
+  d: number;
+  label: EffectSizeLabel;
+};
+
+export function cohensD(
+  mean1: number,
+  mean2: number,
+  sd1: number,
+  sd2: number,
+  n1: number,
+  n2: number
+): CohensDResult {
+  const pooledVar = ((n1 - 1) * sd1 * sd1 + (n2 - 1) * sd2 * sd2) / (n1 + n2 - 2);
+  const pooledSd = Math.sqrt(pooledVar);
+  if (pooledSd === 0) return { d: 0, label: "negligible" };
+
+  const d = Math.round(((mean1 - mean2) / pooledSd) * 1000) / 1000;
+  const abs = Math.abs(d);
+  const label: EffectSizeLabel =
+    abs >= 0.8 ? "large" : abs >= 0.5 ? "medium" : abs >= 0.2 ? "small" : "negligible";
+
+  return { d, label };
+}
+
+// ============================================================
+// Segment significance — combined test
+// ============================================================
+
+const SEGMENT_MIN_N = 10;
+const BOOTSTRAP_THRESHOLD_N = 30;
+
+export type SegmentSignificanceResult = {
+  welch: WelchResult | null;
+  bootstrap: BootstrapResult | null;
+  effectSize: CohensDResult;
+};
+
+export function segmentSignificance(
+  segA: number[],
+  segB: number[]
+): SegmentSignificanceResult | null {
+  if (segA.length < SEGMENT_MIN_N || segB.length < SEGMENT_MIN_N) return null;
+
+  const m1 = mean(segA);
+  const m2 = mean(segB);
+  const sd1 = stdDev(segA);
+  const sd2 = stdDev(segB);
+
+  const welch = welchTTest(segA, segB);
+  const needsBootstrap = segA.length < BOOTSTRAP_THRESHOLD_N || segB.length < BOOTSTRAP_THRESHOLD_N;
+  const bootstrap = needsBootstrap ? bootstrapCI(segA, segB) : null;
+  const effectSize = cohensD(m1, m2, sd1, sd2, segA.length, segB.length);
+
+  return { welch, bootstrap, effectSize };
+}

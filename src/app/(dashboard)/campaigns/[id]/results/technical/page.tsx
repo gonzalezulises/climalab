@@ -8,6 +8,7 @@ import { getCampaignQualityReport } from "@/actions/quality";
 import { getLatestAnalysisComparison } from "@/actions/analysis-comparison";
 import { getSemanticResultFamilies } from "@/actions/semantic-results";
 import { getONAStatus } from "@/actions/ona";
+import { getCampaignCFA, getCampaignInvariance } from "@/actions/statistical-validation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlphaIndicator } from "@/components/results/AlphaIndicator";
@@ -32,6 +33,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
     comparisonResult,
     semanticFamiliesResult,
     onaStatusResult,
+    cfaResult,
+    invarianceResult,
   ] = await Promise.all([
     getCampaign(id),
     getCampaignResults(id),
@@ -42,6 +45,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
     getLatestAnalysisComparison(id),
     getSemanticResultFamilies(id),
     getONAStatus(id),
+    getCampaignCFA(id),
+    getCampaignInvariance(id),
   ]);
 
   if (!campaignResult.success) notFound();
@@ -54,6 +59,49 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
   const comparison = comparisonResult.success ? comparisonResult.data : null;
   const semanticFamilies = semanticFamiliesResult.success ? semanticFamiliesResult.data : [];
   const onaStatus = onaStatusResult.success ? onaStatusResult.data : null;
+  const cfaData = cfaResult.success
+    ? (cfaResult.data as {
+        fit_indices?: { cfi?: number; rmsea?: number; srmr?: number; chi2_df?: number };
+        verdict?: string;
+        problematic_items?: unknown[];
+        discriminant_issues?: unknown[];
+      } | null)
+    : null;
+  const invarianceData = invarianceResult.success
+    ? (invarianceResult.data as Array<{
+        grouping_variable?: string;
+        levels?: Array<{
+          level: string;
+          passed: boolean;
+          delta_cfi?: number;
+          delta_rmsea?: number;
+        }>;
+        verdict?: string;
+      }>)
+    : [];
+
+  // Wave comparison data from dimension results
+  const waveComparisonRows = results
+    .filter((r) => r.result_type === "dimension" && r.segment_type === "global")
+    .map((r) => {
+      const meta = r.metadata as {
+        dimension_name?: string;
+        wave_comparison?: {
+          delta: number;
+          t_statistic: number;
+          df: number;
+          p_value: number;
+          cohens_d: number;
+          effect_label: string;
+        };
+      };
+      return {
+        code: r.dimension_code ?? "",
+        name: meta?.dimension_name ?? r.dimension_code ?? "",
+        waveComparison: meta?.wave_comparison ?? null,
+      };
+    })
+    .filter((row) => row.waveComparison !== null);
 
   // Top 5 / Bottom 5 items
   const itemResults = results
@@ -599,6 +647,257 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
           </div>
         </CardContent>
       </Card>
+
+      {/* CFA — Validez Factorial */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Validez Factorial (CFA)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {cfaData?.fit_indices ? (
+            <div className="space-y-3">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 pr-4">Índice</th>
+                      <th className="text-center px-3 py-2">Valor</th>
+                      <th className="text-center px-3 py-2">Criterio</th>
+                      <th className="text-center px-3 py-2">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b last:border-0">
+                      <td className="py-2 pr-4">CFI</td>
+                      <td className="text-center px-3 py-2 font-mono">
+                        {cfaData.fit_indices.cfi?.toFixed(3) ?? "—"}
+                      </td>
+                      <td className="text-center px-3 py-2 text-muted-foreground">≥ 0.90</td>
+                      <td className="text-center px-3 py-2">
+                        <Badge
+                          className={
+                            (cfaData.fit_indices.cfi ?? 0) >= 0.9
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }
+                        >
+                          {(cfaData.fit_indices.cfi ?? 0) >= 0.9 ? "Aceptable" : "Bajo"}
+                        </Badge>
+                      </td>
+                    </tr>
+                    <tr className="border-b last:border-0">
+                      <td className="py-2 pr-4">RMSEA</td>
+                      <td className="text-center px-3 py-2 font-mono">
+                        {cfaData.fit_indices.rmsea?.toFixed(3) ?? "—"}
+                      </td>
+                      <td className="text-center px-3 py-2 text-muted-foreground">≤ 0.08</td>
+                      <td className="text-center px-3 py-2">
+                        <Badge
+                          className={
+                            (cfaData.fit_indices.rmsea ?? 1) <= 0.08
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }
+                        >
+                          {(cfaData.fit_indices.rmsea ?? 1) <= 0.08 ? "Aceptable" : "Alto"}
+                        </Badge>
+                      </td>
+                    </tr>
+                    <tr className="border-b last:border-0">
+                      <td className="py-2 pr-4">SRMR</td>
+                      <td className="text-center px-3 py-2 font-mono">
+                        {cfaData.fit_indices.srmr?.toFixed(3) ?? "—"}
+                      </td>
+                      <td className="text-center px-3 py-2 text-muted-foreground">≤ 0.08</td>
+                      <td className="text-center px-3 py-2">
+                        <Badge
+                          className={
+                            (cfaData.fit_indices.srmr ?? 1) <= 0.08
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }
+                        >
+                          {(cfaData.fit_indices.srmr ?? 1) <= 0.08 ? "Aceptable" : "Alto"}
+                        </Badge>
+                      </td>
+                    </tr>
+                    <tr className="border-b last:border-0">
+                      <td className="py-2 pr-4">χ²/df</td>
+                      <td className="text-center px-3 py-2 font-mono">
+                        {cfaData.fit_indices.chi2_df?.toFixed(2) ?? "—"}
+                      </td>
+                      <td className="text-center px-3 py-2 text-muted-foreground">≤ 3.0</td>
+                      <td className="text-center px-3 py-2">
+                        <Badge
+                          className={
+                            (cfaData.fit_indices.chi2_df ?? 999) <= 3
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }
+                        >
+                          {(cfaData.fit_indices.chi2_df ?? 999) <= 3 ? "Aceptable" : "Alto"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {cfaData.verdict && (
+                <p className="text-sm text-muted-foreground">{cfaData.verdict}</p>
+              )}
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>Ítems problemáticos: {cfaData.problematic_items?.length ?? 0}</span>
+                <span>Problemas de discriminancia: {cfaData.discriminant_issues?.length ?? 0}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No ejecutado. El análisis factorial confirmatorio requiere ejecutar el motor
+              estadístico.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Invariancia de Medición */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Invariancia de Medición</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invarianceData.length > 0 ? (
+            <div className="space-y-4">
+              {invarianceData.map((group, gi) => (
+                <div key={gi} className="space-y-2">
+                  <p className="text-sm font-medium">
+                    Variable de agrupación: {group.grouping_variable ?? "Desconocida"}
+                  </p>
+                  {group.levels && group.levels.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 pr-4">Nivel</th>
+                            <th className="text-center px-3 py-2">ΔCFI</th>
+                            <th className="text-center px-3 py-2">ΔRMSEA</th>
+                            <th className="text-center px-3 py-2">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.levels.map((level, li) => (
+                            <tr key={li} className="border-b last:border-0">
+                              <td className="py-2 pr-4 capitalize">{level.level}</td>
+                              <td className="text-center px-3 py-2 font-mono">
+                                {level.delta_cfi?.toFixed(3) ?? "—"}
+                              </td>
+                              <td className="text-center px-3 py-2 font-mono">
+                                {level.delta_rmsea?.toFixed(3) ?? "—"}
+                              </td>
+                              <td className="text-center px-3 py-2">
+                                <Badge
+                                  className={
+                                    level.passed
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }
+                                >
+                                  {level.passed ? "Aprobado" : "Fallido"}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {group.verdict && (
+                    <p className="text-xs text-muted-foreground">{group.verdict}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No ejecutado. El análisis de invariancia requiere ejecutar el motor estadístico.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Significancia Wave-over-Wave */}
+      {waveComparisonRows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Significancia Wave-over-Wave</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              Prueba t de muestras independientes comparando la campaña actual con la anterior.
+              Cohen&apos;s d indica el tamaño del efecto.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4">Dimensión</th>
+                    <th className="text-center px-3 py-2">Δ</th>
+                    <th className="text-center px-3 py-2">t</th>
+                    <th className="text-center px-3 py-2">df</th>
+                    <th className="text-center px-3 py-2">p-value</th>
+                    <th className="text-center px-3 py-2">Cohen&apos;s d</th>
+                    <th className="text-center px-3 py-2">Efecto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {waveComparisonRows.map((row) => {
+                    const wc = row.waveComparison!;
+                    const significant = wc.p_value < 0.05;
+                    return (
+                      <tr key={row.code} className="border-b last:border-0">
+                        <td className="py-2 pr-4">
+                          <span className="font-medium">{row.code}</span>
+                          <span className="text-muted-foreground ml-2">{row.name}</span>
+                        </td>
+                        <td
+                          className={`text-center px-3 py-2 font-mono ${
+                            wc.delta > 0 ? "text-green-600" : wc.delta < 0 ? "text-red-600" : ""
+                          }`}
+                        >
+                          {wc.delta > 0 ? "+" : ""}
+                          {wc.delta.toFixed(2)}
+                        </td>
+                        <td className="text-center px-3 py-2 font-mono">
+                          {wc.t_statistic.toFixed(3)}
+                        </td>
+                        <td className="text-center px-3 py-2 font-mono">{wc.df}</td>
+                        <td className="text-center px-3 py-2 font-mono">
+                          {wc.p_value < 0.001 ? "<0.001" : wc.p_value.toFixed(3)}
+                        </td>
+                        <td className="text-center px-3 py-2 font-mono">
+                          {Math.abs(wc.cohens_d).toFixed(3)}
+                        </td>
+                        <td className="text-center px-3 py-2">
+                          <Badge
+                            className={
+                              significant
+                                ? wc.delta > 0
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-600"
+                            }
+                          >
+                            {significant ? wc.effect_label : "n.s."}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Top 5 items */}
       <Card>

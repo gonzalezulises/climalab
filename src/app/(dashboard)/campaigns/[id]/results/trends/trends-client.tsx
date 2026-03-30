@@ -38,12 +38,19 @@ const COLORS = [
   "#8b5cf6",
 ];
 
+type WaveSignificanceEntry = {
+  p_value: number;
+  delta: number;
+  effect_label: string;
+};
+
 type Props = {
   campaignId: string;
   organizationId: string;
   campaigns: Array<{ id: string; name: string; ends_at: string }>;
   series: Record<string, Array<{ campaign_id: string; avg_score: number }>>;
   initialNarrative: TrendsNarrative | null;
+  waveSignificance?: Record<string, WaveSignificanceEntry>;
 };
 
 export function TrendsClient({
@@ -52,6 +59,7 @@ export function TrendsClient({
   campaigns,
   series,
   initialNarrative,
+  waveSignificance = {},
 }: Props) {
   const allCodes = Object.keys(series);
   const [selected, setSelected] = useState<string[]>(["ENG"]);
@@ -149,6 +157,9 @@ export function TrendsClient({
                     </th>
                   ))}
                   {campaigns.length >= 2 && <th className="text-center px-3 py-2">Δ</th>}
+                  {campaigns.length >= 2 && Object.keys(waveSignificance).length > 0 && (
+                    <th className="text-center px-3 py-2">Sig.</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -180,6 +191,35 @@ export function TrendsClient({
                           }`}
                         >
                           {delta != null ? `${delta > 0 ? "+" : ""}${delta}` : "—"}
+                        </td>
+                      )}
+                      {campaigns.length >= 2 && Object.keys(waveSignificance).length > 0 && (
+                        <td className="text-center px-3 py-2">
+                          {(() => {
+                            const ws = waveSignificance[code];
+                            if (!ws) return <span className="text-gray-400">—</span>;
+                            const significant = ws.p_value < 0.05;
+                            if (!significant)
+                              return (
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                  <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />
+                                  n.s.
+                                </span>
+                              );
+                            if (ws.delta > 0)
+                              return (
+                                <span className="inline-flex items-center gap-1 text-xs text-green-700">
+                                  <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+                                  {ws.effect_label}
+                                </span>
+                              );
+                            return (
+                              <span className="inline-flex items-center gap-1 text-xs text-red-700">
+                                <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+                                {ws.effect_label}
+                              </span>
+                            );
+                          })()}
                         </td>
                       )}
                     </tr>

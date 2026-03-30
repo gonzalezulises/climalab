@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCampaign } from "@/actions/campaigns";
+import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getTrendsData } from "@/actions/analytics";
 import { getTrendsNarrative } from "@/actions/ai-insights";
 import { TrendsClient } from "./trends-client";
@@ -23,8 +23,29 @@ export default async function TrendsPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const narrativeResult = await getTrendsNarrative(id);
+  const [narrativeResult, resultsResult] = await Promise.all([
+    getTrendsNarrative(id),
+    getCampaignResults(id),
+  ]);
   const trendsNarrative = narrativeResult.success ? narrativeResult.data : null;
+
+  const waveSignificance: Record<string, { p_value: number; delta: number; effect_label: string }> =
+    {};
+  if (resultsResult.success) {
+    for (const r of resultsResult.data) {
+      if (r.result_type !== "dimension" || r.segment_type !== "global") continue;
+      const meta = r.metadata as {
+        wave_comparison?: { p_value: number; delta: number; effect_label: string };
+      };
+      if (meta?.wave_comparison && r.dimension_code) {
+        waveSignificance[r.dimension_code] = {
+          p_value: meta.wave_comparison.p_value,
+          delta: meta.wave_comparison.delta,
+          effect_label: meta.wave_comparison.effect_label,
+        };
+      }
+    }
+  }
 
   return (
     <TrendsClient
@@ -33,6 +54,7 @@ export default async function TrendsPage({ params }: { params: Promise<{ id: str
       campaigns={trends.campaigns}
       series={trends.series}
       initialNarrative={trendsNarrative}
+      waveSignificance={waveSignificance}
     />
   );
 }
