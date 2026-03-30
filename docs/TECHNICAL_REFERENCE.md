@@ -4,7 +4,7 @@
 **Plataforma**: ClimaLab (producto de Rizo.ma Consulting, Panamá)
 **Público objetivo**: PyMEs de LATAM (1–500 empleados)
 **Stack tecnológico**: Next.js 16, Supabase (Postgres + Auth + RLS), TypeScript
-**Última actualización**: 2026-03-08
+**Última actualización**: 2026-03-29
 
 ---
 
@@ -29,6 +29,7 @@
 17. [Clasificación de Puntajes](#17-clasificación-de-puntajes-v47)
 18. [Seguridad — Funciones SECURITY DEFINER](#18-seguridad--funciones-security-definer)
 19. [Pruebas y Calidad](#19-pruebas-y-calidad)
+20. [Calidad de Campaña y Evaluación de IA](#20-calidad-de-campaña-y-evaluación-de-ia)
 
 ---
 
@@ -1602,3 +1603,76 @@ Validación productiva cerrada el **29 de marzo de 2026**:
 - `campaign_ai_insights` separa outputs IA de `campaign_analytics`
 
 Referencia detallada: `docs/DATA_LINEAGE.md`
+
+## 20. Calidad de Campaña y Evaluación de IA
+
+ClimaLab añade una capa específica de lectura metodológica por campaña para distinguir entre la calidad del instrumento y la calidad de las interpretaciones generadas por IA.
+
+### 20.1 Vista dedicada
+
+Se agrega una nueva página de resultados por campaña:
+
+- `src/app/(dashboard)/campaigns/[id]/results/quality/page.tsx`
+
+La ficha técnica mantiene un resumen compacto y la vista `quality` concentra el detalle.
+
+### 20.2 Calidad del instrumento
+
+Implementación principal:
+
+- `src/lib/quality/instrument-quality.ts`
+- `src/lib/quality/quality-store.ts`
+- `src/actions/quality.ts`
+
+Entradas utilizadas:
+
+- muestra de campaña
+- `loadCampaignQuality()` para calidad operativa base
+- alfa por dimensión (`campaign_analytics.analysis_type = 'reliability'`)
+- rwg por dimensión (`campaign_results.metadata.rwg`)
+- respuestas válidas por ítem
+
+Métricas adicionales calculadas:
+
+- missingness por ítem
+- correlación ítem-total corregida
+- alpha if item deleted
+- efectos de piso y techo
+- interpretabilidad por dimensión
+
+Estados de interpretación:
+
+- `robusto`
+- `aceptable`
+- `precaucion`
+- `no_interpretable`
+
+### 20.3 Matriz de desempeño de IA
+
+Implementación principal:
+
+- `src/lib/quality/ai-evaluation.ts`
+
+La matriz se divide en:
+
+1. **Capa metodológica**
+   - fidelidad a los datos
+   - cobertura
+   - calibración/prudencia
+   - accionabilidad
+2. **Capa operativa**
+   - cobertura de insight types esperados
+   - proveedor
+   - modelo
+
+La versión actual es determinista y auditable: contrasta la salida persistida con evidencia de campaña ya materializada y no usa un segundo modelo como juez.
+
+### 20.4 Resumen en ficha técnica
+
+`src/app/(dashboard)/campaigns/[id]/results/technical/page.tsx` ahora resume:
+
+- estado global del instrumento
+- score metodológico de IA
+- cobertura de insight types
+
+La profundidad completa queda en `/results/quality`.

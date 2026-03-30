@@ -15,6 +15,7 @@ import {
   FileText,
   Download,
   Network,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
   { href: "alerts", label: "Alertas", icon: AlertTriangle },
   { href: "comments", label: "Comentarios", icon: MessageSquare },
   { href: "network", label: "Red perceptual", icon: Network },
+  { href: "quality", label: "Calidad", icon: ShieldCheck },
   { href: "technical", label: "Ficha Técnica", icon: FileText },
   { href: "export", label: "Exportar", icon: Download },
 ];

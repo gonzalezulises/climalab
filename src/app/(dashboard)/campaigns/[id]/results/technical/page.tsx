@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCampaign, getCampaignResults } from "@/actions/campaigns";
 import { getReliabilityData } from "@/actions/analytics";
 import { getPipelineOperationalSummary } from "@/actions/pipeline-ops";
 import { getCampaignDataQuality } from "@/actions/data-quality";
+import { getCampaignQualityReport } from "@/actions/quality";
 import { getLatestAnalysisComparison } from "@/actions/analysis-comparison";
 import { getSemanticResultFamilies } from "@/actions/semantic-results";
 import { getONAStatus } from "@/actions/ona";
@@ -26,6 +28,7 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
     reliabilityResult,
     pipelineResult,
     qualityResult,
+    qualityReportResult,
     comparisonResult,
     semanticFamiliesResult,
     onaStatusResult,
@@ -35,6 +38,7 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
     getReliabilityData(id),
     getPipelineOperationalSummary(id),
     getCampaignDataQuality(id),
+    getCampaignQualityReport(id),
     getLatestAnalysisComparison(id),
     getSemanticResultFamilies(id),
     getONAStatus(id),
@@ -46,6 +50,7 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
   const reliability = reliabilityResult.success ? reliabilityResult.data : [];
   const pipeline = pipelineResult.success ? pipelineResult.data : null;
   const quality = qualityResult.success ? qualityResult.data : null;
+  const qualityReport = qualityReportResult.success ? qualityReportResult.data : null;
   const comparison = comparisonResult.success ? comparisonResult.data : null;
   const semanticFamilies = semanticFamiliesResult.success ? semanticFamiliesResult.data : [];
   const onaStatus = onaStatusResult.success ? onaStatusResult.data : null;
@@ -107,6 +112,89 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Ficha Técnica</h1>
+
+      {qualityReport ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Calidad del instrumento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Estado</span>
+                <Badge
+                  className={
+                    qualityReport.instrumentQuality.overallStatus === "robusto"
+                      ? "bg-green-100 text-green-800"
+                      : qualityReport.instrumentQuality.overallStatus === "aceptable"
+                        ? "bg-blue-100 text-blue-800"
+                        : qualityReport.instrumentQuality.overallStatus === "precaucion"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                  }
+                >
+                  {qualityReport.instrumentQuality.overallStatus}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Score</span>
+                <span>{qualityReport.instrumentQuality.overallScore}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Alertas</span>
+                <span>
+                  {qualityReport.instrumentQuality.warnings.length +
+                    qualityReport.instrumentQuality.dimensionWarnings.length}
+                </span>
+              </div>
+              <Link
+                href={`/campaigns/${id}/results/quality`}
+                className="inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Ver reporte de calidad completo
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Desempeño de IA</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Score metodológico</span>
+                <Badge
+                  className={
+                    qualityReport.aiEvaluation.methodological.overallScore >= 85
+                      ? "bg-green-100 text-green-800"
+                      : qualityReport.aiEvaluation.methodological.overallScore >= 70
+                        ? "bg-blue-100 text-blue-800"
+                        : qualityReport.aiEvaluation.methodological.overallScore >= 55
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                  }
+                >
+                  {qualityReport.aiEvaluation.methodological.overallScore}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Cobertura</span>
+                <span>{qualityReport.aiEvaluation.operational.successRatePct}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Tipos generados</span>
+                <span>{qualityReport.aiEvaluation.coverage.generatedInsightTypes}</span>
+              </div>
+              <Link
+                href={`/campaigns/${id}/results/quality`}
+                className="inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Ver matriz de desempeño IA
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {/* Statistical card */}
       <Card>
