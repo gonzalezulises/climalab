@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buildAiEvaluationMatrix } from "@/lib/quality/ai-evaluation";
 import { buildInstrumentQualityReport } from "@/lib/quality/instrument-quality";
 import { loadCampaignQuality } from "@/lib/campaign-quality";
+import { loadPagedResponsesByRespondentIds } from "@/lib/supabase/paged-responses";
 import type { Json } from "@/types/database";
 
 type ReliabilityRow = {
@@ -149,15 +150,7 @@ async function getCampaignQualityArtifacts(campaignId: string) {
   let dimensionRows: Array<{ id: string; code: string; name: string }> = [];
 
   if (validRespondentIds.length > 0) {
-    const responsesResult = await supabase
-      .from("responses")
-      .select("respondent_id, item_id, score")
-      .in("respondent_id", validRespondentIds);
-    if (responsesResult.error) {
-      throw new Error(responsesResult.error.message);
-    }
-
-    responseRows = responsesResult.data ?? [];
+    responseRows = await loadPagedResponsesByRespondentIds(supabase, validRespondentIds);
     const itemIds = [...new Set(responseRows.map((row) => row.item_id))];
     if (itemIds.length > 0) {
       const itemsResult = await supabase

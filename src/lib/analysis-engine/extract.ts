@@ -1,3 +1,4 @@
+import { loadPagedResponsesByRespondentIds } from "@/lib/supabase/paged-responses";
 import type { AnalysisDataset, AnalysisDimension, CampaignInstrumentRef } from "./types";
 
 type QueryClient = {
@@ -50,8 +51,6 @@ type ResponseRecord = {
   score: number;
   answered_at: string | null;
 };
-
-const RESPONSE_PAGE_SIZE = 1000;
 
 export function buildCampaignInstrumentRefs(campaign: CampaignRecord): CampaignInstrumentRef[] {
   if (campaign.campaign_instruments && campaign.campaign_instruments.length > 0) {
@@ -191,7 +190,9 @@ export async function loadCampaignAnalysisDataset(
   const respondentIds = respondents.map((respondent) => respondent.id);
 
   const responses =
-    respondentIds.length > 0 ? await loadCampaignResponses(reader, respondentIds) : [];
+    respondentIds.length > 0
+      ? ((await loadPagedResponsesByRespondentIds(reader, respondentIds)) as ResponseRecord[])
+      : [];
 
   return {
     campaignId,
@@ -212,63 +213,4 @@ export async function loadCampaignAnalysisDataset(
       answeredAt: response.answered_at,
     })),
   };
-}
-
-async function loadCampaignResponses(reader: QueryClient, respondentIds: string[]) {
-  const responses: ResponseRecord[] = [];
-  let from = 0;
-
-  while (true) {
-    // Campaigns with many respondents can easily exceed the PostgREST page cap.
-    const responsesQuery = reader
-      .from("responses")
-      .select("respondent_id, item_id, score, answered_at") as {
-      in: (
-        column: string,
-        values: string[]
-      ) => {
-        order: (
-          column: string,
-          options?: { ascending?: boolean }
-        ) => {
-          order: (
-            column: string,
-            options?: { ascending?: boolean }
-          ) => {
-            range: (
-              from: number,
-              to: number
-            ) => Promise<{
-              data: ResponseRecord[] | null;
-              error: { message: string } | null;
-            }>;
-          };
-        };
-      };
-    };
-
-    const { data: pageData, error: responsesError } = (await responsesQuery
-      .in("respondent_id", respondentIds)
-      .order("respondent_id", { ascending: true })
-      .order("item_id", { ascending: true })
-      .range(from, from + RESPONSE_PAGE_SIZE - 1)) as {
-      data: ResponseRecord[] | null;
-      error: { message: string } | null;
-    };
-
-    if (responsesError) {
-      throw new Error(responsesError.message);
-    }
-
-    const page = (pageData ?? []) as ResponseRecord[];
-    responses.push(...page);
-
-    if (page.length < RESPONSE_PAGE_SIZE) {
-      break;
-    }
-
-    from += RESPONSE_PAGE_SIZE;
-  }
-
-  return responses;
 }
