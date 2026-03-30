@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "next.config.ts",
+        "postcss.config.mjs",
+        "src/proxy.ts",
+        "src/app/**/*.{ts,tsx}",
+        "src/actions/**/*.{ts,tsx}",
+        "src/lib/**/*.{ts,tsx}",
+        "scripts/**/*.{ts,mjs,py}",
+        "supabase/functions/**/*.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs,py}", "supabase/functions/**/*.ts"],
+      "ignore": ["docs/**"],
+      "ignoreDependencies": [
+        "@vitest/coverage-v8",
+        "postcss",
+        "server-only",
+        "shadcn",
+        "tailwindcss",
+        "tw-animate-css"
+      ]
+    },
+    "testing-agent": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

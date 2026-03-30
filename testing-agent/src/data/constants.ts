@@ -2,40 +2,12 @@
  * Instrument UUIDs, climate presets, and demographic distributions.
  */
 
-// Instrument UUIDs
 export const CORE_INSTRUMENT_ID = "b0000000-0000-0000-0000-000000000001";
-export const PULSE_INSTRUMENT_ID = "b0000000-0000-0000-0000-000000000002";
 export const MODULE_IDS: Record<string, string> = {
   CAM: "b0000000-0000-0000-0000-000000000003",
   CLI: "b0000000-0000-0000-0000-000000000004",
   DIG: "b0000000-0000-0000-0000-000000000005",
 };
-
-// 22 dimension codes (Core v4.0)
-export const DIMENSION_CODES = [
-  "ORG",
-  "PRO",
-  "SEG",
-  "BAL",
-  "CUI",
-  "DEM",
-  "LID",
-  "AUT",
-  "COM",
-  "CON",
-  "ROL",
-  "CMP",
-  "REC",
-  "BEN",
-  "EQA",
-  "NDI",
-  "COH",
-  "INN",
-  "RES",
-  "DES",
-  "APR",
-  "ENG",
-] as const;
 
 // Climate presets — target average per dimension
 export const CLIMATE_PRESETS: Record<string, Record<string, number>> = {
