@@ -1,32 +1,37 @@
 # ClimaLab — Product Roadmap
 
-## Estado Actual: v4.6
+## Estado Actual: v4.8
 
 **Instrumento**: Core v4.0 (22 dimensiones, 109 items) — sin cambios en el instrumento desde v4.0
 
-| Feature                                        | Estado                       | Commit            |
-| ---------------------------------------------- | ---------------------------- | ----------------- |
-| Core v4.0 (22 dims, 109 items)                 | Implementado                 | 5ea0548 + f4c2fd1 |
-| rwg, Cronbach alpha, ficha tecnica             | Implementado                 | b59e11e           |
-| Business indicators (tabla + CRUD + seed data) | Implementado                 | b59e11e           |
-| Niveles EMCO (3 niveles)                       | Implementado                 | b59e11e           |
-| AI Insights (Ollama, 7 paginas)                | Implementado                 | fc35ab6           |
-| Export Excel + PDF                             | Implementado                 | 8d423fa           |
-| Benchmarks internos                            | Implementado                 | 8d423fa           |
-| Multi-instrumento (base + modulos)             | Implementado                 | 531ec39           |
-| ONA perceptual (NetworkX, Louvain)             | Implementado                 | a553ea2           |
-| Tests + CI/CD + Error boundaries               | Implementado                 | d817d19           |
-| Branding per-org + emails + recordatorios      | Implementado                 | 97554e3           |
-| ONA igraph migration (Leiden + NMI stability)  | Implementado                 | 463477e           |
-| AI dual backend (DGX + Ollama fallback)        | Implementado                 | 3f8f5d5           |
-| AI error handling (fail-fast + UI feedback)    | Implementado                 | ea569e4           |
-| Testing agent (E2E pipeline, 20 checks)        | Implementado                 | 56c6898           |
-| Pulsos automatizados                           | Pendiente                    | —                 |
-| Reportes PDF con marca blanca                  | Implementado (branding v4.4) | 97554e3           |
-| CFA / Invariancia                              | Horizonte 2                  | —                 |
-| ONA sociometrica                               | Horizonte 2                  | —                 |
-| NLP comentarios (local)                        | Horizonte 3                  | —                 |
-| Modulos sectoriales                            | Horizonte 3 (infra lista)    | —                 |
+| Feature                                                      | Estado                       | Commit            |
+| ------------------------------------------------------------ | ---------------------------- | ----------------- |
+| Core v4.0 (22 dims, 109 items)                               | Implementado                 | 5ea0548 + f4c2fd1 |
+| rwg, Cronbach alpha, ficha tecnica                           | Implementado                 | b59e11e           |
+| Business indicators (tabla + CRUD + seed data)               | Implementado                 | b59e11e           |
+| Niveles EMCO (3 niveles)                                     | Implementado                 | b59e11e           |
+| AI Insights (Ollama, 7 paginas)                              | Implementado                 | fc35ab6           |
+| Export Excel + DOCX                                          | Implementado                 | 8d423fa + 7b9b6c0 |
+| Benchmarks internos                                          | Implementado                 | 8d423fa           |
+| Multi-instrumento (base + modulos)                           | Implementado                 | 531ec39           |
+| ONA perceptual (NetworkX, Louvain)                           | Implementado                 | a553ea2           |
+| Tests + CI/CD + Error boundaries                             | Implementado                 | d817d19           |
+| Branding per-org + emails + recordatorios                    | Implementado                 | 97554e3           |
+| ONA igraph migration (Leiden + NMI stability)                | Implementado                 | 463477e           |
+| AI dual backend (DGX + Ollama fallback)                      | Implementado                 | 3f8f5d5           |
+| AI error handling (fail-fast + UI feedback)                  | Implementado                 | ea569e4           |
+| Testing agent (E2E pipeline, 20 checks)                      | Implementado                 | 56c6898           |
+| Ingesta múltiple + pipeline incremental/batch                | Implementado                 | 141f4a1           |
+| Linaje explícito + analysis runs + snapshots                 | Implementado                 | 9a02797 + 81ecc7c |
+| Operaciones, backfill y salud estadística                    | Implementado                 | 81ecc7c           |
+| Observabilidad productiva + smoke de producción              | Implementado                 | 6ff9c13           |
+| Refactor hotspots (IA, export, survey, analytics, campaigns) | Implementado                 | 90cda4d           |
+| Pulsos automatizados                                         | Pendiente                    | —                 |
+| Reportes PDF con marca blanca                                | Implementado (branding v4.4) | 97554e3           |
+| CFA / Invariancia                                            | Horizonte 2                  | —                 |
+| ONA sociometrica                                             | Horizonte 2                  | —                 |
+| NLP comentarios (local)                                      | Horizonte 3                  | —                 |
+| Modulos sectoriales                                          | Horizonte 3 (infra lista)    | —                 |
 
 ---
 
@@ -67,11 +72,44 @@
 - Testing agent standalone (`testing-agent/`): genera orgs, empleados, encuestas; calcula resultados; verifica con 20 assertions
 - Fix crash Select.Item (Radix UI requiere value no vacío en segment filter bar)
 
+### Completado (v4.7)
+
+- Ingesta múltiple: survey web, direct API, CSV, webhook externo y Tally convergen al mismo modelo de datos
+- Pipeline operacional en 3 capas: ingesta → trigger → procesamiento → análisis → output
+- `campaign_stats` como cache incremental para dashboard con refresh asíncrono
+- Batch programado y bajo demanda con observabilidad (`batch_job_runs`, `pipeline_dispatch_events`)
+- Linaje explícito de resultados con `analysis_runs`, `campaign_instruments`, taxonomía de dimensiones y separación de `campaign_ai_insights`
+- Backfill histórico controlado, snapshots de corrida, comparativas de drift y panel técnico/operativo
+
+### Completado (v4.8)
+
+- Runtime productivo estabilizado con `SUPABASE_SECRET_KEY` como credencial backend prioritaria
+- Smoke productivo automatizado para sitio, batch, ingest y runtime admin
+- Hygiene pass del repositorio: poda de código muerto, upgrades de dependencias y `npm audit` productivo en cero
+- Refactorización de hotspots:
+  - `ai-insights.ts` extraído en proveedor, prompts, persistencia y rate limit
+  - `export.ts` dividido en loaders y builders
+  - survey público modularizado en hook, helpers, backup y step components
+  - `analytics.ts` separado por familias de lectura
+  - `campaigns.ts` reducido a fachadas + núcleo `calculateResults()`
+
 ### Pendiente
 
 - Pulsos automatizados (programacion periodica de 22 items ancla)
 - Recordatorios automáticos por cron (programación periódica)
 - Onboarding wizard multi-paso para nuevas organizaciones
+- Alertas operativas conectadas a un canal real (Slack/email/webhook) y playbooks de respuesta
+- Backfill histórico real en producción con revisión de drift y thresholds
+- Rotación final manual fuera de credenciales legacy donde aún aplique en infraestructura externa
+- Baseline formal de performance/capacidad para campañas grandes
+
+### Próximos pasos recomendados (siguientes 90 días)
+
+1. Correr backfill histórico completo en producción y revisar diferencias materiales por campaña
+2. Activar notificaciones operativas reales para fallos de ingest, batch, dispatch y ONA
+3. Medir tiempos y costo de `calculateResults()` para definir qué más pasar a incremental
+4. Cerrar pulsos automatizados y recordatorios por cron como siguientes features de negocio
+5. Preparar la siguiente capa analítica: comparativas longitudinales más claras y validación CFA/invariancia
 
 ---
 
