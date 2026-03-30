@@ -16,9 +16,9 @@
 
 **Files:**
 
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/supabase/migrations/000039_ten_out_of_ten_foundations.sql`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/types/database.ts`
-- Test: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/ten-out-of-ten-foundations.test.ts`
+- Create: `supabase/migrations/000039_ten_out_of_ten_foundations.sql`
+- Modify: `src/types/database.ts`
+- Test: `src/lib/__tests__/ten-out-of-ten-foundations.test.ts`
 
 - [ ] **Step 1: Write failing test for new derived helpers that depend on new tables**
 - [ ] **Step 2: Run `npm test -- --run src/lib/__tests__/ten-out-of-ten-foundations.test.ts` and confirm failure**
@@ -33,9 +33,9 @@
 
 **Files:**
 
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/excellence/statistical-baselines.ts`
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/statistical-baselines.test.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/actions/analysis-comparison.ts`
+- Create: `src/lib/excellence/statistical-baselines.ts`
+- Create: `src/lib/__tests__/statistical-baselines.test.ts`
+- Modify: `src/actions/analysis-comparison.ts`
 
 - [ ] **Step 1: Write failing tests for robustness score, drift summary and interpretation labels**
 - [ ] **Step 2: Run `npm test -- --run src/lib/__tests__/statistical-baselines.test.ts` and confirm failure**
@@ -48,10 +48,10 @@
 
 **Files:**
 
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/semantic-results.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/actions/semantic-results.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/export/loaders.ts`
-- Test: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/semantic-results.test.ts`
+- Modify: `src/lib/semantic-results.ts`
+- Modify: `src/actions/semantic-results.ts`
+- Modify: `src/lib/export/loaders.ts`
+- Test: `src/lib/__tests__/semantic-results.test.ts`
 
 - [ ] **Step 1: Write failing tests for longitudinal and export-ready semantic packs**
 - [ ] **Step 2: Run `npm test -- --run src/lib/__tests__/semantic-results.test.ts` and confirm failure**
@@ -66,11 +66,11 @@
 
 **Files:**
 
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/ai/evidence.ts`
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/ai-evidence.test.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/ai/generate.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/actions/ai-governance.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/quality/ai-evaluation.ts`
+- Create: `src/lib/ai/evidence.ts`
+- Create: `src/lib/__tests__/ai-evidence.test.ts`
+- Modify: `src/lib/ai/generate.ts`
+- Modify: `src/actions/ai-governance.ts`
+- Modify: `src/lib/quality/ai-evaluation.ts`
 
 - [ ] **Step 1: Write failing tests for claim extraction, evidence normalization and publish gating**
 - [ ] **Step 2: Run `npm test -- --run src/lib/__tests__/ai-evidence.test.ts` and confirm failure**
@@ -86,13 +86,13 @@
 
 **Files:**
 
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/excellence/slo-scorecards.ts`
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/excellence/performance-baselines.ts`
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/slo-scorecards.test.ts`
-- Create: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/__tests__/performance-baselines.test.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/actions/pipeline-ops.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/jobs/analyzeBatch.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/jobs/backfillAnalysis.ts`
+- Create: `src/lib/excellence/slo-scorecards.ts`
+- Create: `src/lib/excellence/performance-baselines.ts`
+- Create: `src/lib/__tests__/slo-scorecards.test.ts`
+- Create: `src/lib/__tests__/performance-baselines.test.ts`
+- Modify: `src/actions/pipeline-ops.ts`
+- Modify: `src/jobs/analyzeBatch.ts`
+- Modify: `src/jobs/backfillAnalysis.ts`
 
 - [ ] **Step 1: Write failing tests for SLO status derivation and performance baseline summaries**
 - [ ] **Step 2: Run targeted tests and confirm failure**
@@ -108,15 +108,15 @@
 
 **Files:**
 
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/actions/quality.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/lib/quality/quality-store.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/(dashboard)/campaigns/[id]/results/quality/page.tsx`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/(dashboard)/campaigns/[id]/results/technical/page.tsx`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/(dashboard)/campaigns/[id]/results/ai-governance/page.tsx`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/(dashboard)/operations/page.tsx`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/docs/TECHNICAL_REFERENCE.md`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/docs/PIPELINE_OPERATIONS.md`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/docs/ROADMAP.md`
+- Modify: `src/actions/quality.ts`
+- Modify: `src/lib/quality/quality-store.ts`
+- Modify: `src/app/(dashboard)/campaigns/[id]/results/quality/page.tsx`
+- Modify: `src/app/(dashboard)/campaigns/[id]/results/technical/page.tsx`
+- Modify: `src/app/(dashboard)/campaigns/[id]/results/ai-governance/page.tsx`
+- Modify: `src/app/(dashboard)/operations/page.tsx`
+- Modify: `docs/TECHNICAL_REFERENCE.md`
+- Modify: `docs/PIPELINE_OPERATIONS.md`
+- Modify: `docs/ROADMAP.md`
 
 - [ ] **Step 1: Add loaders for statistical baselines, AI evidence, SLOs and performance baselines**
 - [ ] **Step 2: Surface summaries in quality, technical, AI governance and operations pages**
@@ -130,9 +130,9 @@
 
 **Files:**
 
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/testing-agent/src/commands/e2e-ops.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/testing-agent/src/commands/e2e-prod-smoke.ts`
-- Modify: `/Users/ulisesgonzalez/Documents/GitHub/climalab/testing-agent/src/index.ts`
+- Modify: `testing-agent/src/commands/e2e-ops.ts`
+- Modify: `testing-agent/src/commands/e2e-prod-smoke.ts`
+- Modify: `testing-agent/src/index.ts`
 
 - [ ] **Step 1: Extend ops E2E to assert new baseline/evidence/SLO tables**
 - [ ] **Step 2: Run `cd testing-agent && npx tsx src/index.ts e2e-ops`**

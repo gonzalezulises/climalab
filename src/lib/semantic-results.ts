@@ -66,12 +66,13 @@ export function buildSemanticResultFamilies(rows: SemanticDimensionRow[]): Seman
           };
         }
 
+        const SIGNIFICANT_DELTA_THRESHOLD = 0.05;
         const deltas = withBaseline.map((row) => row.baselineDelta as number);
         return {
           hasBaseline: true,
           averageDelta: round(deltas.reduce((sum, value) => sum + value, 0) / deltas.length),
-          improvingCount: deltas.filter((value) => value > 0.05).length,
-          decliningCount: deltas.filter((value) => value < -0.05).length,
+          improvingCount: deltas.filter((value) => value > SIGNIFICANT_DELTA_THRESHOLD).length,
+          decliningCount: deltas.filter((value) => value < -SIGNIFICANT_DELTA_THRESHOLD).length,
         };
       })(),
     }));

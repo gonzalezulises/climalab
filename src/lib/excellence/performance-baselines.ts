@@ -23,7 +23,9 @@ export function buildPerformanceBaseline(input: {
   const p95 = percentile(sorted, 0.95);
   const p99 = percentile(sorted, 0.99);
   const max = count > 0 ? sorted[count - 1]! : 0;
-  const outlierThreshold = Math.max(500, avg * 1.75);
+  const OUTLIER_THRESHOLD_MULTIPLIER = 1.75;
+  const OUTLIER_MIN_THRESHOLD_MS = 500;
+  const outlierThreshold = Math.max(OUTLIER_MIN_THRESHOLD_MS, avg * OUTLIER_THRESHOLD_MULTIPLIER);
   const outlierCount = sorted.filter((value) => value >= outlierThreshold).length;
 
   return {

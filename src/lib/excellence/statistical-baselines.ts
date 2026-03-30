@@ -19,6 +19,16 @@ type BuildStatisticalBaselineInput = {
   };
 };
 
+const MODERATE_DRIFT_PENALTY = 8;
+const MATERIAL_DRIFT_PENALTY = 20;
+const WARNING_PENALTY = 8;
+const LARGE_SAMPLE_SHIFT_THRESHOLD = 25;
+const LARGE_SAMPLE_SHIFT_PENALTY = 10;
+const LOGIC_VERSION_CHANGE_PENALTY = 15;
+const NON_INTERPRETABLE_SCORE_THRESHOLD = 50;
+const ATTENTION_NEEDED_SCORE_THRESHOLD = 80;
+const MATERIAL_CHANGES_NON_INTERPRETABLE_THRESHOLD = 3;
+
 function round(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -42,11 +52,14 @@ export function buildStatisticalBaseline(input: BuildStatisticalBaselineInput) {
   );
 
   const materialChangeRatio = driftCounts.total > 0 ? driftCounts.material / driftCounts.total : 0;
-  const moderatePenalty = driftCounts.moderate * 8;
-  const materialPenalty = driftCounts.material * 20;
-  const warningPenalty = input.warnings.length * 8;
-  const samplePenalty = Math.abs(input.comparison.sampleNDelta) >= 25 ? 10 : 0;
-  const logicPenalty = input.comparison.logicVersionChanged ? 15 : 0;
+  const moderatePenalty = driftCounts.moderate * MODERATE_DRIFT_PENALTY;
+  const materialPenalty = driftCounts.material * MATERIAL_DRIFT_PENALTY;
+  const warningPenalty = input.warnings.length * WARNING_PENALTY;
+  const samplePenalty =
+    Math.abs(input.comparison.sampleNDelta) >= LARGE_SAMPLE_SHIFT_THRESHOLD
+      ? LARGE_SAMPLE_SHIFT_PENALTY
+      : 0;
+  const logicPenalty = input.comparison.logicVersionChanged ? LOGIC_VERSION_CHANGE_PENALTY : 0;
 
   const robustnessScore = Math.max(
     0,
@@ -57,13 +70,21 @@ export function buildStatisticalBaseline(input: BuildStatisticalBaselineInput) {
     ...input.warnings,
     ...(input.comparison.logicVersionChanged ? ["logic_version_changed"] : []),
     ...(materialChangeRatio > 0.3 ? ["high_material_drift"] : []),
-    ...(Math.abs(input.comparison.sampleNDelta) >= 25 ? ["sample_shift_detected"] : []),
+    ...(Math.abs(input.comparison.sampleNDelta) >= LARGE_SAMPLE_SHIFT_THRESHOLD
+      ? ["sample_shift_detected"]
+      : []),
   ];
 
   let interpretationStatus: "robust" | "attention_needed" | "non_interpretable" = "robust";
-  if (robustnessScore < 50 || driftCounts.material >= 3) {
+  if (
+    robustnessScore < NON_INTERPRETABLE_SCORE_THRESHOLD ||
+    driftCounts.material >= MATERIAL_CHANGES_NON_INTERPRETABLE_THRESHOLD
+  ) {
     interpretationStatus = "non_interpretable";
-  } else if (robustnessScore < 80 || interpretationWarnings.length > 0) {
+  } else if (
+    robustnessScore < ATTENTION_NEEDED_SCORE_THRESHOLD ||
+    interpretationWarnings.length > 0
+  ) {
     interpretationStatus = "attention_needed";
   }
 
