@@ -90,6 +90,7 @@ export function DemographicsStep(props: {
   tenure: string;
   gender: string;
   saving: boolean;
+  preAssignedDepartment: boolean;
   onDepartmentChange: (value: string) => void;
   onTenureChange: (value: string) => void;
   onGenderChange: (value: string) => void;
@@ -104,23 +105,32 @@ export function DemographicsStep(props: {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Departamento <span className="text-red-500">*</span>
-          </label>
-          <Select value={props.department} onValueChange={props.onDepartmentChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona tu departamento" />
-            </SelectTrigger>
-            <SelectContent>
-              {props.departments.map((department) => (
-                <SelectItem key={department} value={department}>
-                  {department}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {props.preAssignedDepartment ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Departamento</label>
+            <div className="flex h-10 items-center rounded-md border bg-muted px-3 text-sm">
+              {props.department}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Departamento <span className="text-red-500">*</span>
+            </label>
+            <Select value={props.department} onValueChange={props.onDepartmentChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona tu departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {props.departments.map((department) => (
+                  <SelectItem key={department} value={department}>
+                    {department}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="text-sm font-medium">

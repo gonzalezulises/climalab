@@ -154,6 +154,7 @@ export async function generateRespondentLinksOperation(
   const supabase = await createClient();
   const rows = Array.from({ length: parsed.data.count }, () => ({
     campaign_id: parsed.data.campaign_id,
+    department: parsed.data.department ?? null,
   }));
 
   const { data, error } = await supabase.from("respondents").insert(rows).select();

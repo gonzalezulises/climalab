@@ -67,6 +67,7 @@ export function SurveyClient({
             tenure={session.tenure}
             gender={session.gender}
             saving={session.saving}
+            preAssignedDepartment={!!respondentDemographics.department}
             onDepartmentChange={session.setDepartment}
             onTenureChange={session.setTenure}
             onGenderChange={session.setGender}

@@ -108,9 +108,10 @@ export async function addParticipants(
     };
   }
 
-  // Create respondent rows first
-  const respondentRows = newParticipants.map(() => ({
+  // Create respondent rows first (propagate department if pre-assigned)
+  const respondentRows = newParticipants.map((p) => ({
     campaign_id,
+    department: p.department ?? null,
   }));
 
   const { data: respondents, error: respError } = await supabase

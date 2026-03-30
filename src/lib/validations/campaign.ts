@@ -33,6 +33,7 @@ export const updateCampaignStatusSchema = z.object({
 export const generateLinksSchema = z.object({
   campaign_id: zUuid(),
   count: z.number().int().min(1, "Mínimo 1 enlace").max(1000, "Máximo 1000 enlaces"),
+  department: z.string().max(200).optional(),
 });
 
 // Participant schemas
