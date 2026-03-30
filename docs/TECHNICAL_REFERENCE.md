@@ -1515,6 +1515,18 @@ El runtime backend web de ClimaLab resolvió originalmente su cliente administra
 
 La clasificación de familia de clave (`sb_secret`, `legacy_jwt`, `unknown`, `missing`) se usa solo para diagnóstico interno seguro y never expone el valor del secreto en respuestas del sistema.
 
+La arquitectura operativa asociada quedó con dos guardrails nuevos:
+
+- `GET /api/jobs/admin-runtime-health` como health check protegido para validar el runtime del cliente admin sin exponer secretos
+- `testing-agent e2e-prod-smoke` como gate repetible de aceptación post-rotación y pre-backfill
+
+Validación productiva cerrada el **29 de marzo de 2026**:
+
+- `admin-runtime-health` respondió `200`
+- `runtime.keySource = SUPABASE_SECRET_KEY`
+- `queryOk = true`
+- el smoke productivo quedó `4/4`
+
 ### 19.1 Tests Estadísticos (`src/lib/statistics.test.ts`)
 
 41 tests unitarios cubriendo las 5 funciones estadísticas:

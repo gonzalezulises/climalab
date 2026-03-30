@@ -22,6 +22,17 @@ Cerrar la brecha entre una plataforma ya endurecida a nivel de código y una ope
   - notificaciones técnicas
   - health summaries y métricas de performance
 
+## Estado Resuelto 2026-03-29
+
+El gate rojo inicial de Fase 4 quedó resuelto en producción:
+
+- el runtime web ahora prioriza `SUPABASE_SECRET_KEY`
+- `GET /api/jobs/admin-runtime-health` confirma `runtime.keySource = SUPABASE_SECRET_KEY`
+- el probe SDK y los probes REST (`apikey_only` y `apikey_and_bearer`) responden `200`
+- `e2e-prod-smoke` pasa `4/4`
+
+Con esto, Fase 4 deja de estar bloqueada por credenciales inválidas y puede continuar con backfill histórico real, alertas activas y baseline de performance sobre una base productiva estable.
+
 ## Alternativas Consideradas
 
 ### Opción A: Estabilización operativa primero, luego expansión
