@@ -241,7 +241,6 @@ export function SurveyClient({
 
     if (unsaved.length === 0) return;
 
-    console.log(`Recovering ${unsaved.length} responses from localStorage`);
     postSurvey("responses", {
       items: unsaved.map((entry) => ({
         itemId: entry.item_id,
