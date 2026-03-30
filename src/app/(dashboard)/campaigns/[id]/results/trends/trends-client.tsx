@@ -46,7 +46,13 @@ type Props = {
   initialNarrative: TrendsNarrative | null;
 };
 
-export function TrendsClient({ organizationId, campaigns, series, initialNarrative }: Props) {
+export function TrendsClient({
+  campaignId,
+  organizationId,
+  campaigns,
+  series,
+  initialNarrative,
+}: Props) {
   const allCodes = Object.keys(series);
   const [selected, setSelected] = useState<string[]>(["ENG"]);
   const [narrative, setNarrative] = useState<TrendsNarrative | null>(initialNarrative);
@@ -201,7 +207,7 @@ export function TrendsClient({ organizationId, campaigns, series, initialNarrati
                   setAiError(null);
                   startTransition(async () => {
                     try {
-                      const result = await generateTrendsNarrative(organizationId);
+                      const result = await generateTrendsNarrative(organizationId, campaignId);
                       if (result.success) setNarrative(result.data);
                       else setAiError(result.error);
                     } catch {
@@ -277,7 +283,7 @@ export function TrendsClient({ organizationId, campaigns, series, initialNarrati
             setAiError(null);
             startTransition(async () => {
               try {
-                const result = await generateTrendsNarrative(organizationId);
+                const result = await generateTrendsNarrative(organizationId, campaignId);
                 if (result.success) setNarrative(result.data);
                 else setAiError(result.error);
               } catch {

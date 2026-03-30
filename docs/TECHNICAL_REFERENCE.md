@@ -1676,3 +1676,84 @@ La versión actual es determinista y auditable: contrasta la salida persistida c
 - cobertura de insight types
 
 La profundidad completa queda en `/results/quality`.
+
+## 21. AI Governance
+
+ClimaLab ahora gobierna la generación IA con una capa explícita de contratos, versionado y trazabilidad.
+
+Archivos clave:
+
+- `src/lib/ai/contracts.ts`
+- `src/lib/ai/registry.ts`
+- `src/lib/ai/generate.ts`
+- `src/lib/ai/normalize.ts`
+- `src/lib/ai/persistence.ts`
+- `src/actions/ai-governance.ts`
+- `src/app/(dashboard)/campaigns/[id]/results/ai-governance/page.tsx`
+- `supabase/migrations/000038_ai_governance.sql`
+
+### 21.1 Contratos
+
+Cada `insight_type` se valida con Zod antes de persistir. Si el modelo devuelve JSON inválido o estructura incompleta, se intenta una reparación única y luego se registra el fallo.
+
+### 21.2 Metadata obligatoria
+
+Cada insight persistido guarda:
+
+- `status`
+- `prompt_version`
+- `schema_version`
+- `input_fingerprint`
+- `warnings`
+- `validation_errors`
+- `provider`
+- `model`
+
+### 21.3 Envelope gobernado
+
+`campaign_ai_insights.data` ahora puede contener:
+
+- `content`: payload funcional consumido por las páginas existentes
+- `governance`: resumen, claims, cautions, warnings y versiones
+
+Las lecturas públicas siguen siendo backward-compatible porque los getters extraen `content` automáticamente.
+
+### 21.4 Estado editorial
+
+Estados soportados:
+
+- `draft`
+- `approved`
+- `published`
+- `rejected`
+- `failed`
+
+La regla de lectura es:
+
+1. latest `published`
+2. si no existe, latest `draft` o `approved`
+
+### 21.5 Trazabilidad operativa
+
+`campaign_ai_generation_events` registra cada intento con:
+
+- `status`
+- `latency_ms`
+- `error_message`
+- `raw_excerpt`
+- `provider`
+- `model`
+- `prompt_version`
+- `schema_version`
+
+### 21.6 UI
+
+La navegación de resultados agrega `/results/ai-governance`.
+
+La vista muestra:
+
+- cobertura de insight types
+- warnings y validation errors
+- versiones de prompt/schema
+- estado editorial
+- historial de eventos

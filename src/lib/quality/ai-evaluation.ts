@@ -12,6 +12,11 @@ export type AiEvaluationInsightInput = {
   insightType: InsightType;
   provider: string | null;
   model: string | null;
+  status?: string | null;
+  promptVersion?: string | null;
+  schemaVersion?: string | null;
+  warnings?: string[];
+  validationErrors?: string[];
   data: unknown;
 };
 
@@ -33,6 +38,9 @@ export type AiEvaluationRow = {
   insightType: InsightType;
   provider: string | null;
   model: string | null;
+  status: string | null;
+  promptVersion: string | null;
+  schemaVersion: string | null;
   methodological: {
     dataFidelityScore: number;
     coverageScore: number;
@@ -187,6 +195,9 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
       insightType: insight.insightType,
       provider: insight.provider,
       model: insight.model,
+      status: insight.status ?? null,
+      promptVersion: insight.promptVersion ?? null,
+      schemaVersion: insight.schemaVersion ?? null,
       methodological: {
         dataFidelityScore,
         coverageScore,
@@ -194,7 +205,9 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
         actionabilityScore,
         overallScore,
       },
-      warnings,
+      warnings: [
+        ...new Set([...(insight.warnings ?? []), ...warnings, ...(insight.validationErrors ?? [])]),
+      ],
     };
   });
 

@@ -401,33 +401,57 @@ export type Database = {
           campaign_id: string
           created_at: string
           data: Json
+          generated_at: string | null
           id: string
+          input_fingerprint: string | null
           insight_type: string
           model: string | null
+          prompt_version: string | null
           provider: string | null
+          published_at: string | null
+          schema_version: string | null
+          status: string
           updated_at: string
+          validation_errors: Json
+          warnings: Json
         }
         Insert: {
           analysis_run_id?: string | null
           campaign_id: string
           created_at?: string
           data?: Json
+          generated_at?: string | null
           id?: string
+          input_fingerprint?: string | null
           insight_type: string
           model?: string | null
+          prompt_version?: string | null
           provider?: string | null
+          published_at?: string | null
+          schema_version?: string | null
+          status?: string
           updated_at?: string
+          validation_errors?: Json
+          warnings?: Json
         }
         Update: {
           analysis_run_id?: string | null
           campaign_id?: string
           created_at?: string
           data?: Json
+          generated_at?: string | null
           id?: string
+          input_fingerprint?: string | null
           insight_type?: string
           model?: string | null
+          prompt_version?: string | null
           provider?: string | null
+          published_at?: string | null
+          schema_version?: string | null
+          status?: string
           updated_at?: string
+          validation_errors?: Json
+          warnings?: Json
         }
         Relationships: [
           {
@@ -439,6 +463,78 @@ export type Database = {
           },
           {
             foreignKeyName: "campaign_ai_insights_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_ai_generation_events: {
+        Row: {
+          analysis_run_id: string | null
+          campaign_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          input_fingerprint: string | null
+          insight_type: string
+          latency_ms: number | null
+          model: string | null
+          prompt_version: string | null
+          provider: string | null
+          raw_excerpt: string | null
+          schema_version: string | null
+          status: string
+          validation_errors: Json
+          warnings: Json
+        }
+        Insert: {
+          analysis_run_id?: string | null
+          campaign_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_fingerprint?: string | null
+          insight_type: string
+          latency_ms?: number | null
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          raw_excerpt?: string | null
+          schema_version?: string | null
+          status: string
+          validation_errors?: Json
+          warnings?: Json
+        }
+        Update: {
+          analysis_run_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_fingerprint?: string | null
+          insight_type?: string
+          latency_ms?: number | null
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          raw_excerpt?: string | null
+          schema_version?: string | null
+          status?: string
+          validation_errors?: Json
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ai_generation_events_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_ai_generation_events_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
