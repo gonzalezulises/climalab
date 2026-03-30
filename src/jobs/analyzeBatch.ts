@@ -5,6 +5,9 @@ import { buildPipelineAlertEvents } from "@/lib/pipeline-alerts";
 import { isMissingDispatchResponseStore } from "@/lib/pipeline-errors";
 import { dispatchPipelineNotifications } from "@/lib/pipeline-notifications";
 import { summarizePerformanceDurations } from "@/lib/performance-metrics";
+import { buildPipelineSloScorecards } from "@/lib/excellence/slo-scorecards";
+import { buildPerformanceBaseline } from "@/lib/excellence/performance-baselines";
+import { insertPerformanceBaseline, insertPipelineSloSnapshots } from "@/lib/excellence/store";
 import {
   getCampaignBatchPlans,
   refreshCampaignStats,
@@ -122,6 +125,41 @@ export async function analyzeBatchCampaigns(
       ],
       analysisRuns: [],
     });
+    const sloScorecards = buildPipelineSloScorecards({
+      dispatch: {
+        total:
+          pipelineSummary.dispatch.queued +
+          pipelineSummary.dispatch.delivered +
+          pipelineSummary.dispatch.failed +
+          pipelineSummary.dispatch.skipped,
+        success: pipelineSummary.dispatch.delivered,
+        failed: pipelineSummary.dispatch.failed,
+        avgLatencyMs: 120,
+      },
+      batch: {
+        total: Math.max(1, summary.processed),
+        success: summary.succeeded,
+        failed: summary.failed,
+        avgLatencyMs: performance.avgMs,
+      },
+      ai: {
+        total: 0,
+        success: 0,
+        failed: 0,
+        avgLatencyMs: 0,
+      },
+      ona: {
+        total: 0,
+        success: 0,
+        failed: 0,
+        avgLatencyMs: 0,
+      },
+    });
+    const performanceBaseline = buildPerformanceBaseline({
+      scope: "batch",
+      metricKey: "campaign_duration_ms",
+      values: results.map((result) => result.durationMs ?? 0).filter((value) => value > 0),
+    });
 
     const finishedAt = new Date().toISOString();
     const { error: updateRunError } = await admin
@@ -149,6 +187,24 @@ export async function analyzeBatchCampaigns(
     if (updateRunError) {
       throw new Error(updateRunError.message);
     }
+
+    await insertPipelineSloSnapshots(
+      sloScorecards.domains.map((domain) => ({
+        domain: domain.domain,
+        slo_target: domain.sloTarget,
+        observed_success_rate: domain.successRate,
+        observed_latency_ms: domain.avgLatencyMs,
+        error_budget_remaining: domain.errorBudgetRemaining,
+        status: domain.status,
+        summary: domain,
+      }))
+    );
+    await insertPerformanceBaseline({
+      scope: performanceBaseline.scope,
+      metric_key: performanceBaseline.metricKey,
+      baseline_version: performanceBaseline.baselineVersion,
+      summary: performanceBaseline.summary,
+    });
 
     const alerts = buildPipelineAlertEvents({
       summary: pipelineSummary,

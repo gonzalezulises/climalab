@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/contracts";
 import { extractJSON } from "@/lib/ai/json";
 import { normalizeInsightClaims, extractInsightSummary } from "@/lib/ai/normalize";
+import { buildAiEvidenceRows } from "@/lib/ai/evidence";
 import {
   insertCampaignAiGenerationEvent,
   type CampaignAiInsightInsert,
@@ -35,6 +36,18 @@ type GenerateGovernedInsightOutput = {
   insert: CampaignAiInsightInsert;
   content: unknown;
   warnings: string[];
+  evidenceRows: Array<{
+    campaign_id: string;
+    analysis_run_id: string | null;
+    insight_type: CampaignAiInsightType;
+    claim_key: string;
+    claim_text: string;
+    evidence: string[];
+    metric_refs: string[];
+    dimension_codes: string[];
+    confidence_label: "low" | "medium" | "high";
+    policy_warnings: string[];
+  }>;
 };
 
 function fingerprintInput(userContent: string) {
@@ -185,6 +198,22 @@ export async function generateGovernedInsight(
     generated_at: now,
     published_at: status === "published" ? now : null,
   };
+  const evidenceRows = buildAiEvidenceRows({
+    campaignId: input.campaignId,
+    analysisRunId: input.analysisRunId ?? null,
+    insightType: input.insightType,
+    governance: {
+      claims: claims.map((claim, index) => ({
+        key: `${input.insightType}_${index + 1}`,
+        statement: claim.statement,
+        evidence: claim.metricRefs,
+        dimensionCodes: claim.dimensionCodes,
+        metricRefs: claim.metricRefs,
+        confidenceLabel: claim.confidence,
+        warnings: [],
+      })),
+    },
+  });
 
   await persistGenerationEvent({
     campaign_id: input.campaignId,
@@ -209,6 +238,7 @@ export async function generateGovernedInsight(
       insert,
       content: finalValidation.data,
       warnings,
+      evidenceRows,
     },
   };
 }

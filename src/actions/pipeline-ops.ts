@@ -6,6 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { INGEST_CONTRACT_VERSION } from "@/lib/ingest-contract";
 import { summarizePipelineOps } from "@/lib/pipeline-ops";
+import {
+  listLatestPerformanceBaselines,
+  listLatestPipelineSloSnapshots,
+} from "@/lib/excellence/store";
 import type { ActionResult } from "@/types";
 
 export async function getPipelineOperationalSummary(
@@ -105,6 +109,21 @@ export async function getPlatformOperationsOverview(): Promise<
       latestLogicVersion: string | null;
       hasSnapshot: boolean;
     }>;
+    latestSloSnapshots: Array<{
+      id: string;
+      domain: string;
+      status: string;
+      successRate: number;
+      latencyMs: number;
+      snapshotDate: string;
+    }>;
+    latestPerformanceBaselines: Array<{
+      id: string;
+      scope: string;
+      metricKey: string;
+      observedAt: string;
+      summary: unknown;
+    }>;
   }>
 > {
   const supabase = createAdminClient();
@@ -116,6 +135,8 @@ export async function getPlatformOperationsOverview(): Promise<
     { data: batchRuns, error: batchRunsError },
     { data: notifications, error: notificationsError },
     backfillRunsResult,
+    sloSnapshots,
+    performanceBaselines,
   ] = await Promise.all([
     supabase.from("campaigns").select("id, name, status").in("status", ["closed", "archived"]),
     supabase
@@ -142,6 +163,8 @@ export async function getPlatformOperationsOverview(): Promise<
       )
       .order("created_at", { ascending: false })
       .limit(10),
+    listLatestPipelineSloSnapshots(20),
+    listLatestPerformanceBaselines(20),
   ]);
 
   const firstError =
@@ -224,6 +247,21 @@ export async function getPlatformOperationsOverview(): Promise<
         reason: candidate.reason,
         latestLogicVersion: candidate.latestLogicVersion,
         hasSnapshot: candidate.hasSnapshot,
+      })),
+      latestSloSnapshots: sloSnapshots.map((snapshot) => ({
+        id: snapshot.id,
+        domain: snapshot.domain,
+        status: snapshot.status,
+        successRate: Number(snapshot.observed_success_rate ?? 0),
+        latencyMs: Number(snapshot.observed_latency_ms ?? 0),
+        snapshotDate: snapshot.snapshot_date,
+      })),
+      latestPerformanceBaselines: performanceBaselines.map((baseline) => ({
+        id: baseline.id,
+        scope: baseline.scope,
+        metricKey: baseline.metric_key,
+        observedAt: baseline.observed_at,
+        summary: baseline.summary,
       })),
     },
   };

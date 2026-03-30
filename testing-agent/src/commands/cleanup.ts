@@ -33,6 +33,9 @@ export async function cleanupCommand(opts: { orgId: string }) {
         }
       }
 
+      // Delete ingest_events before respondents (FK: respondent_id)
+      await supabase.from("ingest_events").delete().eq("campaign_id", cid);
+
       // Delete participants, respondents
       await supabase.from("participants").delete().eq("campaign_id", cid);
       await supabase.from("respondents").delete().eq("campaign_id", cid);

@@ -16,6 +16,7 @@ import {
   getCampaignOrganizationId,
   replaceCampaignAiInsights,
 } from "@/lib/ai/persistence";
+import { replaceCampaignAiEvidence } from "@/lib/excellence/store";
 import { getAiProviderMetadata, hasConfiguredAiProvider } from "@/lib/ai/provider";
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
 import { CATEGORY_LABELS } from "@/lib/constants";
@@ -46,9 +47,24 @@ async function getLatestAnalysisRunId(campaignId: string) {
 async function persistGovernedInsight(
   campaignId: string,
   insightType: CampaignAiInsightType,
-  insert: Parameters<typeof replaceCampaignAiInsights>[2][number]
+  generated: {
+    insert: Parameters<typeof replaceCampaignAiInsights>[2][number];
+    evidenceRows: Array<{
+      campaign_id: string;
+      analysis_run_id: string | null;
+      insight_type: CampaignAiInsightType;
+      claim_key: string;
+      claim_text: string;
+      evidence: string[];
+      metric_refs: string[];
+      dimension_codes: string[];
+      confidence_label: "low" | "medium" | "high";
+      policy_warnings: string[];
+    }>;
+  }
 ) {
-  await replaceCampaignAiInsights(campaignId, [insightType], [insert]);
+  await replaceCampaignAiInsights(campaignId, [insightType], [generated.insert]);
+  await replaceCampaignAiEvidence(campaignId, insightType, generated.evidenceRows);
 }
 
 export async function analyzeComments(campaignId: string): Promise<ActionResult<CommentAnalysis>> {
@@ -104,7 +120,7 @@ ${grouped.general.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(campaignId, "comment_analysis", result.data.insert);
+  await persistGovernedInsight(campaignId, "comment_analysis", result.data);
   return { success: true, data: result.data.content as CommentAnalysis };
 }
 
@@ -202,7 +218,7 @@ ${
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(campaignId, "dashboard_narrative", result.data.insert);
+  await persistGovernedInsight(campaignId, "dashboard_narrative", result.data);
   return { success: true, data: result.data.content as DashboardNarrative };
 }
 
@@ -260,7 +276,7 @@ Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(campaignId, "driver_insights", result.data.insert);
+  await persistGovernedInsight(campaignId, "driver_insights", result.data);
   return { success: true, data: result.data.content as DriverInsights };
 }
 
@@ -300,7 +316,7 @@ Para cada alerta, genera una hipótesis de causa raíz y una recomendación conc
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(campaignId, "alert_context", result.data.insert);
+  await persistGovernedInsight(campaignId, "alert_context", result.data);
   return { success: true, data: result.data.content as AlertContext };
 }
 
@@ -375,7 +391,7 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(campaignId, "segment_profiles", result.data.insert);
+  await persistGovernedInsight(campaignId, "segment_profiles", result.data);
   return { success: true, data: result.data.content as SegmentProfiles };
 }
 
@@ -445,7 +461,7 @@ export async function generateTrendsNarrative(
   });
   if (!result.success) return result;
 
-  await persistGovernedInsight(targetCampaignId, "trends_narrative", result.data.insert);
+  await persistGovernedInsight(targetCampaignId, "trends_narrative", result.data);
   return { success: true, data: result.data.content as TrendsNarrative };
 }
 

@@ -87,6 +87,9 @@ export default async function QualityPage({ params }: { params: Promise<{ id: st
               {aiEvaluation.methodological.overallScore}
             </Badge>
             <p className="text-xs text-muted-foreground">Score global metodológico</p>
+            <p className="text-xs text-muted-foreground">
+              evidencia {reportResult.data.aiEvidenceCoverage.claimCount} claims
+            </p>
           </CardContent>
         </Card>
 
@@ -138,6 +141,40 @@ export default async function QualityPage({ params }: { params: Promise<{ id: st
                   </div>
                 ))}
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Baseline estadístico</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {reportResult.data.statisticalBaseline ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Robustez</span>
+                  <Badge
+                    className={scoreBadgeClass(
+                      reportResult.data.statisticalBaseline.robustnessScore
+                    )}
+                  >
+                    {reportResult.data.statisticalBaseline.robustnessScore}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Interpretación</span>
+                  <Badge
+                    className={statusBadgeClass(
+                      reportResult.data.statisticalBaseline.interpretationStatus
+                    )}
+                  >
+                    {reportResult.data.statisticalBaseline.interpretationStatus}
+                  </Badge>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Aún no hay baseline estadístico persistido.</p>
             )}
           </CardContent>
         </Card>
@@ -265,7 +302,12 @@ export default async function QualityPage({ params }: { params: Promise<{ id: st
                     <p className="text-xs text-muted-foreground">Accionabilidad</p>
                     <p className="font-semibold">{row.methodological.actionabilityScore}</p>
                   </div>
+                  <div className="rounded-md border p-2">
+                    <p className="text-xs text-muted-foreground">Evidencia</p>
+                    <p className="font-semibold">{row.methodological.evidenceCoverageScore}</p>
+                  </div>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">claims {row.claimCount}</p>
                 {row.warnings.length > 0 ? (
                   <p className="mt-3 text-xs text-muted-foreground">{row.warnings.join(" | ")}</p>
                 ) : null}

@@ -12,11 +12,16 @@ import {
   type CampaignAiInsightType,
 } from "@/lib/ai/contracts";
 import { summarizeAiGovernance } from "@/lib/ai/governance";
+import { listCampaignAiEvidence } from "@/lib/excellence/store";
 import type { ActionResult } from "@/types";
 
 export async function getCampaignAiGovernance(campaignId: string): Promise<
   ActionResult<{
     summary: ReturnType<typeof summarizeAiGovernance>;
+    evidenceCoverage: {
+      claimCount: number;
+      insightTypes: string[];
+    };
     insights: Array<{
       id: string;
       insightType: string;
@@ -31,6 +36,17 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
       validationErrors: string[];
       claimCount: number;
       summary: string | null;
+    }>;
+    evidence: Array<{
+      id: string;
+      insightType: string;
+      claimKey: string;
+      claimText: string;
+      evidence: string[];
+      metricRefs: string[];
+      dimensionCodes: string[];
+      confidenceLabel: string;
+      policyWarnings: string[];
     }>;
     events: Array<{
       id: string;
@@ -49,6 +65,7 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
       listCampaignAiInsights(campaignId),
       listCampaignAiGenerationEvents(campaignId),
     ]);
+    const evidence = await listCampaignAiEvidence(campaignId);
 
     const summary = summarizeAiGovernance({ insights, events });
 
@@ -56,6 +73,10 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
       success: true,
       data: {
         summary,
+        evidenceCoverage: {
+          claimCount: evidence.length,
+          insightTypes: [...new Set(evidence.map((row) => row.insight_type))],
+        },
         insights: insights.map((insight) => {
           const governance = extractInsightGovernance(insight.data);
           return {
@@ -80,6 +101,25 @@ export async function getCampaignAiGovernance(campaignId: string): Promise<
             summary: governance?.summary ?? null,
           };
         }),
+        evidence: evidence.map((row) => ({
+          id: row.id,
+          insightType: row.insight_type,
+          claimKey: row.claim_key,
+          claimText: row.claim_text,
+          evidence: Array.isArray(row.evidence)
+            ? row.evidence.filter((entry): entry is string => typeof entry === "string")
+            : [],
+          metricRefs: Array.isArray(row.metric_refs)
+            ? row.metric_refs.filter((entry): entry is string => typeof entry === "string")
+            : [],
+          dimensionCodes: Array.isArray(row.dimension_codes)
+            ? row.dimension_codes.filter((entry): entry is string => typeof entry === "string")
+            : [],
+          confidenceLabel: row.confidence_label,
+          policyWarnings: Array.isArray(row.policy_warnings)
+            ? row.policy_warnings.filter((entry): entry is string => typeof entry === "string")
+            : [],
+        })),
         events: events.map((event) => ({
           id: event.id,
           insightType: event.insight_type,
@@ -106,6 +146,17 @@ export async function setCampaignAiInsightStatus(input: {
   status: CampaignAiInsightStatus;
 }): Promise<ActionResult<void>> {
   try {
+    if (input.status === "published") {
+      const evidence = await listCampaignAiEvidence(input.campaignId);
+      const claimCount = evidence.filter((row) => row.insight_type === input.insightType).length;
+      if (claimCount === 0) {
+        return {
+          success: false,
+          error: "No se puede publicar un insight sin evidencia estructurada",
+        };
+      }
+    }
+
     await updateCampaignAiInsightStatus(input.campaignId, input.insightType, input.status);
     revalidatePath(`/campaigns/${input.campaignId}/results/quality`);
     revalidatePath(`/campaigns/${input.campaignId}/results/ai-governance`);

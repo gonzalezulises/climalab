@@ -238,6 +238,53 @@ export async function e2eOpsCommand(opts: { skipCleanup?: boolean } = {}) {
       JSON.stringify(backfillRuns)
     );
 
+    const { data: baselineRows, error: baselineRowsError } = await (supabase as any)
+      .from("analysis_statistical_baselines")
+      .select("campaign_id, robustness_score, interpretation_status")
+      .eq("campaign_id", campaignResult.campaignId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (baselineRowsError) throw new Error(baselineRowsError.message);
+    pushAssertion(
+      assertions,
+      "statistical baselines persisted",
+      (baselineRows ?? []).length > 0 &&
+        typeof baselineRows?.[0]?.robustness_score === "number" &&
+        typeof baselineRows?.[0]?.interpretation_status === "string",
+      JSON.stringify(baselineRows)
+    );
+
+    const { data: sloRows, error: sloRowsError } = await (supabase as any)
+      .from("pipeline_slo_snapshots")
+      .select("domain, status, observed_success_rate")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (sloRowsError) throw new Error(sloRowsError.message);
+    pushAssertion(
+      assertions,
+      "pipeline slo snapshots persisted",
+      (sloRows ?? []).length > 0 &&
+        (sloRows ?? []).some((row: { domain?: string }) => row.domain?.includes("batch")),
+      JSON.stringify(sloRows)
+    );
+
+    const { data: performanceBaselines, error: performanceBaselinesError } = await (supabase as any)
+      .from("performance_baselines")
+      .select("scope, metric_key, summary")
+      .order("observed_at", { ascending: false })
+      .limit(10);
+    if (performanceBaselinesError) throw new Error(performanceBaselinesError.message);
+    pushAssertion(
+      assertions,
+      "performance baselines persisted",
+      (performanceBaselines ?? []).length > 0 &&
+        (performanceBaselines ?? []).some(
+          (row: { scope?: string; metric_key?: string }) =>
+            row.scope === "batch" || row.scope === "backfill"
+        ),
+      JSON.stringify(performanceBaselines)
+    );
+
     const passed = assertions.filter((assertion) => assertion.passed).length;
     console.log(chalk.green(`\n${passed}/${assertions.length} ops checks passed`));
     for (const assertion of assertions) {
