@@ -13,6 +13,7 @@ import {
   persistRespondentQuality,
   scoreCampaignDataset,
 } from "../src/lib/analysis-engine";
+import { buildWaveComparisonFromStats } from "../src/lib/analysis-engine/wave-comparison";
 import type { Json } from "../src/types/database";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
@@ -41,6 +42,78 @@ async function processOneCampaign(supabase: ReturnType<typeof createClient>, cam
 
   try {
     const output = scoreCampaignDataset(dataset);
+
+    // Wave comparison enrichment
+    const { data: campaignForOrg } = await supabase
+      .from("campaigns")
+      .select("organization_id, ends_at")
+      .eq("id", campaignId)
+      .single();
+
+    if (campaignForOrg?.organization_id) {
+      const { data: prevCampaign } = await supabase
+        .from("campaigns")
+        .select("id")
+        .eq("organization_id", campaignForOrg.organization_id)
+        .in("status", ["closed", "archived"])
+        .neq("id", campaignId)
+        .lt("ends_at", campaignForOrg.ends_at)
+        .order("ends_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (prevCampaign) {
+        const { data: prevResults } = await supabase
+          .from("campaign_results")
+          .select("dimension_code, avg_score, std_score, respondent_count")
+          .eq("campaign_id", prevCampaign.id)
+          .eq("result_type", "dimension")
+          .eq("segment_type", "global");
+
+        if (prevResults && prevResults.length > 0) {
+          const prevByDim = new Map(
+            prevResults
+              .filter((r) => r.dimension_code != null)
+              .map((r) => [r.dimension_code!, r] as const)
+          );
+
+          let enriched = 0;
+          for (const row of output.results) {
+            if (
+              row.result_type === "dimension" &&
+              row.segment_type === "global" &&
+              row.dimension_code
+            ) {
+              const prev = prevByDim.get(row.dimension_code);
+              if (prev && prev.avg_score != null && row.avg_score != null) {
+                const wc = buildWaveComparisonFromStats({
+                  currentAvg: row.avg_score,
+                  currentStd: row.std_score ?? 0.5,
+                  currentN: row.respondent_count ?? 0,
+                  previousAvg: Number(prev.avg_score),
+                  previousStd: Number(prev.std_score) || 0.5,
+                  previousN: prev.respondent_count ?? 0,
+                  previousCampaignId: prevCampaign.id,
+                });
+                if (wc) {
+                  row.metadata = {
+                    ...(row.metadata as Record<string, unknown>),
+                    wave_comparison: wc,
+                  } as Json;
+                  enriched++;
+                }
+              }
+            }
+          }
+          if (enriched > 0) {
+            console.log(
+              `Wave comparison: enriched ${enriched} dimensions vs campaign ${prevCampaign.id}`
+            );
+          }
+        }
+      }
+    }
+
     await persistRespondentQuality(supabase as never, analysisRunId, output.respondentQuality);
     await materializeAnalysisRun(supabase as never, {
       analysisRunId,

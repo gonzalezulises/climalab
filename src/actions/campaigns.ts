@@ -27,6 +27,7 @@ import {
 } from "@/lib/campaigns/operations";
 import { buildWaveComparisonFromStats } from "@/lib/analysis-engine/wave-comparison";
 import type { ActionResult, Campaign, CampaignResult, Respondent } from "@/types";
+import { env } from "@/lib/env";
 import type { Json } from "@/types/database";
 import type {
   CreateCampaignInput,
@@ -228,62 +229,96 @@ export async function calculateResults(
     };
   }
 
-  try {
-    const { execFile } = await import("child_process");
-    const insertedRun = await admin
+  const statisticalUrl = env.STATISTICAL_ENGINE_URL;
+
+  if (statisticalUrl) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (env.STATISTICAL_API_SECRET) {
+      headers["Authorization"] = `Bearer ${env.STATISTICAL_API_SECRET}`;
+    }
+    const body = JSON.stringify({ campaign_id: campaignId });
+
+    // ONA — fire and forget
+    const onaRun = await admin
       .from("campaign_ona_runs")
       .insert({
         campaign_id: campaignId,
         analysis_run_id: analysisRunId,
         status: "pending",
-        backend: "uv/python3",
-        details: {
-          trigger_source: options?.triggerSource ?? (user ? "manual" : "batch"),
-        },
+        backend: "statistical-api",
+        details: { trigger_source: options?.triggerSource ?? (user ? "manual" : "batch") },
       })
       .select("id")
       .single();
+    const onaRunId = onaRun.data?.id as string | undefined;
 
-    const onaRunId = insertedRun.data?.id as string | undefined;
-    const script = `${process.cwd()}/scripts/ona-analysis.py`;
+    fetch(`${statisticalUrl}/ona`, {
+      method: "POST",
+      headers,
+      body,
+      signal: AbortSignal.timeout(300_000),
+    })
+      .then(async (res) => {
+        const status = res.ok ? "completed" : "deferred";
+        const errorMsg = res.ok ? null : await res.text();
+        if (onaRunId) {
+          await admin
+            .from("campaign_ona_runs")
+            .update({ status, error_message: errorMsg, updated_at: new Date().toISOString() })
+            .eq("id", onaRunId);
+        }
+      })
+      .catch((err) => {
+        if (onaRunId) {
+          admin
+            .from("campaign_ona_runs")
+            .update({
+              status: "deferred",
+              error_message: err.message,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", onaRunId)
+            .then(({ error }) => {
+              if (error) console.error("ONA status update failed:", error.message);
+            });
+        }
+      });
 
-    const updateOnaRunStatus = (nextStatus: string, errorMsg: string | null) => {
-      if (onaRunId) {
-        admin
-          .from("campaign_ona_runs")
-          .update({
-            status: nextStatus,
-            error_message: errorMsg,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", onaRunId)
-          .then(({ error: updateError }) => {
-            if (updateError) {
-              console.error(`Failed to update ONA run ${onaRunId} status:`, updateError.message);
-            }
-          });
-      }
-    };
+    // Auto-trigger CFA + HLM if thresholds met (fire and forget)
+    const { data: sampleRow } = await admin
+      .from("campaign_results")
+      .select("respondent_count")
+      .eq("campaign_id", campaignId)
+      .eq("result_type", "dimension")
+      .eq("segment_type", "global")
+      .limit(1)
+      .maybeSingle();
+    const respondentCount = sampleRow?.respondent_count ?? 0;
 
-    // Try uv first, fall back to python3
-    execFile("uv", ["run", script, campaignId], (uvError) => {
-      if (uvError) {
-        execFile("python3", [script, campaignId], (pyError) => {
-          const nextStatus = pyError ? "deferred" : "completed";
-          if (pyError) console.warn("ONA deferred:", pyError.message);
-          updateOnaRunStatus(nextStatus, pyError?.message ?? null);
-        });
-      } else {
-        updateOnaRunStatus("completed", null);
-      }
-    });
-  } catch {
+    if (respondentCount >= 100) {
+      fetch(`${statisticalUrl}/cfa`, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(300_000),
+      }).catch((err) => console.warn("CFA auto-trigger failed:", err.message));
+    }
+    if (respondentCount >= 50) {
+      fetch(`${statisticalUrl}/hlm`, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(300_000),
+      }).catch((err) => console.warn("HLM auto-trigger failed:", err.message));
+    }
+  } else {
+    // No statistical API configured — mark ONA as deferred
     await admin.from("campaign_ona_runs").insert({
       campaign_id: campaignId,
       analysis_run_id: analysisRunId,
       status: "deferred",
       backend: "unavailable",
-      error_message: "python_runtime_unavailable",
+      error_message: "STATISTICAL_ENGINE_URL not configured",
     });
   }
 

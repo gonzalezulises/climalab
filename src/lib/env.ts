@@ -31,6 +31,11 @@ const envSchema = z.object({
     z.string().url().optional()
   ),
   PIPELINE_ALERT_EMAIL_TO: optionalString,
+  STATISTICAL_ENGINE_URL: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().url().optional()
+  ),
+  STATISTICAL_API_SECRET: optionalString,
 });
 
 export const env = envSchema.parse(process.env);

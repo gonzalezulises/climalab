@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlphaIndicator } from "@/components/results/AlphaIndicator";
 import { TechnicalClient } from "./technical-client";
+import { RunAnalysisButtons } from "./run-analysis-buttons";
 
 function rwgStatus(rwg: number | null) {
   if (rwg === null) return { label: "N/D", bg: "bg-gray-100 text-gray-600" };
@@ -88,11 +89,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
         dimension_name?: string;
         wave_comparison?: {
           delta: number;
-          t_statistic: number;
-          df: number;
-          p_value: number;
-          cohens_d: number;
-          effect_label: string;
+          welch: { t: number; df: number; p_value: number; significant: boolean } | null;
+          effect_size: { d: number; label: string };
         };
       };
       return {
@@ -648,6 +646,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
+      <RunAnalysisButtons campaignId={id} respondentCount={sampleN} />
+
       {/* CFA — Validez Factorial */}
       <Card>
         <CardHeader>
@@ -851,7 +851,8 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                 <tbody>
                   {waveComparisonRows.map((row) => {
                     const wc = row.waveComparison!;
-                    const significant = wc.p_value < 0.05;
+                    const pValue = wc.welch?.p_value ?? 1.0;
+                    const significant = pValue < 0.05;
                     return (
                       <tr key={row.code} className="border-b last:border-0">
                         <td className="py-2 pr-4">
@@ -867,14 +868,16 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                           {wc.delta.toFixed(2)}
                         </td>
                         <td className="text-center px-3 py-2 font-mono">
-                          {wc.t_statistic.toFixed(3)}
-                        </td>
-                        <td className="text-center px-3 py-2 font-mono">{wc.df}</td>
-                        <td className="text-center px-3 py-2 font-mono">
-                          {wc.p_value < 0.001 ? "<0.001" : wc.p_value.toFixed(3)}
+                          {wc.welch?.t.toFixed(3) ?? "—"}
                         </td>
                         <td className="text-center px-3 py-2 font-mono">
-                          {Math.abs(wc.cohens_d).toFixed(3)}
+                          {wc.welch?.df.toFixed(0) ?? "—"}
+                        </td>
+                        <td className="text-center px-3 py-2 font-mono">
+                          {pValue < 0.001 ? "<0.001" : pValue.toFixed(3)}
+                        </td>
+                        <td className="text-center px-3 py-2 font-mono">
+                          {Math.abs(wc.effect_size.d).toFixed(3)}
                         </td>
                         <td className="text-center px-3 py-2">
                           <Badge
@@ -886,7 +889,7 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                                 : "bg-gray-100 text-gray-600"
                             }
                           >
-                            {significant ? wc.effect_label : "n.s."}
+                            {significant ? wc.effect_size.label : "n.s."}
                           </Badge>
                         </td>
                       </tr>

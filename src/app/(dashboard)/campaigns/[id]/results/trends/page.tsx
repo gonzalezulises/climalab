@@ -35,13 +35,17 @@ export default async function TrendsPage({ params }: { params: Promise<{ id: str
     for (const r of resultsResult.data) {
       if (r.result_type !== "dimension" || r.segment_type !== "global") continue;
       const meta = r.metadata as {
-        wave_comparison?: { p_value: number; delta: number; effect_label: string };
+        wave_comparison?: {
+          delta: number;
+          welch: { p_value: number; significant: boolean } | null;
+          effect_size: { d: number; label: string };
+        };
       };
       if (meta?.wave_comparison && r.dimension_code) {
         waveSignificance[r.dimension_code] = {
-          p_value: meta.wave_comparison.p_value,
+          p_value: meta.wave_comparison.welch?.p_value ?? 1.0,
           delta: meta.wave_comparison.delta,
-          effect_label: meta.wave_comparison.effect_label,
+          effect_label: meta.wave_comparison.effect_size.label,
         };
       }
     }

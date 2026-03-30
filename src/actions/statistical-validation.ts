@@ -1,52 +1,64 @@
 "use server";
 
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { createClient } from "@/lib/supabase/server";
+import { env } from "@/lib/env";
 import type { ActionResult } from "@/types";
 
-const execFileAsync = promisify(execFile);
-
-async function runStatisticalEngine(
-  subcommand: string,
-  campaignId: string
+async function callStatisticalApi(
+  endpoint: string,
+  body: Record<string, unknown>
 ): Promise<ActionResult<string>> {
-  const supabase = await createClient();
-  const { data: campaign } = await supabase
-    .from("campaigns")
-    .select("id")
-    .eq("id", campaignId)
-    .maybeSingle();
-
-  if (!campaign) {
-    return { success: false, error: "Campaña no encontrada" };
+  if (!env.STATISTICAL_ENGINE_URL) {
+    return { success: false, error: "Motor estadístico no configurado (STATISTICAL_ENGINE_URL)" };
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync(
-      "uv",
-      ["run", "scripts/statistical-engine.py", subcommand, campaignId],
-      { timeout: 300_000 }
-    );
-    return { success: true, data: stdout + (stderr ? `\n${stderr}` : "") };
+    const response = await fetch(`${env.STATISTICAL_ENGINE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(env.STATISTICAL_API_SECRET
+          ? { Authorization: `Bearer ${env.STATISTICAL_API_SECRET}` }
+          : {}),
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(300_000),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      return { success: false, error: `Motor estadístico: ${detail}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data: data.status ?? "completed" };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error ejecutando motor estadístico",
+      error: error instanceof Error ? error.message : "Error contactando motor estadístico",
     };
   }
 }
 
+async function verifyAccess(campaignId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("campaigns").select("id").eq("id", campaignId).maybeSingle();
+  return !!data;
+}
+
 export async function runCampaignCFA(campaignId: string): Promise<ActionResult<string>> {
-  return runStatisticalEngine("cfa", campaignId);
+  if (!(await verifyAccess(campaignId))) return { success: false, error: "Campaña no encontrada" };
+  return callStatisticalApi("/cfa", { campaign_id: campaignId });
 }
 
 export async function runCampaignInvariance(campaignId: string): Promise<ActionResult<string>> {
-  return runStatisticalEngine("invariance", campaignId);
+  if (!(await verifyAccess(campaignId))) return { success: false, error: "Campaña no encontrada" };
+  return callStatisticalApi("/invariance", { campaign_id: campaignId });
 }
 
 export async function runCampaignHLM(campaignId: string): Promise<ActionResult<string>> {
-  return runStatisticalEngine("hlm", campaignId);
+  if (!(await verifyAccess(campaignId))) return { success: false, error: "Campaña no encontrada" };
+  return callStatisticalApi("/hlm", { campaign_id: campaignId });
 }
 
 export async function getCampaignCFA(campaignId: string): Promise<ActionResult<unknown>> {
