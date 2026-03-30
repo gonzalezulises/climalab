@@ -5,15 +5,15 @@ export function shuffleArray<T>(items: T[], seed: string): T[] {
   const result = [...items];
   let hash = 0;
 
-  for (let index = 0; index < seed.length; index++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(index);
+  for (let seedIndex = 0; seedIndex < seed.length; seedIndex++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(seedIndex);
     hash |= 0;
   }
 
-  for (let index = result.length - 1; index > 0; index--) {
+  for (let itemIndex = result.length - 1; itemIndex > 0; itemIndex--) {
     hash = (hash * 16807 + 11) % 2147483647;
-    const randomIndex = Math.abs(hash) % (index + 1);
-    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+    const randomIndex = Math.abs(hash) % (itemIndex + 1);
+    [result[itemIndex], result[randomIndex]] = [result[randomIndex], result[itemIndex]];
   }
 
   return result;

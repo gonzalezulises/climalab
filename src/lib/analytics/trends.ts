@@ -22,26 +22,39 @@ export async function getWaveComparison(organizationId: string): Promise<
   if (error) return { success: false, error: error.message };
   if (!campaigns || campaigns.length === 0) return { success: true, data: [] };
 
-  const waves = [];
-  for (const campaign of campaigns) {
-    const { data: results } = await supabase
-      .from("campaign_results")
-      .select("dimension_code, avg_score, favorability_pct")
-      .eq("campaign_id", campaign.id)
-      .eq("result_type", "dimension")
-      .eq("segment_type", "global");
+  const campaignIds = campaigns.map((campaign) => campaign.id);
+  const { data: allResults, error: resultsError } = await supabase
+    .from("campaign_results")
+    .select("campaign_id, dimension_code, avg_score, favorability_pct")
+    .in("campaign_id", campaignIds)
+    .eq("result_type", "dimension")
+    .eq("segment_type", "global");
 
-    waves.push({
-      campaign_id: campaign.id,
-      campaign_name: campaign.name,
-      ends_at: campaign.ends_at ?? "",
-      dimensions: (results ?? []).map((result) => ({
-        code: result.dimension_code!,
+  if (resultsError) return { success: false, error: resultsError.message };
+
+  const resultsByCampaign = (allResults ?? []).reduce(
+    (accumulator, result) => {
+      if (!result.campaign_id || !result.dimension_code) return accumulator;
+      if (!accumulator[result.campaign_id]) {
+        accumulator[result.campaign_id] = [];
+      }
+
+      accumulator[result.campaign_id].push({
+        code: result.dimension_code,
         avg_score: Number(result.avg_score),
         favorability_pct: Number(result.favorability_pct),
-      })),
-    });
-  }
+      });
+      return accumulator;
+    },
+    {} as Record<string, Array<{ code: string; avg_score: number; favorability_pct: number }>>
+  );
+
+  const waves = campaigns.map((campaign) => ({
+    campaign_id: campaign.id,
+    campaign_name: campaign.name,
+    ends_at: campaign.ends_at ?? "",
+    dimensions: resultsByCampaign[campaign.id] ?? [],
+  }));
 
   return { success: true, data: waves };
 }
@@ -65,24 +78,25 @@ export async function getTrendsData(organizationId: string): Promise<
     return { success: true, data: { campaigns: [], series: {} } };
   }
 
+  const campaignIds = campaigns.map((campaign) => campaign.id);
+  const { data: allResults, error: resultsError } = await supabase
+    .from("campaign_results")
+    .select("campaign_id, dimension_code, avg_score")
+    .in("campaign_id", campaignIds)
+    .eq("result_type", "dimension")
+    .eq("segment_type", "global");
+
+  if (resultsError) return { success: false, error: resultsError.message };
+
   const series: Record<string, Array<{ campaign_id: string; avg_score: number }>> = {};
 
-  for (const campaign of campaigns) {
-    const { data: results } = await supabase
-      .from("campaign_results")
-      .select("dimension_code, avg_score")
-      .eq("campaign_id", campaign.id)
-      .eq("result_type", "dimension")
-      .eq("segment_type", "global");
-
-    for (const result of results ?? []) {
-      if (!result.dimension_code) continue;
-      if (!series[result.dimension_code]) series[result.dimension_code] = [];
-      series[result.dimension_code].push({
-        campaign_id: campaign.id,
-        avg_score: Number(result.avg_score),
-      });
-    }
+  for (const result of allResults ?? []) {
+    if (!result.dimension_code || !result.campaign_id) continue;
+    if (!series[result.dimension_code]) series[result.dimension_code] = [];
+    series[result.dimension_code].push({
+      campaign_id: result.campaign_id,
+      avg_score: Number(result.avg_score),
+    });
   }
 
   return {
