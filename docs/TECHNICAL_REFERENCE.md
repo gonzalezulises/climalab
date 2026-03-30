@@ -1506,6 +1506,15 @@ Además corrige `unnest(departments)` → `jsonb_array_elements(departments)` ya
 
 ## 19. Pruebas y Calidad
 
+### Nota Operativa 2026-03-29
+
+El runtime backend web de ClimaLab resolvió originalmente su cliente administrador únicamente desde `SUPABASE_SERVICE_ROLE_KEY`. A partir de la estabilización post-rotación, la resolución server-only queda formalizada así:
+
+1. `SUPABASE_SECRET_KEY`
+2. `SUPABASE_SERVICE_ROLE_KEY` como fallback legacy
+
+La clasificación de familia de clave (`sb_secret`, `legacy_jwt`, `unknown`, `missing`) se usa solo para diagnóstico interno seguro y never expone el valor del secreto en respuestas del sistema.
+
 ### 19.1 Tests Estadísticos (`src/lib/statistics.test.ts`)
 
 41 tests unitarios cubriendo las 5 funciones estadísticas:

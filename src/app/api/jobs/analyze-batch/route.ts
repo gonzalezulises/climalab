@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { analyzeBatchCampaigns } from "@/jobs/analyzeBatch";
 import { assertCronSecret } from "@/lib/cron-auth";
+import { getAdminClientRuntimeInfo } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
   try {
@@ -27,6 +28,10 @@ export async function GET(request: Request) {
     const result = await analyzeBatchCampaigns(hours, triggerSource);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    console.error("Analyze batch failed", {
+      error: error instanceof Error ? error.message : "unknown_error",
+      adminRuntime: getAdminClientRuntimeInfo(),
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "No se pudo ejecutar el batch" },
       { status: 500 }

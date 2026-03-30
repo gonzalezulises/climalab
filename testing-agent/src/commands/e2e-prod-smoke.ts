@@ -14,10 +14,6 @@ function pushAssertion(assertions: Assertion[], name: string, passed: boolean, d
   assertions.push({ name, passed, details });
 }
 
-function parseJsonResponse(text: string) {
-  return text ? JSON.parse(text) : {};
-}
-
 function isInvalidApiKeyResponse(text: string) {
   return text.toLowerCase().includes("invalid api key");
 }

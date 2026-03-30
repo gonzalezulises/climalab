@@ -4,11 +4,12 @@
 
 App / Vercel:
 
+- `SUPABASE_SECRET_KEY`
 - `INGEST_API_SECRET`
 - `CRON_SECRET`
 - `PIPELINE_ALERT_WEBHOOK_URL`
 - `PIPELINE_ALERT_EMAIL_TO`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (fallback legacy)
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
@@ -65,6 +66,7 @@ http://host.docker.internal:54321/functions/v1/process_response
 `vercel.json` agenda:
 
 - `GET /api/jobs/analyze-batch`
+- `GET /api/jobs/admin-runtime-health`
 
 El endpoint acepta:
 
@@ -72,6 +74,12 @@ El endpoint acepta:
 - `Authorization: Bearer <CRON_SECRET>`
 - opcional `?hours=24`
 - opcional `?source=cron|manual|response_hook`
+
+Health check de runtime:
+
+- `GET /api/jobs/admin-runtime-health`
+- devuelve `runtime.keySource`, `runtime.keyFamily`, `runtime.hasKey` y `queryOk`
+- no expone el valor del secreto
 
 Backfill controlado:
 
@@ -157,6 +165,9 @@ Se espera ver:
 
 ## 7. Notas operativas
 
+- El runtime web del admin client resuelve credenciales en este orden:
+  1. `SUPABASE_SECRET_KEY`
+  2. `SUPABASE_SERVICE_ROLE_KEY`
 - El trigger de `responses` solo despacha para fuentes no `web` y respondentes ya `completed`.
 - El survey web sigue refrescando `campaign_stats` al completar la encuesta, para evitar recálculos parciales durante un llenado en progreso.
 - Si faltan secretos de Vault, el trigger no rompe la escritura: registra `pipeline_dispatch_events.status = 'skipped'` con razón `missing_pipeline_secret`.
