@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { mean, stdDev, favorability, rwg, cronbachAlpha, pearson } from "./statistics";
+import {
+  mean,
+  stdDev,
+  favorability,
+  rwg,
+  cronbachAlpha,
+  pearson,
+  welchTTest,
+  welchTTestFromStats,
+} from "./statistics";
 
 describe("mean", () => {
   it("returns the single value for a single-element array", () => {
@@ -176,5 +185,37 @@ describe("pearson", () => {
     const result = pearson(x, y);
     expect(result.r).toBe(0);
     expect(result.pValue).toBe(1);
+  });
+});
+
+describe("welchTTestFromStats", () => {
+  it("matches welchTTest with equivalent aggregate inputs", () => {
+    const group1 = [2.1, 2.3, 2.5, 2.2, 2.4, 2.6, 2.0, 2.3, 2.1, 2.5, 2.2, 2.4, 2.3, 2.5, 2.1];
+    const group2 = [4.1, 4.3, 4.5, 4.2, 4.4, 4.6, 4.0, 4.3, 4.1, 4.5, 4.2, 4.4, 4.3, 4.5, 4.1];
+    const fromRaw = welchTTest(group1, group2);
+    const fromStats = welchTTestFromStats(
+      mean(group1),
+      stdDev(group1),
+      group1.length,
+      mean(group2),
+      stdDev(group2),
+      group2.length
+    );
+    expect(fromStats).not.toBeNull();
+    expect(fromStats!.t).toBe(fromRaw!.t);
+    expect(fromStats!.df).toBe(fromRaw!.df);
+    expect(fromStats!.pValue).toBe(fromRaw!.pValue);
+  });
+
+  it("returns null when n is below threshold", () => {
+    const result = welchTTestFromStats(3.0, 0.5, 5, 4.0, 0.5, 5);
+    expect(result).toBeNull();
+  });
+
+  it("handles zero standard deviation", () => {
+    const result = welchTTestFromStats(3.0, 0, 20, 3.0, 0, 20);
+    expect(result).not.toBeNull();
+    expect(result!.t).toBe(0);
+    expect(result!.significant).toBe(false);
   });
 });
