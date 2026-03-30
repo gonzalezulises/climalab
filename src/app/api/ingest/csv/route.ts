@@ -4,6 +4,7 @@ import { assertIngestSecret } from "@/lib/ingest-auth";
 import { parseCsv } from "@/lib/csv-ingest";
 import { INGEST_CONTRACT_VERSION, resolveIngestContractVersion } from "@/lib/ingest-contract";
 import { normalizeResponse } from "@/lib/normalizeResponse";
+import { rateLimit } from "@/lib/rate-limit";
 
 function validateCsvHeaders(headers: string[]) {
   const allowedHeaders = new Set([
@@ -86,6 +87,12 @@ export function mapCsvRowToSubmission(input: {
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    const rateLimitResult = rateLimit(`ingest-csv:${ip}`, { limit: 100, windowMs: 60_000 });
+    if (!rateLimitResult.success) {
+      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    }
+
     assertIngestSecret(request);
     const contractVersion = resolveIngestContractVersion({
       headerVersion: request.headers.get("x-climalab-contract-version"),

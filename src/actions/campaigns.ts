@@ -110,6 +110,18 @@ export async function calculateResults(
     }
   }
 
+  // Check for concurrent analysis
+  const { data: runningAnalysis } = await admin
+    .from("analysis_runs")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .eq("status", "running")
+    .maybeSingle();
+
+  if (runningAnalysis) {
+    return { success: false, error: "Ya hay un análisis en progreso para esta campaña" };
+  }
+
   const reader = user ? supabase : admin;
   let analysisRunId: string | null = null;
 
@@ -217,7 +229,7 @@ export async function calculateResults(
   }
 
   try {
-    const { exec } = await import("child_process");
+    const { execFile } = await import("child_process");
     const insertedRun = await admin
       .from("campaign_ona_runs")
       .insert({
@@ -234,20 +246,35 @@ export async function calculateResults(
 
     const onaRunId = insertedRun.data?.id as string | undefined;
     const script = `${process.cwd()}/scripts/ona-analysis.py`;
-    const command = `uv run ${script} ${campaignId} 2>/dev/null || python3 ${script} ${campaignId}`;
-    exec(command, { env: process.env }, (error: Error | null) => {
-      const nextStatus = error ? "deferred" : "completed";
-      if (error) console.warn("ONA deferred:", error.message);
 
+    const updateOnaRunStatus = (nextStatus: string, errorMsg: string | null) => {
       if (onaRunId) {
-        void admin
+        admin
           .from("campaign_ona_runs")
           .update({
             status: nextStatus,
-            error_message: error?.message ?? null,
+            error_message: errorMsg,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", onaRunId);
+          .eq("id", onaRunId)
+          .then(({ error: updateError }) => {
+            if (updateError) {
+              console.error(`Failed to update ONA run ${onaRunId} status:`, updateError.message);
+            }
+          });
+      }
+    };
+
+    // Try uv first, fall back to python3
+    execFile("uv", ["run", script, campaignId], (uvError) => {
+      if (uvError) {
+        execFile("python3", [script, campaignId], (pyError) => {
+          const nextStatus = pyError ? "deferred" : "completed";
+          if (pyError) console.warn("ONA deferred:", pyError.message);
+          updateOnaRunStatus(nextStatus, pyError?.message ?? null);
+        });
+      } else {
+        updateOnaRunStatus("completed", null);
       }
     });
   } catch {

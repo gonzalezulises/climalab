@@ -15,6 +15,9 @@ type AdminClient = {
       payload: Array<Record<string, unknown>>,
       options?: { onConflict?: string }
     ) => Promise<{ error: { message: string } | null }>;
+    update: (payload: Record<string, unknown>) => {
+      eq: (column: string, value: string) => Promise<{ error: { message: string } | null }>;
+    };
   };
   rpc: (
     fn: string,
@@ -130,7 +133,12 @@ export async function materializeAnalysisRun(
   );
 
   if (snapshotError) {
-    throw new Error(`Error guardando snapshot: ${snapshotError.message}`);
+    // Mark analysis run as failed instead of leaving it in "running" state
+    await admin
+      .from("analysis_runs")
+      .update({ status: "failed", error_message: `Snapshot save failed: ${snapshotError.message}` })
+      .eq("id", params.analysisRunId);
+    throw new Error(`Snapshot materialization failed: ${snapshotError.message}`);
   }
 
   const { error: updateError } = await admin.rpc("finalize_analysis_run", {
