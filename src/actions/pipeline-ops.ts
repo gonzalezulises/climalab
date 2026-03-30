@@ -2,6 +2,7 @@
 
 import { ANALYSIS_LOGIC_VERSION } from "@/lib/analysis-engine/materialize";
 import { selectBackfillCandidates } from "@/lib/backfill-analysis";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { INGEST_CONTRACT_VERSION } from "@/lib/ingest-contract";
 import { summarizePipelineOps } from "@/lib/pipeline-ops";
@@ -106,7 +107,7 @@ export async function getPlatformOperationsOverview(): Promise<
     }>;
   }>
 > {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [
     { data: campaigns, error: campaignsError },
