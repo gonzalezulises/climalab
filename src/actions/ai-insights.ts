@@ -1,214 +1,23 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { extractJSON } from "@/lib/ai/json";
+import { getAiProviderMetadata, callAI, hasConfiguredAiProvider } from "@/lib/ai/provider";
+import {
+  getCampaignAiInsight,
+  getCampaignOrganizationId,
+  replaceCampaignAiInsights,
+  type CampaignAiInsightInsert,
+} from "@/lib/ai/persistence";
+import { checkAiRateLimit } from "@/lib/ai/rate-limit";
+import { COMMENTS_SYSTEM } from "@/lib/ai/prompts/comments";
+import { NARRATIVE_SYSTEM } from "@/lib/ai/prompts/dashboard";
+import { DRIVERS_SYSTEM } from "@/lib/ai/prompts/drivers";
+import { ALERTS_SYSTEM } from "@/lib/ai/prompts/alerts";
+import { SEGMENTS_SYSTEM } from "@/lib/ai/prompts/segments";
+import { TRENDS_SYSTEM } from "@/lib/ai/prompts/trends";
 import { CATEGORY_LABELS } from "@/lib/constants";
-import { env } from "@/lib/env";
-import { rateLimit } from "@/lib/rate-limit";
 import type { ActionResult } from "@/types";
-import type { Database } from "@/types/database";
-
-type Json = Database["public"]["Tables"]["campaign_ai_insights"]["Insert"]["data"];
-
-function getAiProviderMetadata() {
-  if (env.OPENAI_API_KEY) {
-    return { provider: "openai", model: env.OPENAI_MODEL };
-  }
-  if (env.ANTHROPIC_API_KEY) {
-    return { provider: "anthropic", model: env.ANTHROPIC_MODEL };
-  }
-  if (env.OLLAMA_BASE_URL) {
-    return { provider: "ollama", model: env.OLLAMA_MODEL };
-  }
-  return { provider: null, model: null };
-}
-
-// ---------------------------------------------------------------------------
-// AI helper — supports OpenAI, Anthropic, and Ollama
-// Priority: OPENAI_API_KEY → ANTHROPIC_API_KEY → OLLAMA_BASE_URL
-// ---------------------------------------------------------------------------
-async function callAI(
-  systemPrompt: string,
-  userContent: string,
-  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
-): Promise<ActionResult<string>> {
-  const openaiKey = env.OPENAI_API_KEY;
-  const anthropicKey = env.ANTHROPIC_API_KEY;
-  const ollamaUrl = env.OLLAMA_BASE_URL;
-
-  if (openaiKey) {
-    return callOpenAI(openaiKey, env.OPENAI_MODEL, systemPrompt, userContent, opts);
-  }
-
-  if (anthropicKey) {
-    return callAnthropic(anthropicKey, env.ANTHROPIC_MODEL, systemPrompt, userContent, opts);
-  }
-
-  if (ollamaUrl) {
-    return callOllamaNative(ollamaUrl, env.OLLAMA_MODEL, systemPrompt, userContent, opts);
-  }
-
-  return {
-    success: false,
-    error:
-      "Motor de IA no configurado. Configure OPENAI_API_KEY, ANTHROPIC_API_KEY o OLLAMA_BASE_URL.",
-  };
-}
-
-async function callAnthropic(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userContent: string,
-  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
-): Promise<ActionResult<string>> {
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: opts?.maxTokens ?? 4096,
-        temperature: opts?.temperature ?? 0.3,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userContent }],
-      }),
-      signal: AbortSignal.timeout(opts?.timeout ?? 60_000),
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      return {
-        success: false,
-        error: `Error de Anthropic (${response.status}): ${body.slice(0, 200)}`,
-      };
-    }
-
-    const data = await response.json();
-    const content: string = data?.content?.[0]?.text ?? "";
-    return { success: true, data: content };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error de conexión con Anthropic";
-    return { success: false, error: message };
-  }
-}
-
-async function callOpenAI(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userContent: string,
-  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
-): Promise<ActionResult<string>> {
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        temperature: opts?.temperature ?? 0.3,
-        max_tokens: opts?.maxTokens ?? 4096,
-      }),
-      signal: AbortSignal.timeout(opts?.timeout ?? 60_000),
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      return {
-        success: false,
-        error: `Error de OpenAI (${response.status}): ${body.slice(0, 200)}`,
-      };
-    }
-
-    const data = await response.json();
-    const content: string = data?.choices?.[0]?.message?.content ?? "";
-    return { success: true, data: content };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error de conexión con OpenAI";
-    return { success: false, error: message };
-  }
-}
-
-async function callOllamaNative(
-  baseUrl: string,
-  model: string,
-  systemPrompt: string,
-  userContent: string,
-  opts?: { maxTokens?: number; temperature?: number; timeout?: number }
-): Promise<ActionResult<string>> {
-  try {
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        stream: false,
-        options: {
-          temperature: opts?.temperature ?? 0.3,
-          num_predict: opts?.maxTokens ?? 4096,
-        },
-      }),
-      signal: AbortSignal.timeout(opts?.timeout ?? 120_000),
-    });
-
-    if (!response.ok) {
-      return { success: false, error: `Error del modelo (${response.status})` };
-    }
-
-    const data = await response.json();
-    const content: string = data?.message?.content ?? "";
-    return { success: true, data: content };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error de conexión con el modelo";
-    return { success: false, error: message };
-  }
-}
-
-function extractJSON<T>(text: string): T | null {
-  // Try to find JSON object or array
-  const objMatch = text.match(/\{[\s\S]*\}/);
-  const arrMatch = text.match(/\[[\s\S]*\]/);
-  const match =
-    objMatch && arrMatch
-      ? objMatch.index! <= arrMatch.index!
-        ? objMatch
-        : arrMatch
-      : (objMatch ?? arrMatch);
-  if (!match) return null;
-  try {
-    return JSON.parse(match[0]) as T;
-  } catch {
-    return null;
-  }
-}
-
-async function checkAiRateLimit(
-  limitPerMin: number
-): Promise<{ success: false; error: string } | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const rl = rateLimit(`ai:${user?.id ?? "anon"}`, { limit: limitPerMin, windowMs: 60_000 });
-  if (!rl.success) {
-    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
-  }
-  return null;
-}
 
 // ---------------------------------------------------------------------------
 // Types for AI insight payloads
@@ -262,24 +71,6 @@ export type TrendsNarrative = {
 // ---------------------------------------------------------------------------
 // 1. analyzeComments — theme extraction, sentiment, summary
 // ---------------------------------------------------------------------------
-const COMMENTS_SYSTEM = `Eres un psicólogo organizacional experto en clima laboral LATAM.
-Analiza los comentarios abiertos de una encuesta de clima organizacional.
-
-Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones) con esta estructura:
-{
-  "themes": [{"theme": "nombre del tema", "count": N, "sentiment": "positive|negative|neutral", "examples": ["ejemplo1"]}],
-  "summary": {"strengths": "resumen de fortalezas en 2-3 oraciones", "improvements": "resumen de áreas de mejora en 2-3 oraciones", "general": "resumen general en 2-3 oraciones"},
-  "sentiment_distribution": {"positive": N, "negative": N, "neutral": N}
-}
-
-Reglas:
-- Identifica 3-8 temas principales agrupando comentarios similares
-- El conteo indica cuántos comentarios mencionan ese tema
-- Los ejemplos deben ser citas textuales (max 2 por tema)
-- El resumen debe ser accionable y específico, no genérico
-- Usa español latinoamericano profesional
-- Los números de sentiment_distribution deben sumar el total de comentarios`;
-
 export async function analyzeComments(campaignId: string): Promise<ActionResult<CommentAnalysis>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -339,23 +130,6 @@ ${grouped.general.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 // ---------------------------------------------------------------------------
 // 2. generateNarrative — executive summary for dashboard
 // ---------------------------------------------------------------------------
-const NARRATIVE_SYSTEM = `Eres un consultor senior de clima organizacional especializado en LATAM.
-Genera un resumen ejecutivo basado en los resultados de una encuesta de clima.
-
-Responde ÚNICAMENTE con JSON válido (sin markdown):
-{
-  "executive_summary": "Párrafo de 3-5 oraciones con el diagnóstico general",
-  "highlights": ["logro o fortaleza 1", "logro 2", "logro 3"],
-  "concerns": ["preocupación 1", "preocupación 2"],
-  "recommendation": "Recomendación principal de acción en 2-3 oraciones"
-}
-
-Reglas:
-- Sé específico con datos (menciona dimensiones, scores, porcentajes)
-- No uses lenguaje técnico-estadístico, usa lenguaje ejecutivo
-- Las recomendaciones deben ser accionables y priorizadas
-- Usa español latinoamericano profesional`;
-
 export async function generateNarrative(
   campaignId: string
 ): Promise<ActionResult<DashboardNarrative>> {
@@ -450,23 +224,6 @@ ${
 // ---------------------------------------------------------------------------
 // 3. interpretDrivers — narrative, paradoxes, quick wins
 // ---------------------------------------------------------------------------
-const DRIVERS_SYSTEM = `Eres un psicólogo organizacional experto en engagement y correlaciones.
-Interpreta los drivers de engagement de una encuesta de clima organizacional.
-
-Responde ÚNICAMENTE con JSON válido (sin markdown):
-{
-  "narrative": "Párrafo de 3-5 oraciones interpretando los drivers principales y sus implicaciones",
-  "paradoxes": ["paradoja o hallazgo inesperado 1", "paradoja 2"],
-  "quick_wins": [{"dimension": "código", "action": "acción concreta", "impact": "impacto esperado"}]
-}
-
-Reglas:
-- Un quick win es una dimensión con alta correlación con engagement PERO score bajo (< 4.0) — mejorarla tendría mayor impacto
-- Las paradojas son patrones inesperados (alta correlación pero alto score, baja correlación pero bajo score, etc.)
-- La narrativa debe explicar la estructura causal sin tecnicismos excesivos
-- Máximo 3 quick wins, máximo 3 paradojas
-- Usa español latinoamericano profesional`;
-
 export async function interpretDrivers(campaignId: string): Promise<ActionResult<DriverInsights>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -517,18 +274,6 @@ Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
 // ---------------------------------------------------------------------------
 // 4. contextualizeAlerts — root cause + recommendations per alert
 // ---------------------------------------------------------------------------
-const ALERTS_SYSTEM = `Eres un consultor de clima organizacional que analiza alertas automáticas.
-Para cada alerta, genera una hipótesis de causa raíz y una recomendación de acción.
-
-Responde ÚNICAMENTE con JSON array válido (sin markdown):
-[{"alert_index": 0, "root_cause": "hipótesis en 1-2 oraciones", "recommendation": "acción concreta en 1-2 oraciones"}]
-
-Reglas:
-- Las hipótesis deben ser plausibles y específicas al contexto LATAM
-- Las recomendaciones deben ser accionables para un gerente de RRHH de PYME
-- No repitas la alerta, solo agrega contexto
-- Usa español latinoamericano profesional`;
-
 export async function contextualizeAlerts(campaignId: string): Promise<ActionResult<AlertContext>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -569,19 +314,6 @@ Para cada alerta, genera una hipótesis de causa raíz y una recomendación conc
 // ---------------------------------------------------------------------------
 // 5. profileSegments — per-segment narrative
 // ---------------------------------------------------------------------------
-const SEGMENTS_SYSTEM = `Eres un psicólogo organizacional experto en análisis de segmentos demográficos.
-Genera perfiles narrativos para cada segmento demográfico basado en sus scores.
-
-Responde ÚNICAMENTE con JSON array válido (sin markdown):
-[{"segment": "nombre", "segment_type": "department|tenure|gender", "narrative": "perfil en 2-3 oraciones", "strengths": ["fortaleza1"], "risks": ["riesgo1"]}]
-
-Reglas:
-- Cada perfil debe ser único y específico a ese segmento
-- Identifica brechas respecto al promedio global
-- Las fortalezas son dimensiones donde el segmento supera al global, los riesgos donde está debajo
-- Máximo 3 fortalezas y 3 riesgos por segmento
-- Usa español latinoamericano profesional`;
-
 export async function profileSegments(campaignId: string): Promise<ActionResult<SegmentProfiles>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -649,28 +381,10 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
 // ---------------------------------------------------------------------------
 // 6. generateTrendsNarrative — temporal trajectory analysis
 // ---------------------------------------------------------------------------
-const TRENDS_SYSTEM = `Eres un consultor de clima organizacional experto en análisis longitudinal.
-Analiza la evolución temporal de dimensiones de clima entre mediciones.
-
-Responde ÚNICAMENTE con JSON válido (sin markdown):
-{
-  "trajectory": "Párrafo de 3-5 oraciones describiendo la trayectoria general",
-  "improving": ["dimensión1 mejoró de X a Y"],
-  "declining": ["dimensión2 bajó de X a Y"],
-  "stable": ["dimensión3 se mantuvo estable en ~X"],
-  "inflection_points": ["observación sobre cambio significativo"]
-}
-
-Reglas:
-- Solo reporta cambios significativos (> 0.15 puntos)
-- Identifica si la tendencia general es de mejora, estancamiento o deterioro
-- Los puntos de inflexión son cambios notables entre waves
-- Usa español latinoamericano profesional`;
-
 export async function generateTrendsNarrative(
   organizationId: string
 ): Promise<ActionResult<TrendsNarrative>> {
-  if (!env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY && !env.OLLAMA_BASE_URL) {
+  if (!hasConfiguredAiProvider()) {
     return {
       success: false,
       error:
@@ -735,7 +449,7 @@ export async function generateAllInsights(campaignId: string): Promise<
   }>
 > {
   // Fail fast if no AI backend configured
-  if (!env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY && !env.OLLAMA_BASE_URL) {
+  if (!hasConfiguredAiProvider()) {
     return {
       success: false,
       error:
@@ -743,23 +457,11 @@ export async function generateAllInsights(campaignId: string): Promise<
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const rl = rateLimit(`ai-all:${user?.id ?? "anon"}`, { limit: 2, windowMs: 60_000 });
-  if (!rl.success) {
-    return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
-  }
+  const blocked = await checkAiRateLimit(2, "ai-all");
+  if (blocked) return blocked;
 
-  // Get campaign org for trends
-  const { data: campaign } = await supabase
-    .from("campaigns")
-    .select("organization_id")
-    .eq("id", campaignId)
-    .single();
-
-  if (!campaign) return { success: false, error: "Campaña no encontrada" };
+  const organizationId = await getCampaignOrganizationId(campaignId);
+  if (!organizationId) return { success: false, error: "Campaña no encontrada" };
 
   // Run all analyses in parallel
   const [comments, narrative, drivers, alerts, segments] = await Promise.all([
@@ -772,13 +474,7 @@ export async function generateAllInsights(campaignId: string): Promise<
 
   // Store successful results in campaign_analytics
   const aiMetadata = getAiProviderMetadata();
-  const inserts: Array<{
-    campaign_id: string;
-    insight_type: string;
-    provider: string | null;
-    model: string | null;
-    data: Json;
-  }> = [];
+  const inserts: CampaignAiInsightInsert[] = [];
 
   if (comments.success)
     inserts.push({
@@ -786,7 +482,7 @@ export async function generateAllInsights(campaignId: string): Promise<
       insight_type: "comment_analysis",
       provider: aiMetadata.provider,
       model: aiMetadata.model,
-      data: comments.data as unknown as Json,
+      data: comments.data,
     });
   if (narrative.success)
     inserts.push({
@@ -794,7 +490,7 @@ export async function generateAllInsights(campaignId: string): Promise<
       insight_type: "dashboard_narrative",
       provider: aiMetadata.provider,
       model: aiMetadata.model,
-      data: narrative.data as unknown as Json,
+      data: narrative.data,
     });
   if (drivers.success)
     inserts.push({
@@ -802,7 +498,7 @@ export async function generateAllInsights(campaignId: string): Promise<
       insight_type: "driver_insights",
       provider: aiMetadata.provider,
       model: aiMetadata.model,
-      data: drivers.data as unknown as Json,
+      data: drivers.data,
     });
   if (alerts.success)
     inserts.push({
@@ -810,7 +506,7 @@ export async function generateAllInsights(campaignId: string): Promise<
       insight_type: "alert_context",
       provider: aiMetadata.provider,
       model: aiMetadata.model,
-      data: alerts.data as unknown as Json,
+      data: alerts.data,
     });
   if (segments.success)
     inserts.push({
@@ -818,42 +514,34 @@ export async function generateAllInsights(campaignId: string): Promise<
       insight_type: "segment_profiles",
       provider: aiMetadata.provider,
       model: aiMetadata.model,
-      data: segments.data as unknown as Json,
+      data: segments.data,
     });
 
-  // Delete previous AI insights before inserting new ones
   const aiTypes = [
     "comment_analysis",
     "dashboard_narrative",
     "driver_insights",
     "alert_context",
     "segment_profiles",
-  ];
-  await supabase
-    .from("campaign_ai_insights")
-    .delete()
-    .eq("campaign_id", campaignId)
-    .in("insight_type", aiTypes);
-
-  if (inserts.length > 0) {
-    await supabase.from("campaign_ai_insights").insert(inserts);
-  }
+  ] as const;
+  await replaceCampaignAiInsights(campaignId, [...aiTypes], inserts);
 
   // Also generate trends narrative if there are multiple campaigns
-  const trendsResult = await generateTrendsNarrative(campaign.organization_id);
+  const trendsResult = await generateTrendsNarrative(organizationId);
   if (trendsResult.success) {
-    await supabase
-      .from("campaign_ai_insights")
-      .delete()
-      .eq("campaign_id", campaignId)
-      .eq("insight_type", "trends_narrative");
-    await supabase.from("campaign_ai_insights").insert({
-      campaign_id: campaignId,
-      insight_type: "trends_narrative",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: trendsResult.data as unknown as Json,
-    });
+    await replaceCampaignAiInsights(
+      campaignId,
+      ["trends_narrative"],
+      [
+        {
+          campaign_id: campaignId,
+          insight_type: "trends_narrative",
+          provider: aiMetadata.provider,
+          model: aiMetadata.model,
+          data: trendsResult.data,
+        },
+      ]
+    );
   }
 
   return {
@@ -874,91 +562,31 @@ export async function generateAllInsights(campaignId: string): Promise<
 export async function getCommentAnalysis(
   campaignId: string
 ): Promise<ActionResult<CommentAnalysis>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "comment_analysis")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No comment analysis found" };
-  return { success: true, data: data.data as CommentAnalysis };
+  return getCampaignAiInsight<CommentAnalysis>(campaignId, "comment_analysis");
 }
 
 export async function getDashboardNarrative(
   campaignId: string
 ): Promise<ActionResult<DashboardNarrative>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "dashboard_narrative")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No dashboard narrative found" };
-  return { success: true, data: data.data as DashboardNarrative };
+  return getCampaignAiInsight<DashboardNarrative>(campaignId, "dashboard_narrative");
 }
 
 export async function getDriverInsights(campaignId: string): Promise<ActionResult<DriverInsights>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "driver_insights")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No driver insights found" };
-  return { success: true, data: data.data as DriverInsights };
+  return getCampaignAiInsight<DriverInsights>(campaignId, "driver_insights");
 }
 
 export async function getAlertContext(campaignId: string): Promise<ActionResult<AlertContext>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "alert_context")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No alert context found" };
-  return { success: true, data: data.data as AlertContext };
+  return getCampaignAiInsight<AlertContext>(campaignId, "alert_context");
 }
 
 export async function getSegmentProfiles(
   campaignId: string
 ): Promise<ActionResult<SegmentProfiles>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "segment_profiles")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No segment profiles found" };
-  return { success: true, data: data.data as SegmentProfiles };
+  return getCampaignAiInsight<SegmentProfiles>(campaignId, "segment_profiles");
 }
 
 export async function getTrendsNarrative(
   campaignId: string
 ): Promise<ActionResult<TrendsNarrative>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("campaign_ai_insights")
-    .select("data")
-    .eq("campaign_id", campaignId)
-    .eq("insight_type", "trends_narrative")
-    .maybeSingle();
-
-  if (error) return { success: false, error: error.message };
-  if (!data) return { success: false, error: "No trends narrative found" };
-  return { success: true, data: data.data as TrendsNarrative };
+  return getCampaignAiInsight<TrendsNarrative>(campaignId, "trends_narrative");
 }
