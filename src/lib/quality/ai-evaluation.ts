@@ -17,6 +17,7 @@ export type AiEvaluationInsightInput = {
   schemaVersion?: string | null;
   warnings?: string[];
   validationErrors?: string[];
+  evidenceClaimCount?: number;
   data: unknown;
 };
 
@@ -46,9 +47,11 @@ export type AiEvaluationRow = {
     coverageScore: number;
     calibrationScore: number;
     actionabilityScore: number;
+    evidenceCoverageScore: number;
     overallScore: number;
   };
   warnings: string[];
+  claimCount: number;
 };
 
 export type AiEvaluationMatrix = {
@@ -175,6 +178,13 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
     }
 
     const coverageScore = computeCoverageScore(texts, supportedMentions);
+    const evidenceCoverageScore =
+      insight.evidenceClaimCount && insight.evidenceClaimCount > 0
+        ? Math.min(100, 60 + insight.evidenceClaimCount * 20)
+        : 25;
+    if (!insight.evidenceClaimCount) {
+      warnings.push("missing_evidence");
+    }
     let calibrationScore = 92;
     if (
       (input.campaignQualityStatus === "precaucion" ||
@@ -188,7 +198,12 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
 
     const actionabilityScore = computeActionabilityScore(insight.insightType, insight.data);
     const overallScore = round(
-      (dataFidelityScore + coverageScore + calibrationScore + actionabilityScore) / 4
+      (dataFidelityScore +
+        coverageScore +
+        calibrationScore +
+        actionabilityScore +
+        evidenceCoverageScore) /
+        5
     );
 
     return {
@@ -203,8 +218,10 @@ export function buildAiEvaluationMatrix(input: AiEvaluationInput): AiEvaluationM
         coverageScore,
         calibrationScore,
         actionabilityScore,
+        evidenceCoverageScore,
         overallScore,
       },
+      claimCount: insight.evidenceClaimCount ?? 0,
       warnings: [
         ...new Set([...(insight.warnings ?? []), ...warnings, ...(insight.validationErrors ?? [])]),
       ],

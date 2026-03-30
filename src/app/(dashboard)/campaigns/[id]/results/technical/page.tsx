@@ -147,6 +147,12 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
                     qualityReport.instrumentQuality.dimensionWarnings.length}
                 </span>
               </div>
+              {qualityReport.statisticalBaseline ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Robustez longitudinal</span>
+                  <span>{qualityReport.statisticalBaseline.robustnessScore}</span>
+                </div>
+              ) : null}
               <Link
                 href={`/campaigns/${id}/results/quality`}
                 className="inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -184,6 +190,10 @@ export default async function TechnicalPage({ params }: { params: Promise<{ id: 
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Tipos generados</span>
                 <span>{qualityReport.aiEvaluation.coverage.generatedInsightTypes}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Claims con evidencia</span>
+                <span>{qualityReport.aiEvidenceCoverage.claimCount}</span>
               </div>
               <Link
                 href={`/campaigns/${id}/results/quality`}

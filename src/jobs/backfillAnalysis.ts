@@ -11,6 +11,14 @@ import { classifyBackfillDriftFromComparison, summarizeBackfillDrift } from "@/l
 import { buildBackfillAlertEvents } from "@/lib/pipeline-alerts";
 import { dispatchPipelineNotifications } from "@/lib/pipeline-notifications";
 import { summarizePerformanceDurations } from "@/lib/performance-metrics";
+import { buildPerformanceBaseline } from "@/lib/excellence/performance-baselines";
+import { buildPipelineSloScorecards } from "@/lib/excellence/slo-scorecards";
+import {
+  insertPerformanceBaseline,
+  insertPipelineSloSnapshots,
+  insertStatisticalBaseline,
+} from "@/lib/excellence/store";
+import { buildStatisticalBaseline } from "@/lib/excellence/statistical-baselines";
 import { loadCampaignQuality, loadStatisticalHealth } from "@/lib/campaign-quality";
 import { buildCampaignDataQuality } from "@/lib/data-quality";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -241,6 +249,41 @@ export async function backfillCampaignAnalyses(input: {
           driftSeverity: drift.severity,
           quality,
         });
+
+        if (comparison) {
+          const statisticalHealth = await loadStatisticalHealth(
+            admin,
+            campaign.campaignId,
+            quality
+          );
+          const baseline = buildStatisticalBaseline({
+            campaignId: campaign.campaignId,
+            analysisRunId: comparison.currentAnalysisRunId,
+            comparisonScope: "latest",
+            warnings: statisticalHealth.warnings ?? [],
+            comparison: {
+              logicVersionChanged: false,
+              sampleNDelta: comparison.sampleDelta,
+              metricChanges: comparison.dimensionChanges.map((change) => ({
+                metric: change.code,
+                current: change.currentScore,
+                previous: change.previousScore,
+                delta: change.delta,
+              })),
+            },
+          });
+
+          await insertStatisticalBaseline({
+            campaign_id: baseline.campaignId,
+            analysis_run_id: baseline.analysisRunId,
+            comparison_scope: baseline.comparisonScope,
+            baseline_version: baseline.baselineVersion,
+            robustness_score: baseline.robustnessScore,
+            drift_summary: baseline.driftSummary,
+            interpretation_status: baseline.interpretationStatus,
+            interpretation_warnings: baseline.interpretationWarnings,
+          });
+        }
       }
     }
 
@@ -278,6 +321,22 @@ export async function backfillCampaignAnalyses(input: {
       attentionNeededCampaigns,
       results,
     };
+    const sloScorecards = buildPipelineSloScorecards({
+      dispatch: { total: 0, success: 0, failed: 0, avgLatencyMs: 0 },
+      batch: {
+        total: Math.max(1, results.length),
+        success: results.filter((result) => result.success).length,
+        failed: results.filter((result) => !result.success).length,
+        avgLatencyMs: performance.avgMs,
+      },
+      ai: { total: 0, success: 0, failed: 0, avgLatencyMs: 0 },
+      ona: { total: 0, success: 0, failed: 0, avgLatencyMs: 0 },
+    });
+    const performanceBaseline = buildPerformanceBaseline({
+      scope: "backfill",
+      metricKey: "campaign_duration_ms",
+      values: results.map((result) => result.durationMs).filter((value) => value > 0),
+    });
 
     await admin
       .from("backfill_run_metrics")
@@ -298,6 +357,23 @@ export async function backfillCampaignAnalyses(input: {
         driftCounts: summary.driftCounts,
         qualityCounts: summary.qualityCounts,
       }),
+    });
+    await insertPipelineSloSnapshots(
+      sloScorecards.domains.map((domain) => ({
+        domain: `backfill_${domain.domain}`,
+        slo_target: domain.sloTarget,
+        observed_success_rate: domain.successRate,
+        observed_latency_ms: domain.avgLatencyMs,
+        error_budget_remaining: domain.errorBudgetRemaining,
+        status: domain.status,
+        summary: domain,
+      }))
+    );
+    await insertPerformanceBaseline({
+      scope: performanceBaseline.scope,
+      metric_key: performanceBaseline.metricKey,
+      baseline_version: performanceBaseline.baselineVersion,
+      summary: performanceBaseline.summary,
     });
 
     return {

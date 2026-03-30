@@ -90,14 +90,24 @@ export default async function AiGovernancePage({ params }: { params: Promise<{ i
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Versiones</CardTitle>
+            <CardTitle className="text-base">Evidencia</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p>Prompt: {summary.promptVersions.join(", ") || "N/D"}</p>
-            <p>Schema: {summary.schemaVersions.join(", ") || "N/D"}</p>
+            <p>Claims: {governanceResult.data.evidenceCoverage.claimCount}</p>
+            <p>Tipos: {governanceResult.data.evidenceCoverage.insightTypes.join(", ") || "N/D"}</p>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Versiones activas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1 text-sm">
+          <p>Prompt: {summary.promptVersions.join(", ") || "N/D"}</p>
+          <p>Schema: {summary.schemaVersions.join(", ") || "N/D"}</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -160,6 +170,34 @@ export default async function AiGovernancePage({ params }: { params: Promise<{ i
                   insightType={insight.insightType}
                   currentStatus={insight.status}
                 />
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Claims y evidencia</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {governanceResult.data.evidence.length === 0 ? (
+            <p className="text-muted-foreground">No hay evidencia estructurada persistida.</p>
+          ) : (
+            governanceResult.data.evidence.map((row) => (
+              <div key={row.id} className="rounded-md border p-3">
+                <p className="font-medium">{row.claimText}</p>
+                <p className="text-xs text-muted-foreground">
+                  {insightLabels[row.insightType] ?? row.insightType} · confianza{" "}
+                  {row.confidenceLabel}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  dimensiones: {row.dimensionCodes.join(", ") || "N/D"} · métricas:{" "}
+                  {row.metricRefs.join(", ") || "N/D"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  evidencia: {row.evidence.join(" | ") || "N/D"}
+                </p>
               </div>
             ))
           )}

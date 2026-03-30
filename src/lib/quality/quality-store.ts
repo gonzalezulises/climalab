@@ -3,6 +3,7 @@ import { extractInsightContent } from "@/lib/ai/contracts";
 import { buildAiEvaluationMatrix } from "@/lib/quality/ai-evaluation";
 import { buildInstrumentQualityReport } from "@/lib/quality/instrument-quality";
 import { loadCampaignQuality } from "@/lib/campaign-quality";
+import { getLatestStatisticalBaseline, listCampaignAiEvidence } from "@/lib/excellence/store";
 import { loadPagedResponsesByRespondentIds } from "@/lib/supabase/paged-responses";
 import type { Json } from "@/types/database";
 
@@ -49,6 +50,8 @@ async function getCampaignQualityArtifacts(campaignId: string) {
     aiInsightsResult,
     alertsResult,
     driversResult,
+    statisticalBaselineResult,
+    aiEvidenceResult,
   ] = await Promise.all([
     supabase
       .from("campaigns")
@@ -95,6 +98,8 @@ async function getCampaignQualityArtifacts(campaignId: string) {
       .eq("campaign_id", campaignId)
       .eq("analysis_type", "engagement_drivers")
       .maybeSingle(),
+    getLatestStatisticalBaseline(campaignId),
+    listCampaignAiEvidence(campaignId),
   ]);
 
   const firstError =
@@ -187,6 +192,8 @@ async function getCampaignQualityArtifacts(campaignId: string) {
     aiInsights: aiInsightsResult.data ?? [],
     alerts: safeArray<AlertRow>(alertsResult.data?.data),
     drivers: safeArray<DriverRow>(driversResult.data?.data),
+    statisticalBaseline: statisticalBaselineResult ?? null,
+    aiEvidence: aiEvidenceResult,
     validRespondentIds,
     responseRows,
     itemRows,
@@ -196,6 +203,13 @@ async function getCampaignQualityArtifacts(campaignId: string) {
 
 export async function loadCampaignQualityReport(campaignId: string) {
   const artifacts = await getCampaignQualityArtifacts(campaignId);
+  const evidenceCountByInsightType = new Map<string, number>();
+  for (const row of artifacts.aiEvidence) {
+    evidenceCountByInsightType.set(
+      row.insight_type,
+      (evidenceCountByInsightType.get(row.insight_type) ?? 0) + 1
+    );
+  }
 
   const reliabilityByCode = new Map(
     artifacts.reliability.map((row) => [row.dimension_code, row] as const)
@@ -319,6 +333,7 @@ export async function loadCampaignQualityReport(campaignId: string) {
             (entry): entry is string => typeof entry === "string"
           ) as string[])
         : [],
+      evidenceClaimCount: evidenceCountByInsightType.get(insight.insight_type) ?? 0,
       data: extractInsightContent(insight.data),
     })),
   });
@@ -326,5 +341,28 @@ export async function loadCampaignQualityReport(campaignId: string) {
   return {
     instrumentQuality,
     aiEvaluation,
+    statisticalBaseline: artifacts.statisticalBaseline
+      ? {
+          robustnessScore: Number(artifacts.statisticalBaseline.robustness_score ?? 0),
+          interpretationStatus: artifacts.statisticalBaseline.interpretation_status,
+          warnings: Array.isArray(artifacts.statisticalBaseline.interpretation_warnings)
+            ? artifacts.statisticalBaseline.interpretation_warnings.filter(
+                (entry): entry is string => typeof entry === "string"
+              )
+            : [],
+          driftSummary:
+            artifacts.statisticalBaseline.drift_summary &&
+            typeof artifacts.statisticalBaseline.drift_summary === "object"
+              ? artifacts.statisticalBaseline.drift_summary
+              : {},
+        }
+      : null,
+    aiEvidenceCoverage: {
+      claimCount: artifacts.aiEvidence.length,
+      insightTypes: [...new Set(artifacts.aiEvidence.map((row) => row.insight_type))],
+      warningCount: artifacts.aiEvidence.filter(
+        (row) => Array.isArray(row.policy_warnings) && row.policy_warnings.length > 0
+      ).length,
+    },
   };
 }

@@ -1757,3 +1757,31 @@ La vista muestra:
 - versiones de prompt/schema
 - estado editorial
 - historial de eventos
+
+## 22. Foundations 10/10
+
+La ola `codex/ten-out-of-ten-program` añade cuatro foundations persistentes:
+
+- `analysis_statistical_baselines`: robustez longitudinal, drift e interpretación
+- `campaign_ai_evidence`: evidencia estructurada por claim
+- `pipeline_slo_snapshots`: scorecards operativos por dominio
+- `performance_baselines`: baseline de capacidad y outliers
+
+### 22.1 Robustez estadística
+
+`src/lib/excellence/statistical-baselines.ts` convierte comparativas entre snapshots en:
+
+- `robustness_score`
+- `interpretation_status`
+- `interpretation_warnings`
+- `drift_summary`
+
+Esto no reemplaza `campaign_results`; los contextualiza para lectura longitudinal.
+
+### 22.2 Evidencia IA
+
+`src/lib/ai/evidence.ts` extrae filas de evidencia por claim. Un insight no puede pasar a `published` si no tiene evidencia persistida en `campaign_ai_evidence`.
+
+### 22.3 SLOs y capacidad
+
+`src/lib/excellence/slo-scorecards.ts` y `src/lib/excellence/performance-baselines.ts` derivan scorecards y baselines reutilizables. Batch y backfill persisten snapshots operativos para que `/operations` deje de mostrar solo conteos y pase a mostrar salud y capacidad.

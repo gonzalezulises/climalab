@@ -134,6 +134,29 @@ export default async function OperationsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">SLOs del pipeline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {data.latestSloSnapshots.length === 0 ? (
+              <p className="text-muted-foreground">Sin snapshots SLO todavía.</p>
+            ) : (
+              data.latestSloSnapshots.map((snapshot) => (
+                <div key={snapshot.id} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{snapshot.domain}</p>
+                    <Badge variant="outline">{snapshot.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    success {snapshot.successRate}% · latencia {snapshot.latencyMs}ms
+                  </p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Candidatos de backfill</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -153,6 +176,28 @@ export default async function OperationsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Baselines de performance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {data.latestPerformanceBaselines.length === 0 ? (
+            <p className="text-muted-foreground">Sin baselines persistidos todavía.</p>
+          ) : (
+            data.latestPerformanceBaselines.map((baseline) => (
+              <div key={baseline.id} className="rounded-md border p-3">
+                <p className="font-medium">
+                  {baseline.scope} · {baseline.metricKey}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  observado {new Date(baseline.observedAt).toLocaleString("es-PA")}
+                </p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

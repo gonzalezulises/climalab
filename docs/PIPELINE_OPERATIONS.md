@@ -265,3 +265,49 @@ Regla de lectura:
 - si no existe `published`, usan el latest `draft` o `approved`
 
 La página `/campaigns/[id]/results/ai-governance` es la vista operativa para revisar cobertura, warnings, fallos y estado editorial.
+
+## 10. Foundations 10/10
+
+Tablas nuevas:
+
+- `analysis_statistical_baselines`
+- `campaign_ai_evidence`
+- `pipeline_slo_snapshots`
+- `performance_baselines`
+
+Objetivo:
+
+- persistir robustez longitudinal por campaña
+- exigir evidencia estructurada para publicación de insights IA
+- formalizar SLOs operativos
+- guardar baseline de capacidad/performance
+
+Comprobaciones útiles:
+
+```sql
+select comparison_scope, robustness_score, interpretation_status, created_at
+from analysis_statistical_baselines
+where campaign_id = '<campaign_uuid>'
+order by created_at desc;
+```
+
+```sql
+select insight_type, claim_key, confidence_label, created_at
+from campaign_ai_evidence
+where campaign_id = '<campaign_uuid>'
+order by created_at desc;
+```
+
+```sql
+select domain, status, observed_success_rate, observed_latency_ms, snapshot_date
+from pipeline_slo_snapshots
+order by created_at desc
+limit 20;
+```
+
+```sql
+select scope, metric_key, observed_at, summary
+from performance_baselines
+order by observed_at desc
+limit 20;
+```
