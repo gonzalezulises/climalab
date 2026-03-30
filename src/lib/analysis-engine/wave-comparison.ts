@@ -1,4 +1,11 @@
-import { mean, stdDev, welchTTest, bootstrapCI, cohensD } from "@/lib/statistics";
+import {
+  mean,
+  stdDev,
+  welchTTest,
+  welchTTestFromStats,
+  bootstrapCI,
+  cohensD,
+} from "@/lib/statistics";
 
 type WaveComparisonInput = {
   currentScores: number[];
@@ -18,6 +25,53 @@ export type WaveComparisonMetadata = {
 };
 
 const ROUND = (v: number) => Math.round(v * 1000) / 1000;
+
+export type WaveComparisonFromStatsInput = {
+  currentAvg: number;
+  currentStd: number;
+  currentN: number;
+  previousAvg: number;
+  previousStd: number;
+  previousN: number;
+  previousCampaignId: string;
+};
+
+export function buildWaveComparisonFromStats(
+  input: WaveComparisonFromStatsInput
+): WaveComparisonMetadata | null {
+  if (input.currentN === 0 || input.previousN === 0) return null;
+
+  const welch = welchTTestFromStats(
+    input.currentAvg,
+    input.currentStd,
+    input.currentN,
+    input.previousAvg,
+    input.previousStd,
+    input.previousN
+  );
+  const effectSize = cohensD(
+    input.currentAvg,
+    input.previousAvg,
+    input.currentStd,
+    input.previousStd,
+    input.currentN,
+    input.previousN
+  );
+  const delta = ROUND(input.currentAvg - input.previousAvg);
+
+  return {
+    previous_campaign_id: input.previousCampaignId,
+    previous_avg: ROUND(input.previousAvg),
+    current_avg: ROUND(input.currentAvg),
+    delta,
+    welch: welch
+      ? { t: welch.t, df: welch.df, p_value: welch.pValue, significant: welch.significant }
+      : null,
+    bootstrap: null,
+    effect_size: { d: effectSize.d, label: effectSize.label },
+    method: "welch_t_from_stats",
+  };
+}
 
 export function buildWaveComparisonMetadata(
   input: WaveComparisonInput

@@ -165,7 +165,8 @@ ${grouped.general.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 }
 
 export async function generateNarrative(
-  campaignId: string
+  campaignId: string,
+  cachedStatContext?: string
 ): Promise<ActionResult<DashboardNarrative>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -244,7 +245,7 @@ ${
     : "Ninguna"
 }`;
 
-  const statContext = await buildStatisticalContext(campaignId);
+  const statContext = cachedStatContext ?? (await buildStatisticalContext(campaignId));
   const enrichedContent = statContext ? `${userContent}\n\n${statContext}` : userContent;
 
   const result = await generateGovernedInsight({
@@ -265,7 +266,10 @@ ${
   return { success: true, data: result.data.content as DashboardNarrative };
 }
 
-export async function interpretDrivers(campaignId: string): Promise<ActionResult<DriverInsights>> {
+export async function interpretDrivers(
+  campaignId: string,
+  cachedStatContext?: string
+): Promise<ActionResult<DriverInsights>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
@@ -310,7 +314,7 @@ Score de engagement global: ${(dimScores.get("ENG") ?? 0).toFixed(2)} de 5.0
 
 Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
 
-  const statContext = await buildStatisticalContext(campaignId);
+  const statContext = cachedStatContext ?? (await buildStatisticalContext(campaignId));
   if (statContext) userContent += `\n\n${statContext}`;
 
   const result = await generateGovernedInsight({
@@ -326,7 +330,10 @@ Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
   return { success: true, data: result.data.content as DriverInsights };
 }
 
-export async function contextualizeAlerts(campaignId: string): Promise<ActionResult<AlertContext>> {
+export async function contextualizeAlerts(
+  campaignId: string,
+  cachedStatContext?: string
+): Promise<ActionResult<AlertContext>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
@@ -354,7 +361,7 @@ ${alerts.map((a, i) => `${i}. [${a.severity}] ${a.message} (valor: ${a.value}, u
 
 Para cada alerta, genera una hipótesis de causa raíz y una recomendación concreta.`;
 
-  const statContext = await buildStatisticalContext(campaignId);
+  const statContext = cachedStatContext ?? (await buildStatisticalContext(campaignId));
   if (statContext) userContent += `\n\n${statContext}`;
 
   const result = await generateGovernedInsight({
@@ -369,7 +376,10 @@ Para cada alerta, genera una hipótesis de causa raíz y una recomendación conc
   return { success: true, data: result.data.content as AlertContext };
 }
 
-export async function profileSegments(campaignId: string): Promise<ActionResult<SegmentProfiles>> {
+export async function profileSegments(
+  campaignId: string,
+  cachedStatContext?: string
+): Promise<ActionResult<SegmentProfiles>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
@@ -430,7 +440,7 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
     userContent += "\n";
   }
 
-  const statContext = await buildStatisticalContext(campaignId);
+  const statContext = cachedStatContext ?? (await buildStatisticalContext(campaignId));
   if (statContext) userContent += `\n${statContext}`;
 
   const result = await generateGovernedInsight({
@@ -541,12 +551,14 @@ export async function generateAllInsights(campaignId: string): Promise<
   const organizationId = await getCampaignOrganizationId(campaignId);
   if (!organizationId) return { success: false, error: "Campaña no encontrada" };
 
+  const statContext = await buildStatisticalContext(campaignId);
+
   const [comments, narrative, drivers, alerts, segments, trends] = await Promise.all([
     analyzeComments(campaignId),
-    generateNarrative(campaignId),
-    interpretDrivers(campaignId),
-    contextualizeAlerts(campaignId),
-    profileSegments(campaignId),
+    generateNarrative(campaignId, statContext),
+    interpretDrivers(campaignId, statContext),
+    contextualizeAlerts(campaignId, statContext),
+    profileSegments(campaignId, statContext),
     generateTrendsNarrative(organizationId, campaignId),
   ]);
 

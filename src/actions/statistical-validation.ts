@@ -7,11 +7,25 @@ import type { ActionResult } from "@/types";
 
 const execFileAsync = promisify(execFile);
 
-async function runStatisticalEngine(...args: string[]): Promise<ActionResult<string>> {
+async function runStatisticalEngine(
+  subcommand: string,
+  campaignId: string
+): Promise<ActionResult<string>> {
+  const supabase = await createClient();
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", campaignId)
+    .maybeSingle();
+
+  if (!campaign) {
+    return { success: false, error: "Campaña no encontrada" };
+  }
+
   try {
     const { stdout, stderr } = await execFileAsync(
       "uv",
-      ["run", "scripts/statistical-engine.py", ...args],
+      ["run", "scripts/statistical-engine.py", subcommand, campaignId],
       { timeout: 300_000 }
     );
     return { success: true, data: stdout + (stderr ? `\n${stderr}` : "") };

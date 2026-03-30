@@ -40,6 +40,26 @@ export async function cleanupCommand(opts: { orgId: string }) {
       await supabase.from("participants").delete().eq("campaign_id", cid);
       await supabase.from("respondents").delete().eq("campaign_id", cid);
 
+      // Delete analysis run lineage (before campaign_results which may reference analysis_run_id)
+      await supabase.from("analysis_run_snapshots").delete().eq("campaign_id", cid);
+      await supabase
+        .from("analysis_run_respondent_quality")
+        .delete()
+        .in(
+          "analysis_run_id",
+          (await supabase.from("analysis_runs").select("id").eq("campaign_id", cid)).data?.map(
+            (r) => r.id
+          ) ?? []
+        );
+      await supabase.from("campaign_ona_runs").delete().eq("campaign_id", cid);
+      await supabase.from("analysis_runs").delete().eq("campaign_id", cid);
+
+      // Delete AI insights and evidence
+      await supabase.from("campaign_ai_evidence").delete().eq("campaign_id", cid);
+      await supabase.from("campaign_ai_generation_events").delete().eq("campaign_id", cid);
+      await supabase.from("campaign_ai_insights").delete().eq("campaign_id", cid);
+      await supabase.from("analysis_statistical_baselines").delete().eq("campaign_id", cid);
+
       // Delete results and analytics
       await supabase.from("campaign_results").delete().eq("campaign_id", cid);
       await supabase.from("campaign_analytics").delete().eq("campaign_id", cid);

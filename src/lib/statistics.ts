@@ -220,6 +220,36 @@ export function welchTTest(sample1: number[], sample2: number[]): WelchResult | 
   };
 }
 
+export function welchTTestFromStats(
+  mean1: number,
+  sd1: number,
+  n1: number,
+  mean2: number,
+  sd2: number,
+  n2: number
+): WelchResult | null {
+  if (n1 < WELCH_MIN_N || n2 < WELCH_MIN_N) return null;
+
+  const v1 = sd1 * sd1;
+  const v2 = sd2 * sd2;
+  const se = Math.sqrt(v1 / n1 + v2 / n2);
+  if (se === 0) return { t: 0, df: n1 + n2 - 2, pValue: 1, significant: false };
+
+  const t = (mean1 - mean2) / se;
+  const num = (v1 / n1 + v2 / n2) ** 2;
+  const den = (v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1);
+  const df = den > 0 ? num / den : n1 + n2 - 2;
+  const pValue = df > 0 ? Math.exp(-0.717 * Math.abs(t) - (0.416 * (t * t)) / df) : 1;
+  const pRounded = Math.round(Math.min(1, pValue) * 10000) / 10000;
+
+  return {
+    t: Math.round(t * 1000) / 1000,
+    df: Math.round(df * 10) / 10,
+    pValue: pRounded,
+    significant: pRounded < 0.05,
+  };
+}
+
 // ============================================================
 // Bootstrap confidence interval for mean difference
 // ============================================================
