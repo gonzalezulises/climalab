@@ -1,83 +1,61 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { extractJSON } from "@/lib/ai/json";
-import { getAiProviderMetadata, callAI, hasConfiguredAiProvider } from "@/lib/ai/provider";
+import {
+  type AlertContext as AlertContextContract,
+  type CampaignAiInsightType,
+  type CommentAnalysis as CommentAnalysisContract,
+  type DashboardNarrative as DashboardNarrativeContract,
+  type DriverInsights as DriverInsightsContract,
+  type SegmentProfiles as SegmentProfilesContract,
+  type TrendsNarrative as TrendsNarrativeContract,
+} from "@/lib/ai/contracts";
+import { generateGovernedInsight } from "@/lib/ai/generate";
 import {
   getCampaignAiInsight,
   getCampaignOrganizationId,
   replaceCampaignAiInsights,
-  type CampaignAiInsightInsert,
 } from "@/lib/ai/persistence";
+import { getAiProviderMetadata, hasConfiguredAiProvider } from "@/lib/ai/provider";
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
-import { COMMENTS_SYSTEM } from "@/lib/ai/prompts/comments";
-import { NARRATIVE_SYSTEM } from "@/lib/ai/prompts/dashboard";
-import { DRIVERS_SYSTEM } from "@/lib/ai/prompts/drivers";
-import { ALERTS_SYSTEM } from "@/lib/ai/prompts/alerts";
-import { SEGMENTS_SYSTEM } from "@/lib/ai/prompts/segments";
-import { TRENDS_SYSTEM } from "@/lib/ai/prompts/trends";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import type { ActionResult } from "@/types";
 
-// ---------------------------------------------------------------------------
-// Types for AI insight payloads
-// ---------------------------------------------------------------------------
-export type CommentAnalysis = {
-  themes: Array<{
-    theme: string;
-    count: number;
-    sentiment: "positive" | "negative" | "neutral";
-    examples: string[];
-  }>;
-  summary: { strengths: string; improvements: string; general: string };
-  sentiment_distribution: { positive: number; negative: number; neutral: number };
-};
+export type CommentAnalysis = CommentAnalysisContract;
+export type DashboardNarrative = DashboardNarrativeContract;
+export type DriverInsights = DriverInsightsContract;
+export type AlertContext = AlertContextContract;
+export type SegmentProfiles = SegmentProfilesContract;
+export type TrendsNarrative = TrendsNarrativeContract;
 
-export type DashboardNarrative = {
-  executive_summary: string;
-  highlights: string[];
-  concerns: string[];
-  recommendation: string;
-};
+async function getLatestAnalysisRunId(campaignId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("analysis_runs")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .eq("status", "completed")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-export type DriverInsights = {
-  narrative: string;
-  paradoxes: string[];
-  quick_wins: Array<{ dimension: string; action: string; impact: string }>;
-};
+  if (error) return null;
+  return data?.id ?? null;
+}
 
-export type AlertContext = Array<{
-  alert_index: number;
-  root_cause: string;
-  recommendation: string;
-}>;
+async function persistGovernedInsight(
+  campaignId: string,
+  insightType: CampaignAiInsightType,
+  insert: Parameters<typeof replaceCampaignAiInsights>[2][number]
+) {
+  await replaceCampaignAiInsights(campaignId, [insightType], [insert]);
+}
 
-export type SegmentProfiles = Array<{
-  segment: string;
-  segment_type: string;
-  narrative: string;
-  strengths: string[];
-  risks: string[];
-}>;
-
-export type TrendsNarrative = {
-  trajectory: string;
-  improving: string[];
-  declining: string[];
-  stable: string[];
-  inflection_points: string[];
-};
-
-// ---------------------------------------------------------------------------
-// 1. analyzeComments — theme extraction, sentiment, summary
-// ---------------------------------------------------------------------------
 export async function analyzeComments(campaignId: string): Promise<ActionResult<CommentAnalysis>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
   const supabase = await createClient();
-
-  // open_responses has no campaign_id — join through respondents
   const { data: respondents } = await supabase
     .from("respondents")
     .select("id")
@@ -118,18 +96,18 @@ ${grouped.improvement.map((t, i) => `${i + 1}. ${t}`).join("\n")}
 GENERAL (${grouped.general.length} comentarios):
 ${grouped.general.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 
-  const result = await callAI(COMMENTS_SYSTEM, userContent);
+  const result = await generateGovernedInsight({
+    campaignId,
+    analysisRunId: await getLatestAnalysisRunId(campaignId),
+    insightType: "comment_analysis",
+    userContent,
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<CommentAnalysis>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió un análisis válido" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(campaignId, "comment_analysis", result.data.insert);
+  return { success: true, data: result.data.content as CommentAnalysis };
 }
 
-// ---------------------------------------------------------------------------
-// 2. generateNarrative — executive summary for dashboard
-// ---------------------------------------------------------------------------
 export async function generateNarrative(
   campaignId: string
 ): Promise<ActionResult<DashboardNarrative>> {
@@ -137,8 +115,6 @@ export async function generateNarrative(
   if (blocked) return blocked;
 
   const supabase = await createClient();
-
-  // Fetch all needed data
   const [resultsRes, analyticsRes] = await Promise.all([
     supabase
       .from("campaign_results")
@@ -212,24 +188,29 @@ ${
     : "Ninguna"
 }`;
 
-  const result = await callAI(NARRATIVE_SYSTEM, userContent);
+  const result = await generateGovernedInsight({
+    campaignId,
+    analysisRunId: await getLatestAnalysisRunId(campaignId),
+    insightType: "dashboard_narrative",
+    userContent,
+    dimensions: dimensions
+      .filter((dimension) => Boolean(dimension.code))
+      .map((dimension) => ({
+        code: dimension.code ?? "unknown",
+        name: dimension.name ?? dimension.code ?? "unknown",
+      })),
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<DashboardNarrative>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió una narrativa válida" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(campaignId, "dashboard_narrative", result.data.insert);
+  return { success: true, data: result.data.content as DashboardNarrative };
 }
 
-// ---------------------------------------------------------------------------
-// 3. interpretDrivers — narrative, paradoxes, quick wins
-// ---------------------------------------------------------------------------
 export async function interpretDrivers(campaignId: string): Promise<ActionResult<DriverInsights>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
 
   const supabase = await createClient();
-
   const [driversRes, resultsRes] = await Promise.all([
     supabase
       .from("campaign_analytics")
@@ -246,9 +227,17 @@ export async function interpretDrivers(campaignId: string): Promise<ActionResult
   ]);
 
   const drivers = (driversRes.data?.data ?? []) as Array<{ code: string; name: string; r: number }>;
+  const dimensions = (resultsRes.data ?? [])
+    .filter((row) => row.dimension_code)
+    .map((row) => ({
+      code: row.dimension_code!,
+      name: ((row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code)!,
+      avgScore: Number(row.avg_score),
+    }));
+
   const dimScores = new Map<string, number>();
-  for (const r of resultsRes.data ?? []) {
-    if (r.dimension_code) dimScores.set(r.dimension_code, Number(r.avg_score));
+  for (const dimension of dimensions) {
+    dimScores.set(dimension.code, dimension.avgScore);
   }
 
   if (drivers.length === 0) {
@@ -262,18 +251,19 @@ Score de engagement global: ${(dimScores.get("ENG") ?? 0).toFixed(2)} de 5.0
 
 Interpreta estos drivers, identifica paradojas y sugiere quick wins.`;
 
-  const result = await callAI(DRIVERS_SYSTEM, userContent);
+  const result = await generateGovernedInsight({
+    campaignId,
+    analysisRunId: await getLatestAnalysisRunId(campaignId),
+    insightType: "driver_insights",
+    userContent,
+    dimensions: dimensions.map((dimension) => ({ code: dimension.code, name: dimension.name })),
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<DriverInsights>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió insights válidos" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(campaignId, "driver_insights", result.data.insert);
+  return { success: true, data: result.data.content as DriverInsights };
 }
 
-// ---------------------------------------------------------------------------
-// 4. contextualizeAlerts — root cause + recommendations per alert
-// ---------------------------------------------------------------------------
 export async function contextualizeAlerts(campaignId: string): Promise<ActionResult<AlertContext>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -302,18 +292,18 @@ ${alerts.map((a, i) => `${i}. [${a.severity}] ${a.message} (valor: ${a.value}, u
 
 Para cada alerta, genera una hipótesis de causa raíz y una recomendación concreta.`;
 
-  const result = await callAI(ALERTS_SYSTEM, userContent);
+  const result = await generateGovernedInsight({
+    campaignId,
+    analysisRunId: await getLatestAnalysisRunId(campaignId),
+    insightType: "alert_context",
+    userContent,
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<AlertContext>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió contexto válido" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(campaignId, "alert_context", result.data.insert);
+  return { success: true, data: result.data.content as AlertContext };
 }
 
-// ---------------------------------------------------------------------------
-// 5. profileSegments — per-segment narrative
-// ---------------------------------------------------------------------------
 export async function profileSegments(campaignId: string): Promise<ActionResult<SegmentProfiles>> {
   const blocked = await checkAiRateLimit(5);
   if (blocked) return blocked;
@@ -343,46 +333,55 @@ export async function profileSegments(campaignId: string): Promise<ActionResult<
   }
 
   const globalScores = new Map<string, number>();
-  for (const r of globalData) {
-    if (r.dimension_code) globalScores.set(r.dimension_code, Number(r.avg_score));
+  const dimensions = globalData
+    .filter((row) => row.dimension_code)
+    .map((row) => ({
+      code: row.dimension_code!,
+      name: ((row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code)!,
+    }));
+
+  for (const row of globalData) {
+    if (row.dimension_code) globalScores.set(row.dimension_code, Number(row.avg_score));
   }
 
-  // Group by segment
   const segGroups = new Map<string, typeof segData>();
-  for (const r of segData) {
-    const key = `${r.segment_type}|${r.segment_key}`;
+  for (const row of segData) {
+    const key = `${row.segment_type}|${row.segment_key}`;
     if (!segGroups.has(key)) segGroups.set(key, []);
-    segGroups.get(key)!.push(r);
+    segGroups.get(key)!.push(row);
   }
 
   let userContent = "Datos de segmentos vs promedio global:\n\n";
   for (const [key, rows] of segGroups) {
     const [segType, segKey] = key.split("|");
     userContent += `SEGMENTO: ${segKey} (${segType})\n`;
-    for (const r of rows) {
+    for (const row of rows) {
       const dimName =
-        (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
-      const global = globalScores.get(r.dimension_code!) ?? 0;
-      const diff = Number(r.avg_score) - global;
-      userContent += `  ${dimName} (${r.dimension_code}): ${Number(r.avg_score).toFixed(2)} (global: ${global.toFixed(2)}, delta: ${diff > 0 ? "+" : ""}${diff.toFixed(2)})\n`;
+        (row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code;
+      const global = globalScores.get(row.dimension_code!) ?? 0;
+      const diff = Number(row.avg_score) - global;
+      userContent += `  ${dimName} (${row.dimension_code}): ${Number(row.avg_score).toFixed(2)} (global: ${global.toFixed(2)}, delta: ${diff > 0 ? "+" : ""}${diff.toFixed(2)})\n`;
     }
     userContent += "\n";
   }
 
-  const result = await callAI(SEGMENTS_SYSTEM, userContent, { maxTokens: 6144 });
+  const result = await generateGovernedInsight({
+    campaignId,
+    analysisRunId: await getLatestAnalysisRunId(campaignId),
+    insightType: "segment_profiles",
+    userContent,
+    dimensions,
+    options: { maxTokens: 6144 },
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<SegmentProfiles>(result.data);
-  if (!parsed) return { success: false, error: "El modelo no devolvió perfiles válidos" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(campaignId, "segment_profiles", result.data.insert);
+  return { success: true, data: result.data.content as SegmentProfiles };
 }
 
-// ---------------------------------------------------------------------------
-// 6. generateTrendsNarrative — temporal trajectory analysis
-// ---------------------------------------------------------------------------
 export async function generateTrendsNarrative(
-  organizationId: string
+  organizationId: string,
+  campaignId?: string
 ): Promise<ActionResult<TrendsNarrative>> {
   if (!hasConfiguredAiProvider()) {
     return {
@@ -395,7 +394,6 @@ export async function generateTrendsNarrative(
   if (blocked) return blocked;
 
   const supabase = await createClient();
-
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, name, ends_at")
@@ -408,37 +406,49 @@ export async function generateTrendsNarrative(
   }
 
   let userContent = "Evolución temporal de dimensiones de clima:\n\n";
+  const dimensions = new Map<string, { code: string; name: string }>();
 
-  for (const c of campaigns) {
+  for (const campaign of campaigns) {
     const { data: results } = await supabase
       .from("campaign_results")
       .select("dimension_code, avg_score, metadata")
-      .eq("campaign_id", c.id)
+      .eq("campaign_id", campaign.id)
       .eq("result_type", "dimension")
       .eq("segment_type", "global");
 
-    userContent += `CAMPAÑA: ${c.name} (${c.ends_at ?? "sin fecha"})\n`;
-    for (const r of results ?? []) {
+    userContent += `CAMPAÑA: ${campaign.name} (${campaign.ends_at ?? "sin fecha"})\n`;
+    for (const row of results ?? []) {
       const dimName =
-        (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code;
-      userContent += `  ${dimName} (${r.dimension_code}): ${Number(r.avg_score).toFixed(2)}\n`;
+        (row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code;
+      if (row.dimension_code) {
+        dimensions.set(row.dimension_code, {
+          code: row.dimension_code,
+          name: dimName ?? row.dimension_code,
+        });
+      }
+      userContent += `  ${dimName} (${row.dimension_code}): ${Number(row.avg_score).toFixed(2)}\n`;
     }
     userContent += "\n";
   }
 
-  const result = await callAI(TRENDS_SYSTEM, userContent);
+  const targetCampaignId = campaignId ?? campaigns[campaigns.length - 1]?.id;
+  if (!targetCampaignId) {
+    return { success: false, error: "No se encontró campaña para persistir tendencias" };
+  }
+
+  const result = await generateGovernedInsight({
+    campaignId: targetCampaignId,
+    analysisRunId: await getLatestAnalysisRunId(targetCampaignId),
+    insightType: "trends_narrative",
+    userContent,
+    dimensions: [...dimensions.values()],
+  });
   if (!result.success) return result;
 
-  const parsed = extractJSON<TrendsNarrative>(result.data);
-  if (!parsed)
-    return { success: false, error: "El modelo no devolvió narrativa de tendencias válida" };
-
-  return { success: true, data: parsed };
+  await persistGovernedInsight(targetCampaignId, "trends_narrative", result.data.insert);
+  return { success: true, data: result.data.content as TrendsNarrative };
 }
 
-// ---------------------------------------------------------------------------
-// Orchestrator — generate all AI insights for a campaign
-// ---------------------------------------------------------------------------
 export async function generateAllInsights(campaignId: string): Promise<
   ActionResult<{
     comment_analysis: boolean;
@@ -446,9 +456,9 @@ export async function generateAllInsights(campaignId: string): Promise<
     driver_insights: boolean;
     alert_context: boolean;
     segment_profiles: boolean;
+    trends_narrative: boolean;
   }>
 > {
-  // Fail fast if no AI backend configured
   if (!hasConfiguredAiProvider()) {
     return {
       success: false,
@@ -463,86 +473,14 @@ export async function generateAllInsights(campaignId: string): Promise<
   const organizationId = await getCampaignOrganizationId(campaignId);
   if (!organizationId) return { success: false, error: "Campaña no encontrada" };
 
-  // Run all analyses in parallel
-  const [comments, narrative, drivers, alerts, segments] = await Promise.all([
+  const [comments, narrative, drivers, alerts, segments, trends] = await Promise.all([
     analyzeComments(campaignId),
     generateNarrative(campaignId),
     interpretDrivers(campaignId),
     contextualizeAlerts(campaignId),
     profileSegments(campaignId),
+    generateTrendsNarrative(organizationId, campaignId),
   ]);
-
-  // Store successful results in campaign_analytics
-  const aiMetadata = getAiProviderMetadata();
-  const inserts: CampaignAiInsightInsert[] = [];
-
-  if (comments.success)
-    inserts.push({
-      campaign_id: campaignId,
-      insight_type: "comment_analysis",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: comments.data,
-    });
-  if (narrative.success)
-    inserts.push({
-      campaign_id: campaignId,
-      insight_type: "dashboard_narrative",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: narrative.data,
-    });
-  if (drivers.success)
-    inserts.push({
-      campaign_id: campaignId,
-      insight_type: "driver_insights",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: drivers.data,
-    });
-  if (alerts.success)
-    inserts.push({
-      campaign_id: campaignId,
-      insight_type: "alert_context",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: alerts.data,
-    });
-  if (segments.success)
-    inserts.push({
-      campaign_id: campaignId,
-      insight_type: "segment_profiles",
-      provider: aiMetadata.provider,
-      model: aiMetadata.model,
-      data: segments.data,
-    });
-
-  const aiTypes = [
-    "comment_analysis",
-    "dashboard_narrative",
-    "driver_insights",
-    "alert_context",
-    "segment_profiles",
-  ] as const;
-  await replaceCampaignAiInsights(campaignId, [...aiTypes], inserts);
-
-  // Also generate trends narrative if there are multiple campaigns
-  const trendsResult = await generateTrendsNarrative(organizationId);
-  if (trendsResult.success) {
-    await replaceCampaignAiInsights(
-      campaignId,
-      ["trends_narrative"],
-      [
-        {
-          campaign_id: campaignId,
-          insight_type: "trends_narrative",
-          provider: aiMetadata.provider,
-          model: aiMetadata.model,
-          data: trendsResult.data,
-        },
-      ]
-    );
-  }
 
   return {
     success: true,
@@ -552,13 +490,11 @@ export async function generateAllInsights(campaignId: string): Promise<
       driver_insights: drivers.success,
       alert_context: alerts.success,
       segment_profiles: segments.success,
+      trends_narrative: trends.success,
     },
   };
 }
 
-// ---------------------------------------------------------------------------
-// Retrieval functions — fetch stored AI insights
-// ---------------------------------------------------------------------------
 export async function getCommentAnalysis(
   campaignId: string
 ): Promise<ActionResult<CommentAnalysis>> {
@@ -590,3 +526,5 @@ export async function getTrendsNarrative(
 ): Promise<ActionResult<TrendsNarrative>> {
   return getCampaignAiInsight<TrendsNarrative>(campaignId, "trends_narrative");
 }
+
+export { getAiProviderMetadata };

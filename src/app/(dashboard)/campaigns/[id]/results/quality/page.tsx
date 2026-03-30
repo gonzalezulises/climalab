@@ -239,6 +239,10 @@ export default async function QualityPage({ params }: { params: Promise<{ id: st
                     <p className="text-xs text-muted-foreground">
                       {row.provider ?? "N/D"} · {row.model ?? "N/D"}
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      estado {row.status ?? "draft"} · prompt {row.promptVersion ?? "N/D"} · schema{" "}
+                      {row.schemaVersion ?? "N/D"}
+                    </p>
                   </div>
                   <Badge className={scoreBadgeClass(row.methodological.overallScore)}>
                     {row.methodological.overallScore}

@@ -223,3 +223,45 @@ Secuencia recomendada:
 - Si faltan secretos de Vault, el trigger no rompe la escritura: registra `pipeline_dispatch_events.status = 'skipped'` con razón `missing_pipeline_secret`.
 - Las alertas operativas activas salen por webhook o email solo si configuras `PIPELINE_ALERT_WEBHOOK_URL` y/o `PIPELINE_ALERT_EMAIL_TO`. Si no, quedan registradas como `log/skipped`.
 - La heurística batch usa `incremental_stats_refresh` para campañas activas con lógica vigente y `full_recompute` para cierres, lógica desactualizada o backfills.
+
+## 9. Operación de AI Governance
+
+Tablas:
+
+- `campaign_ai_insights`: contenido gobernado por campaña e `insight_type`
+- `campaign_ai_generation_events`: historial operativo de intentos de generación
+
+Campos de control en `campaign_ai_insights`:
+
+- `status`
+- `prompt_version`
+- `schema_version`
+- `input_fingerprint`
+- `warnings`
+- `validation_errors`
+- `generated_at`
+- `published_at`
+
+Comprobaciones útiles:
+
+```sql
+select insight_type, status, prompt_version, schema_version, generated_at, published_at
+from campaign_ai_insights
+where campaign_id = '<campaign_uuid>'
+order by insight_type;
+```
+
+```sql
+select insight_type, status, provider, model, latency_ms, error_message, created_at
+from campaign_ai_generation_events
+where campaign_id = '<campaign_uuid>'
+order by created_at desc
+limit 20;
+```
+
+Regla de lectura:
+
+- si existe `published`, las páginas consumen ese insight
+- si no existe `published`, usan el latest `draft` o `approved`
+
+La página `/campaigns/[id]/results/ai-governance` es la vista operativa para revisar cobertura, warnings, fallos y estado editorial.

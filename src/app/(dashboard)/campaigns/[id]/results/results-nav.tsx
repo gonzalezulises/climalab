@@ -16,6 +16,7 @@ import {
   Download,
   Network,
   ShieldCheck,
+  Bot,
 } from "lucide-react";
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { href: "comments", label: "Comentarios", icon: MessageSquare },
   { href: "network", label: "Red perceptual", icon: Network },
   { href: "quality", label: "Calidad", icon: ShieldCheck },
+  { href: "ai-governance", label: "AI Governance", icon: Bot },
   { href: "technical", label: "Ficha Técnica", icon: FileText },
   { href: "export", label: "Exportar", icon: Download },
 ];

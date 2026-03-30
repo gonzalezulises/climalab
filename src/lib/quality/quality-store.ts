@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { extractInsightContent } from "@/lib/ai/contracts";
 import { buildAiEvaluationMatrix } from "@/lib/quality/ai-evaluation";
 import { buildInstrumentQualityReport } from "@/lib/quality/instrument-quality";
 import { loadCampaignQuality } from "@/lib/campaign-quality";
@@ -77,7 +78,9 @@ async function getCampaignQualityArtifacts(campaignId: string) {
       .eq("segment_type", "global"),
     supabase
       .from("campaign_ai_insights")
-      .select("insight_type, provider, model, data, created_at, updated_at")
+      .select(
+        "insight_type, provider, model, status, prompt_version, schema_version, warnings, validation_errors, data, created_at, updated_at"
+      )
       .eq("campaign_id", campaignId)
       .order("created_at", { ascending: false }),
     supabase
@@ -303,7 +306,20 @@ export async function loadCampaignQualityReport(campaignId: string) {
       >[0]["insightTypes"][number]["insightType"],
       provider: insight.provider,
       model: insight.model,
-      data: insight.data,
+      status: insight.status,
+      promptVersion: insight.prompt_version,
+      schemaVersion: insight.schema_version,
+      warnings: Array.isArray(insight.warnings)
+        ? (insight.warnings.filter(
+            (entry): entry is string => typeof entry === "string"
+          ) as string[])
+        : [],
+      validationErrors: Array.isArray(insight.validation_errors)
+        ? (insight.validation_errors.filter(
+            (entry): entry is string => typeof entry === "string"
+          ) as string[])
+        : [],
+      data: extractInsightContent(insight.data),
     })),
   });
 
