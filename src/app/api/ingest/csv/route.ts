@@ -88,7 +88,7 @@ export function mapCsvRowToSubmission(input: {
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-    const rateLimitResult = rateLimit(`ingest-csv:${ip}`, { limit: 100, windowMs: 60_000 });
+    const rateLimitResult = await rateLimit(`ingest-csv:${ip}`, { limit: 100, windowMs: 60_000 });
     if (!rateLimitResult.success) {
       return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
     }

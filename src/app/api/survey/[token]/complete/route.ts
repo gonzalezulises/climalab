@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { completeSurveySession } from "@/lib/survey-session";
+import { surveyCompleteSchema } from "@/lib/validations/survey";
 
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   try {
     const { token } = await context.params;
-    const body = (await request.json()) as {
-      enpsScore?: number | null;
-      openResponses?: Array<{ questionType: "strength" | "improvement" | "general"; text: string }>;
-    };
+    const raw = await request.json();
+    const parsed = surveyCompleteSchema.safeParse(raw);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Datos inválidos" },
+        { status: 422 }
+      );
+    }
 
     await completeSurveySession({
       token,
-      enpsScore: body.enpsScore ?? null,
-      openResponses: body.openResponses ?? [],
+      enpsScore: parsed.data.enpsScore ?? null,
+      openResponses: parsed.data.openResponses ?? [],
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

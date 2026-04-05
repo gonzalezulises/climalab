@@ -35,6 +35,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { compareCampaigns } from "@/actions/campaigns";
 import { generateAllInsights } from "@/actions/ai-insights";
 import type { DashboardNarrative } from "@/actions/ai-insights";
+import { AiInsightProgress } from "@/components/results/ai-insight-progress";
 import { AnalysisLevelCards } from "@/components/results/analysis-level-cards";
 import { INDICATOR_TYPES, CATEGORY_LABELS } from "@/lib/constants";
 import { classifyFavorability, favToHex, SEVERITY_LABELS } from "@/lib/score-utils";
@@ -93,6 +94,7 @@ export function DashboardClient({
   const [narrative] = useState<DashboardNarrative | null>(initialNarrative);
   const [isGenerating, startGeneration] = useTransition();
   const [aiError, setAiError] = useState<string | null>(null);
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
 
   const handleComparisonChange = async (value: string) => {
     setSelectedPrevId(value);
@@ -255,6 +257,16 @@ export function DashboardClient({
       )}
 
       {/* AI Narrative */}
+      {activeBatchId && (
+        <AiInsightProgress
+          batchId={activeBatchId}
+          onDone={() => {
+            setActiveBatchId(null);
+            window.location.reload();
+          }}
+        />
+      )}
+
       {narrative ? (
         <Card className="border-purple-200 bg-purple-50/50">
           <CardHeader className="pb-2">
@@ -271,14 +283,18 @@ export function DashboardClient({
                     setAiError(null);
                     try {
                       const result = await generateAllInsights(campaignId);
-                      if (result.success) window.location.reload();
-                      else setAiError(result.error);
+                      if (!result.success) {
+                        setAiError(result.error);
+                        return;
+                      }
+                      if ("batch_id" in result.data) setActiveBatchId(result.data.batch_id);
+                      else window.location.reload();
                     } catch {
                       setAiError("Error de conexión. Intente nuevamente.");
                     }
                   })
                 }
-                disabled={isGenerating}
+                disabled={isGenerating || !!activeBatchId}
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Regenerar"}
               </Button>
@@ -333,14 +349,18 @@ export function DashboardClient({
                     setAiError(null);
                     try {
                       const result = await generateAllInsights(campaignId);
-                      if (result.success) window.location.reload();
-                      else setAiError(result.error);
+                      if (!result.success) {
+                        setAiError(result.error);
+                        return;
+                      }
+                      if ("batch_id" in result.data) setActiveBatchId(result.data.batch_id);
+                      else window.location.reload();
                     } catch {
                       setAiError("Error de conexión. Intente nuevamente.");
                     }
                   })
                 }
-                disabled={isGenerating}
+                disabled={isGenerating || !!activeBatchId}
               >
                 {isGenerating ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -61,7 +61,7 @@ function verifySignature(payload: string, signature: string, secret: string): bo
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const rateLimitResult = rateLimit(`webhook-tally:${ip}`, { limit: 100, windowMs: 60_000 });
+  const rateLimitResult = await rateLimit(`webhook-tally:${ip}`, { limit: 100, windowMs: 60_000 });
   if (!rateLimitResult.success) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }

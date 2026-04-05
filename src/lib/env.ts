@@ -26,6 +26,9 @@ const envSchema = z.object({
   TALLY_WEBHOOK_SECRET: optionalString,
   INGEST_API_SECRET: optionalString,
   CRON_SECRET: optionalString,
+  AI_INSIGHT_HOOK_SECRET: optionalString,
+  TELEGRAM_BOT_TOKEN: optionalString,
+  TELEGRAM_ALERT_CHAT_ID: optionalString,
   PIPELINE_ALERT_WEBHOOK_URL: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
     z.string().url().optional()

@@ -1,8 +1,65 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 import type { ActionResult } from "@/types";
+
+const RETRY_DELAYS_MS = [0, 1_500, 4_500] as const;
+const CIRCUIT_KEY = "circuit:statistical-api";
+const CIRCUIT_THRESHOLD = 3; // failures in window before opening
+const CIRCUIT_WINDOW_MS = 300_000; // 5 min
+
+async function sendTelegramAlert(message: string): Promise<void> {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_ALERT_CHAT_ID) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_ALERT_CHAT_ID,
+        text: message,
+        parse_mode: "HTML",
+      }),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // Alerting must never crash the caller
+  }
+}
+
+async function isCircuitOpen(): Promise<boolean> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.rpc(
+      "is_circuit_open" as never,
+      {
+        p_key: CIRCUIT_KEY,
+        p_threshold: CIRCUIT_THRESHOLD,
+        p_window_ms: CIRCUIT_WINDOW_MS,
+      } as never
+    );
+    return data === true;
+  } catch {
+    return false; // fail open if check errors
+  }
+}
+
+async function recordCircuitFailure(): Promise<number> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin.rpc(
+      "record_circuit_failure" as never,
+      {
+        p_key: CIRCUIT_KEY,
+        p_window_ms: CIRCUIT_WINDOW_MS,
+      } as never
+    );
+    return typeof data === "number" ? data : 0;
+  } catch {
+    return 0;
+  }
+}
 
 async function callStatisticalApi(
   endpoint: string,
@@ -12,32 +69,107 @@ async function callStatisticalApi(
     return { success: false, error: "Motor estadístico no configurado (STATISTICAL_ENGINE_URL)" };
   }
 
-  try {
-    const response = await fetch(`${env.STATISTICAL_ENGINE_URL}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(env.STATISTICAL_API_SECRET
-          ? { Authorization: `Bearer ${env.STATISTICAL_API_SECRET}` }
-          : {}),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(300_000),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      return { success: false, error: `Motor estadístico: ${detail}` };
-    }
-
-    const data = await response.json();
-    return { success: true, data: data.status ?? "completed" };
-  } catch (error) {
+  if (await isCircuitOpen()) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error contactando motor estadístico",
+      error:
+        "Motor estadístico temporalmente no disponible (circuit breaker abierto). Se reintentará en 5 minutos.",
     };
   }
+
+  const url = `${env.STATISTICAL_ENGINE_URL}${endpoint}`;
+  let lastError = "Error desconocido";
+
+  for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(env.STATISTICAL_API_SECRET
+            ? { Authorization: `Bearer ${env.STATISTICAL_API_SECRET}` }
+            : {}),
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(300_000),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { success: true, data: data.status ?? "completed" };
+      }
+
+      // 4xx — not retriable
+      if (response.status >= 400 && response.status < 500) {
+        return { success: false, error: `Motor estadístico: error ${response.status}` };
+      }
+
+      // Log detail internally, never propagate raw body to caller or alerts
+      const detail = (await response.text()).slice(0, 200);
+      console.error(
+        JSON.stringify({
+          level: "error",
+          service: "statistical-api",
+          endpoint,
+          status: response.status,
+          detail,
+          ts: new Date().toISOString(),
+        })
+      );
+      lastError = `HTTP ${response.status}`;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Error de red";
+    }
+
+    console.error(
+      JSON.stringify({
+        level: "error",
+        service: "statistical-api",
+        endpoint,
+        attempt: attempt + 1,
+        maxAttempts: RETRY_DELAYS_MS.length,
+        error: lastError,
+        campaignId: body.campaign_id ?? null,
+        ts: new Date().toISOString(),
+      })
+    );
+  }
+
+  // All retries exhausted — open the circuit and alert
+  const failureCount = await recordCircuitFailure();
+
+  const criticalLog = {
+    level: "critical",
+    service: "statistical-api",
+    endpoint,
+    error: `Todos los intentos fallaron. Último: ${lastError}`,
+    failureCount,
+    circuitOpen: failureCount >= CIRCUIT_THRESHOLD,
+    campaignId: body.campaign_id ?? null,
+    ts: new Date().toISOString(),
+  };
+
+  console.error(JSON.stringify(criticalLog));
+
+  if (failureCount >= CIRCUIT_THRESHOLD) {
+    await sendTelegramAlert(
+      `🔴 <b>ClimaLab — Statistical API caída</b>\n\n` +
+        `Endpoint: <code>${endpoint}</code>\n` +
+        `Fallos en ventana: <b>${failureCount}</b>\n` +
+        `Último error: <code>${lastError}</code>\n` +
+        `Circuit breaker <b>ABIERTO</b> por 5 min.\n` +
+        `Campaña: <code>${body.campaign_id ?? "—"}</code>`
+    );
+  }
+
+  return {
+    success: false,
+    error: `Motor estadístico no disponible tras ${RETRY_DELAYS_MS.length} intentos. Último error: ${lastError}`,
+  };
 }
 
 async function verifyAccess(campaignId: string): Promise<boolean> {

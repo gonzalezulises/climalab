@@ -7,33 +7,76 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
+      ai_insight_jobs: {
+        Row: {
+          attempt_count: number
+          batch_id: string
+          campaign_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          insight_type: string
+          max_attempts: number
+          organization_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number
+          batch_id: string
+          campaign_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          insight_type: string
+          max_attempts?: number
+          organization_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_count?: number
+          batch_id?: string
+          campaign_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          insight_type?: string
+          max_attempts?: number
+          organization_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insight_jobs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insight_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analysis_run_respondent_quality: {
         Row: {
           analysis_run_id: string
@@ -69,50 +112,6 @@ export type Database = {
             columns: ["respondent_id"]
             isOneToOne: false
             referencedRelation: "respondents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      analysis_runs: {
-        Row: {
-          campaign_id: string
-          completed_at: string | null
-          error_message: string | null
-          id: string
-          input_snapshot: Json
-          logic_version: string
-          started_at: string
-          status: string
-          trigger_source: string
-        }
-        Insert: {
-          campaign_id: string
-          completed_at?: string | null
-          error_message?: string | null
-          id?: string
-          input_snapshot?: Json
-          logic_version: string
-          started_at?: string
-          status?: string
-          trigger_source: string
-        }
-        Update: {
-          campaign_id?: string
-          completed_at?: string | null
-          error_message?: string | null
-          id?: string
-          input_snapshot?: Json
-          logic_version?: string
-          started_at?: string
-          status?: string
-          trigger_source?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "analysis_runs_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -155,6 +154,50 @@ export type Database = {
           },
           {
             foreignKeyName: "analysis_run_snapshots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analysis_runs: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          input_snapshot: Json
+          logic_version: string
+          started_at: string
+          status: string
+          trigger_source: string
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_snapshot?: Json
+          logic_version: string
+          started_at?: string
+          status?: string
+          trigger_source: string
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_snapshot?: Json
+          logic_version?: string
+          started_at?: string
+          status?: string
+          trigger_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_runs_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -216,51 +259,6 @@ export type Database = {
           },
         ]
       }
-      batch_job_runs: {
-        Row: {
-          campaign_ids: string[]
-          created_at: string
-          error_message: string | null
-          failed: number
-          finished_at: string | null
-          hours_window: number
-          id: string
-          metadata: Json
-          processed: number
-          status: string
-          succeeded: number
-          trigger_source: string
-        }
-        Insert: {
-          campaign_ids?: string[]
-          created_at?: string
-          error_message?: string | null
-          failed?: number
-          finished_at?: string | null
-          hours_window?: number
-          id?: string
-          metadata?: Json
-          processed?: number
-          status?: string
-          succeeded?: number
-          trigger_source: string
-        }
-        Update: {
-          campaign_ids?: string[]
-          created_at?: string
-          error_message?: string | null
-          failed?: number
-          finished_at?: string | null
-          hours_window?: number
-          id?: string
-          metadata?: Json
-          processed?: number
-          status?: string
-          succeeded?: number
-          trigger_source?: string
-        }
-        Relationships: []
-      }
       backfill_run_metrics: {
         Row: {
           batch_size: number
@@ -305,6 +303,51 @@ export type Database = {
           succeeded?: number
           summary?: Json
           target_logic_version?: string
+          trigger_source?: string
+        }
+        Relationships: []
+      }
+      batch_job_runs: {
+        Row: {
+          campaign_ids: string[]
+          created_at: string
+          error_message: string | null
+          failed: number
+          finished_at: string | null
+          hours_window: number
+          id: string
+          metadata: Json
+          processed: number
+          status: string
+          succeeded: number
+          trigger_source: string
+        }
+        Insert: {
+          campaign_ids?: string[]
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          hours_window?: number
+          id?: string
+          metadata?: Json
+          processed?: number
+          status?: string
+          succeeded?: number
+          trigger_source: string
+        }
+        Update: {
+          campaign_ids?: string[]
+          created_at?: string
+          error_message?: string | null
+          failed?: number
+          finished_at?: string | null
+          hours_window?: number
+          id?: string
+          metadata?: Json
+          processed?: number
+          status?: string
+          succeeded?: number
           trigger_source?: string
         }
         Relationships: []
@@ -356,41 +399,59 @@ export type Database = {
           },
         ]
       }
-      campaign_analytics: {
+      campaign_ai_evidence: {
         Row: {
           analysis_run_id: string | null
-          analysis_type: string
           campaign_id: string
+          claim_key: string
+          claim_text: string
+          confidence_label: string
           created_at: string
-          data: Json
+          dimension_codes: Json
+          evidence: Json
           id: string
+          insight_type: string
+          metric_refs: Json
+          policy_warnings: Json
         }
         Insert: {
           analysis_run_id?: string | null
-          analysis_type: string
           campaign_id: string
+          claim_key: string
+          claim_text: string
+          confidence_label?: string
           created_at?: string
-          data: Json
+          dimension_codes?: Json
+          evidence?: Json
           id?: string
+          insight_type: string
+          metric_refs?: Json
+          policy_warnings?: Json
         }
         Update: {
           analysis_run_id?: string | null
-          analysis_type?: string
           campaign_id?: string
+          claim_key?: string
+          claim_text?: string
+          confidence_label?: string
           created_at?: string
-          data?: Json
+          dimension_codes?: Json
+          evidence?: Json
           id?: string
+          insight_type?: string
+          metric_refs?: Json
+          policy_warnings?: Json
         }
         Relationships: [
           {
-            foreignKeyName: "campaign_analytics_analysis_run_id_fkey"
+            foreignKeyName: "campaign_ai_evidence_analysis_run_id_fkey"
             columns: ["analysis_run_id"]
             isOneToOne: false
             referencedRelation: "analysis_runs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "campaign_analytics_campaign_id_fkey"
+            foreignKeyName: "campaign_ai_evidence_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -398,50 +459,71 @@ export type Database = {
           },
         ]
       }
-      campaign_ona_runs: {
+      campaign_ai_generation_events: {
         Row: {
           analysis_run_id: string | null
-          backend: string | null
           campaign_id: string
           created_at: string
-          details: Json
           error_message: string | null
           id: string
+          input_fingerprint: string | null
+          insight_type: string
+          latency_ms: number | null
+          model: string | null
+          prompt_version: string | null
+          provider: string | null
+          raw_excerpt: string | null
+          schema_version: string | null
           status: string
-          updated_at: string
+          validation_errors: Json
+          warnings: Json
         }
         Insert: {
           analysis_run_id?: string | null
-          backend?: string | null
           campaign_id: string
           created_at?: string
-          details?: Json
           error_message?: string | null
           id?: string
+          input_fingerprint?: string | null
+          insight_type: string
+          latency_ms?: number | null
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          raw_excerpt?: string | null
+          schema_version?: string | null
           status: string
-          updated_at?: string
+          validation_errors?: Json
+          warnings?: Json
         }
         Update: {
           analysis_run_id?: string | null
-          backend?: string | null
           campaign_id?: string
           created_at?: string
-          details?: Json
           error_message?: string | null
           id?: string
+          input_fingerprint?: string | null
+          insight_type?: string
+          latency_ms?: number | null
+          model?: string | null
+          prompt_version?: string | null
+          provider?: string | null
+          raw_excerpt?: string | null
+          schema_version?: string | null
           status?: string
-          updated_at?: string
+          validation_errors?: Json
+          warnings?: Json
         }
         Relationships: [
           {
-            foreignKeyName: "campaign_ona_runs_analysis_run_id_fkey"
+            foreignKeyName: "campaign_ai_generation_events_analysis_run_id_fkey"
             columns: ["analysis_run_id"]
             isOneToOne: false
             referencedRelation: "analysis_runs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "campaign_ona_runs_campaign_id_fkey"
+            foreignKeyName: "campaign_ai_generation_events_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -524,131 +606,41 @@ export type Database = {
           },
         ]
       }
-      campaign_ai_generation_events: {
+      campaign_analytics: {
         Row: {
           analysis_run_id: string | null
+          analysis_type: string
           campaign_id: string
           created_at: string
-          error_message: string | null
+          data: Json
           id: string
-          input_fingerprint: string | null
-          insight_type: string
-          latency_ms: number | null
-          model: string | null
-          prompt_version: string | null
-          provider: string | null
-          raw_excerpt: string | null
-          schema_version: string | null
-          status: string
-          validation_errors: Json
-          warnings: Json
         }
         Insert: {
           analysis_run_id?: string | null
+          analysis_type: string
           campaign_id: string
           created_at?: string
-          error_message?: string | null
+          data: Json
           id?: string
-          input_fingerprint?: string | null
-          insight_type: string
-          latency_ms?: number | null
-          model?: string | null
-          prompt_version?: string | null
-          provider?: string | null
-          raw_excerpt?: string | null
-          schema_version?: string | null
-          status: string
-          validation_errors?: Json
-          warnings?: Json
         }
         Update: {
           analysis_run_id?: string | null
+          analysis_type?: string
           campaign_id?: string
           created_at?: string
-          error_message?: string | null
+          data?: Json
           id?: string
-          input_fingerprint?: string | null
-          insight_type?: string
-          latency_ms?: number | null
-          model?: string | null
-          prompt_version?: string | null
-          provider?: string | null
-          raw_excerpt?: string | null
-          schema_version?: string | null
-          status?: string
-          validation_errors?: Json
-          warnings?: Json
         }
         Relationships: [
           {
-            foreignKeyName: "campaign_ai_generation_events_analysis_run_id_fkey"
+            foreignKeyName: "campaign_analytics_analysis_run_id_fkey"
             columns: ["analysis_run_id"]
             isOneToOne: false
             referencedRelation: "analysis_runs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "campaign_ai_generation_events_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      campaign_ai_evidence: {
-        Row: {
-          analysis_run_id: string | null
-          campaign_id: string
-          claim_key: string
-          claim_text: string
-          confidence_label: string
-          created_at: string
-          dimension_codes: Json
-          evidence: Json
-          id: string
-          insight_type: string
-          metric_refs: Json
-          policy_warnings: Json
-        }
-        Insert: {
-          analysis_run_id?: string | null
-          campaign_id: string
-          claim_key: string
-          claim_text: string
-          confidence_label?: string
-          created_at?: string
-          dimension_codes?: Json
-          evidence?: Json
-          id?: string
-          insight_type: string
-          metric_refs?: Json
-          policy_warnings?: Json
-        }
-        Update: {
-          analysis_run_id?: string | null
-          campaign_id?: string
-          claim_key?: string
-          claim_text?: string
-          confidence_label?: string
-          created_at?: string
-          dimension_codes?: Json
-          evidence?: Json
-          id?: string
-          insight_type?: string
-          metric_refs?: Json
-          policy_warnings?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campaign_ai_evidence_analysis_run_id_fkey"
-            columns: ["analysis_run_id"]
-            isOneToOne: false
-            referencedRelation: "analysis_runs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_ai_evidence_campaign_id_fkey"
+            foreignKeyName: "campaign_analytics_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -698,14 +690,65 @@ export type Database = {
           },
         ]
       }
+      campaign_ona_runs: {
+        Row: {
+          analysis_run_id: string | null
+          backend: string | null
+          campaign_id: string
+          created_at: string
+          details: Json
+          error_message: string | null
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_run_id?: string | null
+          backend?: string | null
+          campaign_id?: string
+          created_at?: string
+          details?: Json
+          error_message?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ona_runs_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_ona_runs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_results: {
         Row: {
           analysis_run_id: string | null
           avg_score: number | null
           calculated_at: string
           campaign_id: string
-          dimension_id: string | null
           dimension_code: string | null
+          dimension_id: string | null
           favorability_pct: number | null
           id: string
           instrument_id: string | null
@@ -723,12 +766,14 @@ export type Database = {
           avg_score?: number | null
           calculated_at?: string
           campaign_id: string
-          dimension_id?: string | null
           dimension_code?: string | null
+          dimension_id?: string | null
           favorability_pct?: number | null
           id?: string
           instrument_id?: string | null
-          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
           metadata?: Json | null
           respondent_count?: number | null
           response_count?: number | null
@@ -742,12 +787,14 @@ export type Database = {
           avg_score?: number | null
           calculated_at?: string
           campaign_id?: string
-          dimension_id?: string | null
           dimension_code?: string | null
+          dimension_id?: string | null
           favorability_pct?: number | null
           id?: string
           instrument_id?: string | null
-          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
           metadata?: Json | null
           respondent_count?: number | null
           response_count?: number | null
@@ -792,14 +839,14 @@ export type Database = {
           analysis_run_id: string | null
           avg_score: number | null
           campaign_id: string
-          dimension_id: string | null
           dimension_code: string
+          dimension_id: string | null
           favorability_pct: number | null
           instrument_id: string | null
           instrument_type: Database["public"]["Enums"]["instrument_type"] | null
           last_response_at: string | null
-          response_count: number
           respondent_count: number
+          response_count: number
           segment_key: string
           segment_type: string
           updated_at: string
@@ -808,14 +855,16 @@ export type Database = {
           analysis_run_id?: string | null
           avg_score?: number | null
           campaign_id: string
-          dimension_id?: string | null
           dimension_code: string
+          dimension_id?: string | null
           favorability_pct?: number | null
           instrument_id?: string | null
-          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
           last_response_at?: string | null
-          response_count?: number
           respondent_count?: number
+          response_count?: number
           segment_key?: string
           segment_type?: string
           updated_at?: string
@@ -824,14 +873,16 @@ export type Database = {
           analysis_run_id?: string | null
           avg_score?: number | null
           campaign_id?: string
-          dimension_id?: string | null
           dimension_code?: string
+          dimension_id?: string | null
           favorability_pct?: number | null
           instrument_id?: string | null
-          instrument_type?: Database["public"]["Enums"]["instrument_type"] | null
+          instrument_type?:
+            | Database["public"]["Enums"]["instrument_type"]
+            | null
           last_response_at?: string | null
-          response_count?: number
           respondent_count?: number
+          response_count?: number
           segment_key?: string
           segment_type?: string
           updated_at?: string
@@ -957,6 +1008,35 @@ export type Database = {
           },
         ]
       }
+      dimension_taxonomy: {
+        Row: {
+          analytics_category: string
+          created_at: string
+          dimension_id: string
+          updated_at: string
+        }
+        Insert: {
+          analytics_category: string
+          created_at?: string
+          dimension_id: string
+          updated_at?: string
+        }
+        Update: {
+          analytics_category?: string
+          created_at?: string
+          dimension_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dimension_taxonomy_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: true
+            referencedRelation: "dimensions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dimensions: {
         Row: {
           category: string | null
@@ -1001,43 +1081,14 @@ export type Database = {
           },
         ]
       }
-      dimension_taxonomy: {
-        Row: {
-          analytics_category: string
-          created_at: string
-          dimension_id: string
-          updated_at: string
-        }
-        Insert: {
-          analytics_category: string
-          created_at?: string
-          dimension_id: string
-          updated_at?: string
-        }
-        Update: {
-          analytics_category?: string
-          created_at?: string
-          dimension_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dimension_taxonomy_dimension_id_fkey"
-            columns: ["dimension_id"]
-            isOneToOne: true
-            referencedRelation: "dimensions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ingest_events: {
         Row: {
           campaign_id: string | null
           contract_version: string
           created_at: string
           error_message: string | null
-          external_subject_id: string | null
           external_event_id: string
+          external_subject_id: string | null
           id: string
           mapping_version: string | null
           metadata: Json
@@ -1052,8 +1103,8 @@ export type Database = {
           contract_version?: string
           created_at?: string
           error_message?: string | null
-          external_subject_id?: string | null
           external_event_id: string
+          external_subject_id?: string | null
           id?: string
           mapping_version?: string | null
           metadata?: Json
@@ -1068,8 +1119,8 @@ export type Database = {
           contract_version?: string
           created_at?: string
           error_message?: string | null
-          external_subject_id?: string | null
           external_event_id?: string
+          external_subject_id?: string | null
           id?: string
           mapping_version?: string | null
           metadata?: Json
@@ -1338,6 +1389,33 @@ export type Database = {
           },
         ]
       }
+      performance_baselines: {
+        Row: {
+          baseline_version: string
+          id: string
+          metric_key: string
+          observed_at: string
+          scope: string
+          summary: Json
+        }
+        Insert: {
+          baseline_version: string
+          id?: string
+          metric_key: string
+          observed_at?: string
+          scope: string
+          summary?: Json
+        }
+        Update: {
+          baseline_version?: string
+          id?: string
+          metric_key?: string
+          observed_at?: string
+          scope?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       pipeline_dispatch_events: {
         Row: {
           campaign_id: string | null
@@ -1497,33 +1575,6 @@ export type Database = {
         }
         Relationships: []
       }
-      performance_baselines: {
-        Row: {
-          baseline_version: string
-          id: string
-          metric_key: string
-          observed_at: string
-          scope: string
-          summary: Json
-        }
-        Insert: {
-          baseline_version: string
-          id?: string
-          metric_key: string
-          observed_at?: string
-          scope: string
-          summary?: Json
-        }
-        Update: {
-          baseline_version?: string
-          id?: string
-          metric_key?: string
-          observed_at?: string
-          scope?: string
-          summary?: Json
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1565,56 +1616,23 @@ export type Database = {
           },
         ]
       }
-      tally_form_mappings: {
+      rate_limit_log: {
         Row: {
-          id: string
-          campaign_id: string
-          tally_form_id: string
-          tally_form_url: string
-          tally_field_key: string
-          target_type: string
-          target_id: string | null
-          target_meta: string | null
-          created_at: string
+          key: string
+          timestamps: string[]
+          updated_at: string
         }
         Insert: {
-          id?: string
-          campaign_id: string
-          tally_form_id: string
-          tally_form_url: string
-          tally_field_key: string
-          target_type: string
-          target_id?: string | null
-          target_meta?: string | null
-          created_at?: string
+          key: string
+          timestamps?: string[]
+          updated_at?: string
         }
         Update: {
-          id?: string
-          campaign_id?: string
-          tally_form_id?: string
-          tally_form_url?: string
-          tally_field_key?: string
-          target_type?: string
-          target_id?: string | null
-          target_meta?: string | null
-          created_at?: string
+          key?: string
+          timestamps?: string[]
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tally_form_mappings_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tally_form_mappings_target_id_fkey"
-            columns: ["target_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       respondents: {
         Row: {
@@ -1711,11 +1729,68 @@ export type Database = {
           },
         ]
       }
+      tally_form_mappings: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          tally_field_key: string
+          tally_form_id: string
+          tally_form_url: string
+          target_id: string | null
+          target_meta: string | null
+          target_type: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          tally_field_key: string
+          tally_form_id: string
+          tally_form_url: string
+          target_id?: string | null
+          target_meta?: string | null
+          target_type: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          tally_field_key?: string
+          tally_form_id?: string
+          tally_form_url?: string
+          target_id?: string | null
+          target_meta?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tally_form_mappings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tally_form_mappings_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_ms: number }
+        Returns: Json
+      }
+      claim_ai_insight_job: { Args: { p_job_id: string }; Returns: boolean }
+      cleanup_rate_limit_log: { Args: never; Returns: undefined }
       finalize_analysis_run: {
         Args: {
           p_analysis_run_id: string
@@ -1731,6 +1806,7 @@ export type Database = {
       }
       get_org_department_counts: { Args: { org_id: string }; Returns: Json }
       get_org_total_headcount: { Args: { p_org_id: string }; Returns: number }
+      get_pipeline_secret: { Args: { secret_name: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
       get_user_role: {
         Args: never
@@ -1743,8 +1819,8 @@ export type Database = {
           p_contract_version?: string
           p_demographics?: Json
           p_enps_score?: number
-          p_external_subject_id?: string
           p_external_event_id: string
+          p_external_subject_id?: string
           p_mapping_version?: string
           p_metadata?: Json
           p_open_responses?: Json
@@ -1756,32 +1832,50 @@ export type Database = {
         Returns: {
           campaign_id: string
           duplicate: boolean
-          error_message: string | null
-          ingest_event_id: string | null
+          error_message: string
+          ingest_event_id: string
           ok: boolean
-          respondent_id: string | null
+          respondent_id: string
         }[]
       }
       refresh_campaign_stats: {
         Args: { p_campaign_id: string }
         Returns: number
       }
-      refresh_pipeline_dispatch_events: {
-        Args: never
-        Returns: number
-      }
-      replace_campaign_materialization: {
+      refresh_pipeline_dispatch_events: { Args: never; Returns: number }
+      replace_campaign_materialization:
+        | {
+            Args: {
+              p_analysis_run_id: string
+              p_analytics: Json
+              p_campaign_id: string
+              p_margin_of_error: number
+              p_population_n: number
+              p_response_rate: number
+              p_results: Json
+              p_sample_n: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_analytics: Json
+              p_campaign_id: string
+              p_margin_of_error: number
+              p_population_n: number
+              p_response_rate: number
+              p_results: Json
+              p_sample_n: number
+            }
+            Returns: undefined
+          }
+      upsert_pipeline_secret: {
         Args: {
-          p_analysis_run_id: string
-          p_analytics: Json
-          p_campaign_id: string
-          p_margin_of_error: number
-          p_population_n: number
-          p_response_rate: number
-          p_results: Json
-          p_sample_n: number
+          secret_description?: string
+          secret_name: string
+          secret_value: string
         }
-        Returns: undefined
+        Returns: string
       }
     }
     Enums: {
@@ -1916,9 +2010,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       campaign_status: ["draft", "active", "closed", "archived"],

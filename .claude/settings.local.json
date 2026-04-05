@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh run:*)",
+      "Bash(git add:*)",
+      "Bash(find /Users/ulisesgonzalez/Documents/GitHub/climalab/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(grep:*)",
+      "Bash(grep -A 30 \"CFA\\\\|HLM\\\\|invariance\\\\|Card\" /Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/\\\\\\(dashboard\\\\\\)/campaigns/[id]/results/technical/page.tsx)",
+      "Bash(wc:*)",
+      "Bash(grep -n \"CFI\\\\|RMSEA\\\\|CFA\\\\|HLM\\\\|ICC\\\\|Invariance\" /Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/\\\\\\(dashboard\\\\\\)/campaigns/[id]/results/technical/page.tsx)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(cat \"/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/\\(dashboard\\)/campaigns/[id]/results/technical/page.tsx\")",
+      "Bash(ls -la /Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/\\\\\\(dashboard\\\\\\)/campaigns/[id\\\\\\)/)",
+      "Bash(ls -la \"/Users/ulisesgonzalez/Documents/GitHub/climalab/src/app/\\(dashboard\\)/campaigns\")"
+    ]
+  }
+}

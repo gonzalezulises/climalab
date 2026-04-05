@@ -10,7 +10,7 @@ export async function checkAiRateLimit(
     data: { user },
   } = await supabase.auth.getUser();
 
-  const rl = rateLimit(`${keyPrefix}:${user?.id ?? "anon"}`, {
+  const rl = await rateLimit(`${keyPrefix}:${user?.id ?? "anon"}`, {
     limit: limitPerMin,
     windowMs: 60_000,
   });

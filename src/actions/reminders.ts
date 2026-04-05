@@ -16,7 +16,7 @@ export async function sendReminders(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const rl = rateLimit(`reminder:${user?.id ?? "anon"}`, { limit: 5, windowMs: 60_000 });
+  const rl = await rateLimit(`reminder:${user?.id ?? "anon"}`, { limit: 5, windowMs: 60_000 });
   if (!rl.success) {
     return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
   }

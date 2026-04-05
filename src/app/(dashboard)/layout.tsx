@@ -4,6 +4,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
 
+const ADMIN_ROLES = ["super_admin", "org_admin"] as const;
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
@@ -15,6 +17,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+  if (!profile || !ADMIN_ROLES.includes(profile.role as (typeof ADMIN_ROLES)[number])) {
+    redirect("/login");
+  }
 
   return (
     <SidebarProvider>

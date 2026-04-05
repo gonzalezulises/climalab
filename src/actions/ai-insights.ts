@@ -20,7 +20,18 @@ import { replaceCampaignAiEvidence } from "@/lib/excellence/store";
 import { getAiProviderMetadata, hasConfiguredAiProvider } from "@/lib/ai/provider";
 import { checkAiRateLimit } from "@/lib/ai/rate-limit";
 import { getCampaignHLM, getCampaignInvariance } from "@/actions/statistical-validation";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { env } from "@/lib/env";
 import { CATEGORY_LABELS } from "@/lib/constants";
+import {
+  analyticsAlertSchema,
+  analyticsCategorySchema,
+  analyticsDriverSchema,
+  analyticsHlmSchema,
+  analyticsInvarianceGroupSchema,
+  parseAnalyticsArray,
+  parseAnalyticsObject,
+} from "@/lib/validations/analytics";
 import type { ActionResult } from "@/types";
 
 export type CommentAnalysis = CommentAnalysisContract;
@@ -29,6 +40,20 @@ export type DriverInsights = DriverInsightsContract;
 export type AlertContext = AlertContextContract;
 export type SegmentProfiles = SegmentProfilesContract;
 export type TrendsNarrative = TrendsNarrativeContract;
+
+/** Safely extract dimension_name from an opaque JSONB metadata field. */
+function getDimensionName(metadata: unknown, fallback: string | null): string {
+  if (
+    metadata !== null &&
+    typeof metadata === "object" &&
+    !Array.isArray(metadata) &&
+    "dimension_name" in metadata
+  ) {
+    const name = (metadata as Record<string, unknown>).dimension_name;
+    if (typeof name === "string") return name;
+  }
+  return fallback ?? "";
+}
 
 async function buildStatisticalContext(campaignId: string): Promise<string> {
   const parts: string[] = [];
@@ -39,10 +64,8 @@ async function buildStatisticalContext(campaignId: string): Promise<string> {
   ]);
 
   if (hlmResult.success && hlmResult.data) {
-    const hlm = hlmResult.data as {
-      dimensions?: Array<{ code: string; icc: number; icc_label: string }>;
-    };
-    const highIcc = hlm.dimensions?.filter((d) => d.icc_label === "alto") ?? [];
+    const hlm = parseAnalyticsObject(analyticsHlmSchema, hlmResult.data);
+    const highIcc = hlm?.dimensions?.filter((d) => d.icc_label === "alto") ?? [];
     if (highIcc.length > 0) {
       parts.push(
         `CONTEXTO ESTADÍSTICO (HLM): Las siguientes dimensiones presentan alta varianza entre departamentos (ICC alto): ${highIcc.map((d) => `${d.code} (ICC=${d.icc.toFixed(3)})`).join(", ")}. Esto indica que la percepción de estas dimensiones varía significativamente según el departamento.`
@@ -51,11 +74,9 @@ async function buildStatisticalContext(campaignId: string): Promise<string> {
   }
 
   if (invarianceResult.success && invarianceResult.data.length > 0) {
-    const failures = (
-      invarianceResult.data as Array<{
-        grouping_variable?: string;
-        levels?: Array<{ level: string; passed: boolean }>;
-      }>
+    const failures = parseAnalyticsArray(
+      analyticsInvarianceGroupSchema,
+      invarianceResult.data
     ).filter((g) => g.levels?.some((l) => !l.passed));
 
     if (failures.length > 0) {
@@ -188,7 +209,7 @@ export async function generateNarrative(
     .filter((r) => r.result_type === "dimension")
     .map((r) => ({
       code: r.dimension_code,
-      name: (r.metadata as { dimension_name?: string })?.dimension_name ?? r.dimension_code,
+      name: getDimensionName(r.metadata, r.dimension_code),
       avg: Number(r.avg_score),
       fav: Number(r.favorability_pct),
     }))
@@ -196,14 +217,14 @@ export async function generateNarrative(
 
   const engagement = results.find((r) => r.result_type === "engagement");
   const enps = results.find((r) => r.result_type === "enps");
-  const alertsRaw = analytics.find((a) => a.analysis_type === "alerts")?.data;
-  const alertsArr = Array.isArray(alertsRaw)
-    ? (alertsRaw as Array<{ severity: string; message: string }>)
-    : [];
-  const categoriesRaw = analytics.find((a) => a.analysis_type === "categories")?.data;
-  const categoriesArr = Array.isArray(categoriesRaw)
-    ? (categoriesRaw as Array<{ category: string; avg_score: number; favorability_pct: number }>)
-    : [];
+  const alertsArr = parseAnalyticsArray(
+    analyticsAlertSchema,
+    analytics.find((a) => a.analysis_type === "alerts")?.data
+  );
+  const categoriesArr = parseAnalyticsArray(
+    analyticsCategorySchema,
+    analytics.find((a) => a.analysis_type === "categories")?.data
+  );
 
   const userContent = `Datos de la encuesta de clima organizacional:
 
@@ -289,12 +310,12 @@ export async function interpretDrivers(
       .eq("segment_type", "global"),
   ]);
 
-  const drivers = (driversRes.data?.data ?? []) as Array<{ code: string; name: string; r: number }>;
+  const drivers = parseAnalyticsArray(analyticsDriverSchema, driversRes.data?.data);
   const dimensions = (resultsRes.data ?? [])
     .filter((row) => row.dimension_code)
     .map((row) => ({
       code: row.dimension_code!,
-      name: ((row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code)!,
+      name: getDimensionName(row.metadata, row.dimension_code),
       avgScore: Number(row.avg_score),
     }));
 
@@ -345,13 +366,7 @@ export async function contextualizeAlerts(
     .eq("analysis_type", "alerts")
     .single();
 
-  const alerts = (data?.data ?? []) as Array<{
-    severity: string;
-    message: string;
-    type: string;
-    value: number;
-    threshold: number;
-  }>;
+  const alerts = parseAnalyticsArray(analyticsAlertSchema, data?.data);
   if (alerts.length === 0) {
     return { success: false, error: "No hay alertas" };
   }
@@ -412,7 +427,7 @@ export async function profileSegments(
     .filter((row) => row.dimension_code)
     .map((row) => ({
       code: row.dimension_code!,
-      name: ((row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code)!,
+      name: getDimensionName(row.metadata, row.dimension_code),
     }));
 
   for (const row of globalData) {
@@ -431,8 +446,7 @@ export async function profileSegments(
     const [segType, segKey] = key.split("|");
     userContent += `SEGMENTO: ${segKey} (${segType})\n`;
     for (const row of rows) {
-      const dimName =
-        (row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code;
+      const dimName = getDimensionName(row.metadata, row.dimension_code);
       const global = globalScores.get(row.dimension_code!) ?? 0;
       const diff = Number(row.avg_score) - global;
       userContent += `  ${dimName} (${row.dimension_code}): ${Number(row.avg_score).toFixed(2)} (global: ${global.toFixed(2)}, delta: ${diff > 0 ? "+" : ""}${diff.toFixed(2)})\n`;
@@ -496,8 +510,7 @@ export async function generateTrendsNarrative(
 
     userContent += `CAMPAÑA: ${campaign.name} (${campaign.ends_at ?? "sin fecha"})\n`;
     for (const row of results ?? []) {
-      const dimName =
-        (row.metadata as { dimension_name?: string })?.dimension_name ?? row.dimension_code;
+      const dimName = getDimensionName(row.metadata, row.dimension_code);
       if (row.dimension_code) {
         dimensions.set(row.dimension_code, {
           code: row.dimension_code,
@@ -527,16 +540,23 @@ export async function generateTrendsNarrative(
   return { success: true, data: result.data.content as TrendsNarrative };
 }
 
-export async function generateAllInsights(campaignId: string): Promise<
-  ActionResult<{
-    comment_analysis: boolean;
-    dashboard_narrative: boolean;
-    driver_insights: boolean;
-    alert_context: boolean;
-    segment_profiles: boolean;
-    trends_narrative: boolean;
-  }>
-> {
+const ALL_INSIGHT_TYPES = [
+  "comment_analysis",
+  "dashboard_narrative",
+  "driver_insights",
+  "alert_context",
+  "segment_profiles",
+  "trends_narrative",
+] as const;
+
+// ---------------------------------------------------------------------------
+// generateAllInsights
+// When AI_INSIGHT_HOOK_SECRET is configured → background jobs via pg_net.
+// Otherwise → synchronous fallback (dev mode / no Vault secrets set).
+// ---------------------------------------------------------------------------
+export async function generateAllInsights(
+  campaignId: string
+): Promise<ActionResult<{ batch_id: string; job_count: number } | { synced: true }>> {
   if (!hasConfiguredAiProvider()) {
     return {
       success: false,
@@ -551,9 +571,36 @@ export async function generateAllInsights(campaignId: string): Promise<
   const organizationId = await getCampaignOrganizationId(campaignId);
   if (!organizationId) return { success: false, error: "Campaña no encontrada" };
 
+  // Background mode: insert jobs and let pg_net dispatch Vercel invocations.
+  if (env.AI_INSIGHT_HOOK_SECRET) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const batchId = crypto.randomUUID();
+    const admin = createAdminClient();
+
+    const rows = ALL_INSIGHT_TYPES.map((insightType) => ({
+      campaign_id: campaignId,
+      organization_id: organizationId,
+      batch_id: batchId,
+      insight_type: insightType,
+      created_by: user?.id ?? null,
+    }));
+
+    const { error } = await admin.from("ai_insight_jobs" as never).insert(rows as never);
+    if (error) {
+      return { success: false, error: `Error al encolar jobs: ${error.message}` };
+    }
+
+    return { success: true, data: { batch_id: batchId, job_count: rows.length } };
+  }
+
+  // Synchronous fallback (dev mode — no pg_net / Vault secrets configured).
   const statContext = await buildStatisticalContext(campaignId);
 
-  const [comments, narrative, drivers, alerts, segments, trends] = await Promise.all([
+  const results = await Promise.all([
     analyzeComments(campaignId),
     generateNarrative(campaignId, statContext),
     interpretDrivers(campaignId, statContext),
@@ -562,17 +609,109 @@ export async function generateAllInsights(campaignId: string): Promise<
     generateTrendsNarrative(organizationId, campaignId),
   ]);
 
+  const firstFailure = results.find((r) => !r.success);
+  if (firstFailure && !firstFailure.success) {
+    return { success: false, error: firstFailure.error };
+  }
+
+  return { success: true, data: { synced: true } };
+}
+
+// ---------------------------------------------------------------------------
+// getInsightJobStatus — polling endpoint for the progress UI.
+// ---------------------------------------------------------------------------
+export type InsightJobStatus = {
+  insight_type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message: string | null;
+  attempt_count: number;
+};
+
+export type InsightBatchStatus = {
+  jobs: InsightJobStatus[];
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  processing: number;
+  is_done: boolean;
+};
+
+export async function getInsightJobStatus(
+  batchId: string
+): Promise<ActionResult<InsightBatchStatus>> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("ai_insight_jobs" as never)
+    .select("insight_type, status, error_message, attempt_count")
+    .eq("batch_id", batchId);
+
+  if (error) return { success: false, error: error.message };
+
+  const jobs = (data ?? []) as InsightJobStatus[];
+  const completed = jobs.filter((j) => j.status === "completed").length;
+  const failed = jobs.filter((j) => j.status === "failed").length;
+  const pending = jobs.filter((j) => j.status === "pending").length;
+  const processing = jobs.filter((j) => j.status === "processing").length;
+
   return {
     success: true,
     data: {
-      comment_analysis: comments.success,
-      dashboard_narrative: narrative.success,
-      driver_insights: drivers.success,
-      alert_context: alerts.success,
-      segment_profiles: segments.success,
-      trends_narrative: trends.success,
+      jobs,
+      total: jobs.length,
+      completed,
+      failed,
+      pending,
+      processing,
+      is_done: jobs.length > 0 && completed + failed === jobs.length,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// retryFailedInsights — resets failed jobs to pending (trigger re-fires).
+// ---------------------------------------------------------------------------
+export async function retryFailedInsights(batchId: string): Promise<ActionResult<number>> {
+  const admin = createAdminClient();
+
+  // Read failed jobs first
+  const { data: failed, error: readError } = await admin
+    .from("ai_insight_jobs" as never)
+    .select("campaign_id, organization_id, insight_type, created_by")
+    .eq("batch_id", batchId)
+    .eq("status", "failed");
+
+  if (readError) return { success: false, error: readError.message };
+  if (!failed || (failed as unknown[]).length === 0) return { success: true, data: 0 };
+
+  // Delete failed rows — new inserts re-trigger dispatch_ai_insight_job()
+  const { error: deleteError } = await admin
+    .from("ai_insight_jobs" as never)
+    .delete()
+    .eq("batch_id", batchId)
+    .eq("status", "failed");
+
+  if (deleteError) return { success: false, error: deleteError.message };
+
+  const rows = (
+    failed as Array<{
+      campaign_id: string;
+      organization_id: string;
+      insight_type: string;
+      created_by: string | null;
+    }>
+  ).map((j) => ({
+    campaign_id: j.campaign_id,
+    organization_id: j.organization_id,
+    batch_id: batchId,
+    insight_type: j.insight_type,
+    created_by: j.created_by,
+  }));
+
+  const { error: insertError } = await admin.from("ai_insight_jobs" as never).insert(rows as never);
+
+  if (insertError) return { success: false, error: insertError.message };
+  return { success: true, data: rows.length };
 }
 
 export async function getCommentAnalysis(

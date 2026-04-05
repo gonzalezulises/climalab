@@ -1,46 +1,37 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+
 /**
- * In-memory sliding-window rate limiter.
- * No external dependencies (no Redis).
+ * Persistent sliding-window rate limiter backed by Supabase.
+ * Works correctly across Vercel serverless cold starts, unlike an in-memory Map.
+ *
+ * Fails open (allows the request) if the Supabase call errors, so a DB
+ * hiccup never blocks legitimate traffic.
  */
-
-const store = new Map<string, number[]>();
-
-// Periodic cleanup of expired entries (every 60s)
-let cleanupScheduled = false;
-
-function scheduleCleanup() {
-  if (cleanupScheduled) return;
-  cleanupScheduled = true;
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, timestamps] of store) {
-      const filtered = timestamps.filter((t) => now - t < 120_000);
-      if (filtered.length === 0) {
-        store.delete(key);
-      } else {
-        store.set(key, filtered);
-      }
-    }
-  }, 60_000).unref?.();
-}
-
-export function rateLimit(
+export async function rateLimit(
   key: string,
   opts: { limit: number; windowMs: number }
-): { success: boolean; remaining: number } {
-  scheduleCleanup();
+): Promise<{ success: boolean; remaining: number }> {
+  try {
+    const supabase = createAdminClient();
 
-  const now = Date.now();
-  const windowStart = now - opts.windowMs;
+    // check_rate_limit is a custom SECURITY DEFINER RPC not in the generated Database types.
+    const { data, error } = await (supabase as ReturnType<typeof createAdminClient>).rpc(
+      "check_rate_limit" as never,
+      {
+        p_key: key,
+        p_limit: opts.limit,
+        p_window_ms: opts.windowMs,
+      } as never
+    );
 
-  const timestamps = (store.get(key) ?? []).filter((t) => t > windowStart);
+    if (error) {
+      console.error("[rate-limit] RPC error:", error.message);
+      return { success: true, remaining: opts.limit };
+    }
 
-  if (timestamps.length >= opts.limit) {
-    store.set(key, timestamps);
-    return { success: false, remaining: 0 };
+    return data as { success: boolean; remaining: number };
+  } catch (err) {
+    console.error("[rate-limit] Unexpected error:", err);
+    return { success: true, remaining: opts.limit };
   }
-
-  timestamps.push(now);
-  store.set(key, timestamps);
-  return { success: true, remaining: opts.limit - timestamps.length };
 }

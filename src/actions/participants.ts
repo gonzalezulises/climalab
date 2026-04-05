@@ -195,7 +195,7 @@ export async function sendInvitations(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const rl = rateLimit(`invite:${user?.id ?? "anon"}`, { limit: 10, windowMs: 60_000 });
+  const rl = await rateLimit(`invite:${user?.id ?? "anon"}`, { limit: 10, windowMs: 60_000 });
   if (!rl.success) {
     return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
   }

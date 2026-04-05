@@ -105,7 +105,7 @@ export async function calculateResults(
   } = await supabase.auth.getUser();
 
   if (user) {
-    const rateLimitResult = rateLimit(`calc:${user.id}`, { limit: 3, windowMs: 60_000 });
+    const rateLimitResult = await rateLimit(`calc:${user.id}`, { limit: 3, windowMs: 60_000 });
     if (!rateLimitResult.success) {
       return { success: false, error: "Demasiadas solicitudes. Intente en un momento." };
     }
