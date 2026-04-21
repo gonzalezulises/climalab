@@ -25,6 +25,6 @@ Instrumento completo organizado por categorías y módulos opcionales.
 
 | Componente         | Dimensiones | Ítems                        |
 | ------------------ | ----------- | ---------------------------- |
-| Core v4.0          | 22          | 109 + 2 verificaciones = 111 |
+| Core v4.0          | 22          | 107 + 2 verificaciones = 109 |
 | Módulos opcionales | 3           | 16                           |
-| **Total**          | **25**      | **127**                      |
+| **Total**          | **25**      | **125**                      |

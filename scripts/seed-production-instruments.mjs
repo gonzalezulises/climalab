@@ -3,7 +3,7 @@
  * Seed Production Instruments
  *
  * Replaces old v3 instrument data (6 dimensions) with full v4.0 instrument:
- * - 22 Core dimensions + 111 items (109 regular + 2 attention checks)
+ * - 22 Core dimensions + 109 items (107 regular + 2 attention checks)
  * - 22 Pulso dimensions + 22 anchor items
  * - 3 Module dimensions + 16 items (already exist but re-inserted for safety)
  *
@@ -106,7 +106,7 @@ const MODULE_DIMENSIONS = [
 ];
 
 // ============================================================
-// Core Items v4.0 (111 total: 109 regular + 2 attention checks)
+// Core Items v4.0 (109 total: 107 regular + 2 attention checks)
 // ============================================================
 const CORE_ITEMS = [
   // ORG (4 items)
@@ -370,7 +370,7 @@ async function main() {
   // Step 4: Update instruments (ensure instrument_type is set)
   console.log("\nStep 4: Updating instruments...");
   const instruments = [
-    { id: CORE_ID, name: "ClimaLab Core", slug: "climalab-core", description: "Instrumento completo de medición de clima organizacional. 22 dimensiones en 4 categorías + Engagement, ~109 ítems + 2 verificaciones de atención. Diseño basado en evidencia psicométrica.", mode: "full", target_size: "all", version: "4.0", instrument_type: "base" },
+    { id: CORE_ID, name: "ClimaLab Core", slug: "climalab-core", description: "Instrumento completo de medición de clima organizacional. 22 dimensiones en 4 categorías + Engagement, 107 ítems + 2 verificaciones de atención. Diseño basado en evidencia psicométrica.", mode: "full", target_size: "all", version: "4.0", instrument_type: "base" },
     { id: PULSO_ID, name: "ClimaLab Pulso", slug: "climalab-pulso", description: "Instrumento de pulso para seguimiento frecuente. 1 ítem ancla por dimensión = 22 ítems.", mode: "pulse", target_size: "all", version: "4.0", instrument_type: "base" },
     { id: CAM_ID, name: "Módulo: Gestión del Cambio", slug: "modulo-gestion-cambio", description: "Módulo opcional de 8 ítems para evaluar la disposición y actitud frente al cambio organizacional.", mode: "full", target_size: "all", version: "1.0", instrument_type: "module" },
     { id: CLI_ID, name: "Módulo: Orientación al Cliente", slug: "modulo-orientacion-cliente", description: "Módulo opcional de 4 ítems para evaluar el enfoque y compromiso organizacional con el cliente.", mode: "full", target_size: "all", version: "1.0", instrument_type: "module" },

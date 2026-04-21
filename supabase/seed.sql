@@ -48,7 +48,7 @@ VALUES (
   'b0000000-0000-0000-0000-000000000001',
   'ClimaLab Core',
   'climalab-core',
-  'Instrumento completo de medición de clima organizacional. 22 dimensiones en 4 categorías + Engagement, ~109 ítems + 2 verificaciones de atención. Diseño basado en evidencia psicométrica.',
+  'Instrumento completo de medición de clima organizacional. 22 dimensiones en 4 categorías + Engagement, 107 ítems + 2 verificaciones de atención. Diseño basado en evidencia psicométrica.',
   'full',
   'all',
   '4.0'
@@ -193,7 +193,7 @@ INSERT INTO dimensions (id, instrument_id, name, code, description, sort_order, 
 
 -- ============================================================
 -- 5. Items — ClimaLab Core v4.0 (corrected)
---    109 ítems regulares + 2 attention checks = 111 total
+--    107 ítems regulares + 2 attention checks = 109 total
 --    Cada dimensión: 1 anchor (is_anchor=true), 1 reverse (is_reverse=true)
 -- ============================================================
 

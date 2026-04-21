@@ -1,6 +1,6 @@
 # ClimaLab Core v4.0 — Preguntas por Dimensión
 
-Instrumento completo: **109 ítems regulares + 2 verificaciones de atención = 111 total**
+Instrumento completo: **107 ítems regulares + 2 verificaciones de atención = 109 total**
 Escala: Likert 1–5 (Totalmente en desacuerdo → Totalmente de acuerdo)
 
 Leyenda:
@@ -372,8 +372,8 @@ Al final de la encuesta, se presentan 3 preguntas de texto libre:
 | Cultura                    | 5 (COH, INN, RES, DES, APR)      | 25                |
 | Engagement                 | 1 (ENG)                          | 5                 |
 | Verificaciones de atención | —                                | 2                 |
-| **Total Core**             | **22**                           | **109 + 2 = 111** |
+| **Total Core**             | **22**                           | **107 + 2 = 109** |
 | Módulo CAM                 | 1                                | 8                 |
 | Módulo CLI                 | 1                                | 4                 |
 | Módulo DIG                 | 1                                | 4                 |
-| **Total con módulos**      | **25**                           | **127**           |
+| **Total con módulos**      | **25**                           | **125**           |
