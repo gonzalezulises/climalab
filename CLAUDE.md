@@ -25,19 +25,20 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `src/app/survey/[token]/` — Public anonymous survey experience
 - `src/components/ui/` — shadcn/ui components
 - `src/components/layout/` — Layout components (sidebar, header, nav-user)
-- `src/components/results/` — 22 reusable chart components for results module
+- `src/components/results/` — 22 reusable chart components for results module; includes `ai-insight-progress.tsx` (polling component for background job status)
 - `src/components/branding/` — LogoUpload and BrandConfigEditor components
 - `src/lib/supabase/` — Supabase client utilities (client.ts, server.ts, middleware.ts)
-- `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator)
+- `src/lib/validations/` — Zod schemas (organization, instrument, campaign, business-indicator, **survey**, **analytics**)
 - `src/lib/constants.ts` — Roles, size categories, countries, instrument modes, indicator types, analysis levels, DEFAULT_BRAND_CONFIG
 - `src/lib/score-utils.ts` — Centralized score classification (classifyFavorability, favToHex, SEVERITY_LABELS) with Rizoma-aligned colors
 - `src/lib/statistics.ts` — Pure statistical functions (mean, stdDev, rwg, cronbachAlpha, pearson, welchTTest, welchTTestFromStats, bootstrapCI, cohensD, segmentSignificance)
 - `src/lib/email.ts` — Multi-type branded email sender (Resend)
 - `src/lib/env.ts` — Zod-validated environment variables
-- `src/lib/rate-limit.ts` — Rate limiting utility
+- `src/lib/rate-limit.ts` — Persistent sliding-window rate limiter backed by Supabase (`rate_limit_log` table via `check_rate_limit()` RPC). Works across Vercel cold starts.
+- `src/app/api/jobs/process-ai-insight/route.ts` — Background job processor endpoint (maxDuration=300, atomic claim via RPC, routes to ai-insights actions)
 - `src/actions/` — Server Actions (auth, organizations, instruments, campaigns, analytics, business-indicators, ai-insights, ona, export, reminders, participants, statistical-validation)
 - `src/types/` — Database types (generated) and derived types (BrandConfig)
-- `supabase/migrations/` — SQL migrations (20 files)
+- `supabase/migrations/` — SQL migrations (42 files, 000001–000042)
 - `supabase/seed.sql` — Demo data + ClimaLab Core v4.0 instrument (~24K lines, includes module responses)
 - `scripts/generate-demo-seed.mjs` — Seeded PRNG (mulberry32) for reproducible demo data
 - `scripts/seed-results.ts` — Post-seed script to calculate analytics for demo campaigns (includes wave comparison enrichment)
@@ -47,6 +48,7 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `docs/ROADMAP.md` — Product roadmap (horizons 1-3)
 - `.github/workflows/ci.yml` — CI/CD pipeline
 - `vitest.config.ts` — Test configuration
+- `tsconfig.test.json` — TypeScript config for test files (extends main, includes `__tests__/**/*.ts` and `*.test.ts`); run with `npm run typecheck:test`
 - `testing-agent/` — Standalone CLI tool for end-to-end pipeline testing (own package.json, tsx runner)
 
 ## Database Schema
@@ -70,6 +72,11 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - `campaign_analytics` — Advanced analytics as JSONB (correlations, drivers, alerts, categories, reliability, AI insights, ONA)
 - `business_indicators` — Objective business metrics per campaign (turnover, absenteeism, NPS, etc.)
 
+### Infrastructure
+
+- `rate_limit_log(key text PK, timestamps timestamptz[], updated_at)` — Persistent sliding-window rate limit state shared across all Vercel instances. RLS deny-all; accessed only via `check_rate_limit()`, `record_circuit_failure()`, `is_circuit_open()` SECURITY DEFINER RPCs.
+- `ai_insight_jobs(id uuid PK, campaign_id, organization_id, batch_id uuid, insight_type, status CHECK('pending'|'processing'|'completed'|'failed'), attempt_count, max_attempts, error_message, started_at, completed_at, created_by, created_at)` — Background AI insight job queue. UNIQUE (batch_id, insight_type). INSERT fires `dispatch_ai_insight_job()` trigger → pg_net HTTP POST to Vercel. `claim_ai_insight_job(p_job_id)` does atomic FOR UPDATE claim with stale-lock recovery.
+
 ### Storage
 
 - `org-assets` — Supabase Storage bucket for organization logos (public read, authenticated upload, 2MiB limit, image mime types)
@@ -80,12 +87,17 @@ Product of Rizo.ma consulting (Panama). Target: LATAM SMEs.
 - **Build order**: SQL migrations → TS types → Server Actions → UI
 - **RLS**: `get_user_role()`, `get_user_org_id()` with `SECURITY DEFINER`
 - **Auth**: Magic link (Supabase Inbucket at localhost:54324 in dev)
+- **Role gate**: `src/app/(dashboard)/layout.tsx` checks `ADMIN_ROLES = ["super_admin","org_admin"]` — `member` role is rejected even with valid session
 - **Survey**: Supabase anon client (no auth), localStorage backup with recovery
 - **PII separation**: `participants` table (name/email) separate from `respondents` (anonymous)
 - **Anonymity**: Segments with < 5 respondents not reported
 - **Attention checks**: 2 per instrument, failing any = disqualified
 - **Reverse items**: Inverted (6 - score) before calculations
-- **Vercel timeout**: `maxDuration = 300` in results layout (72B model needs 30-120s)
+- **Rate limiter**: Persistent sliding-window backed by `rate_limit_log` table via `check_rate_limit()` RPC. Works across Vercel cold starts and parallel instances. `src/lib/rate-limit.ts` is async — all call sites must `await`.
+- **Background AI jobs**: `generateAllInsights()` inserts 6 rows in `ai_insight_jobs`; `dispatch_ai_insight_job()` pg_net trigger fires independent Vercel invocations (maxDuration=300 each). Sync fallback if `AI_INSIGHT_HOOK_SECRET` not set. Frontend polls via `<AiInsightProgress>` every 4s.
+- **Circuit breaker (Statistical API)**: Sliding window 5 min / threshold 3 using `rate_limit_log`. On trip: Telegram alert via Bot API. `src/actions/statistical-validation.ts` — retry delays 0/1.5s/4.5s, fail-closed (returns error to caller, never propagates raw API body).
+- **JSONB safety**: All `campaign_analytics.data` reads go through `parseAnalyticsArray` / `parseAnalyticsObject` in `src/lib/validations/analytics.ts`. Invalid items warn in structured JSON log, never crash.
+- **Vercel timeout**: `maxDuration = 300` in results layout and AI job processor (72B model needs 30-120s)
 - **Design system**: Rizo.ma — Inter (body) + Source Serif 4 (headings), Green #289448, Cyan #1FACC0, Red #C32421
 
 ## Statistical Methods
@@ -193,7 +205,13 @@ If none is configured, AI buttons show a clear error message in Spanish. All ins
 | `segment_profiles`    | Segments  | Per-segment narrative with strengths/risks                          |
 | `trends_narrative`    | Trends    | Trajectory, improving/declining/stable dims, inflection points      |
 
-**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (triple backend dispatcher), `callOpenAI` (OpenAI API), `callAnthropic` (Anthropic Messages API), `callOllamaNative` (Ollama), 6 generation functions, 6 retrieval functions, and 1 orchestrator (`generateAllInsights`). The orchestrator runs all 5 campaign-level analyses in parallel with fail-fast: if no AI provider is configured, it returns an error immediately instead of silently succeeding with empty data. Dashboard has a single "Generar insights IA" button that triggers the orchestrator. Export page generates a downloadable text executive report combining all AI insights. Results layout exports `maxDuration = 300` for Vercel serverless timeout (72B model needs 30-120s per analysis).
+**Architecture**: `src/actions/ai-insights.ts` contains `callAI` (triple backend dispatcher), `callOpenAI`, `callAnthropic`, `callOllamaNative`, 6 generation functions, 6 retrieval functions, and 3 orchestration helpers:
+
+- `generateAllInsights(campaignId, orgId)` — **Background mode** (when `AI_INSIGHT_HOOK_SECRET` set): inserts 6 rows in `ai_insight_jobs`, returns `{ batch_id, job_count: 6 }`. **Sync fallback**: runs all 6 in parallel, returns first error or `{ synced: true }`.
+- `getInsightJobStatus(batchId)` — Returns per-insight status + `is_done` flag. Used by `<AiInsightProgress>` polling component.
+- `retryFailedInsights(batchId)` — DELETEs failed rows then INSERTs new ones (re-triggers pg_net dispatch).
+
+All JSONB reads from `campaign_analytics.data` use `parseAnalyticsArray` / `parseAnalyticsObject` from `src/lib/validations/analytics.ts` — no more raw `as Array<...>` casts. Dashboard renders `<AiInsightProgress batchId={...} onDone={...}>` when background mode is active. Export page generates downloadable text executive report combining all AI insights. Results layout and job processor both export `maxDuration = 300`.
 
 ## Instrument: ClimaLab Core v4.0
 
@@ -281,3 +299,9 @@ Optional (AI — at least one required for AI insights):
 - `ANTHROPIC_API_KEY` — Anthropic API key for Claude Haiku 4.5. **Secondary provider** (~2-5s).
 - `ANTHROPIC_MODEL` — Anthropic model name (default: `claude-haiku-4-5-20251001`)
 - `OLLAMA_BASE_URL` — Ollama server URL (tertiary/local provider, e.g., `http://localhost:11434` or DGX via Tailscale)
+
+Optional (Background AI jobs + Alerting):
+
+- `AI_INSIGHT_HOOK_SECRET` — Shared secret for `x-hook-secret` header on `/api/jobs/process-ai-insight`. **If set in production, required** — endpoint returns 401 without it. If absent, `generateAllInsights` falls back to sync execution.
+- `TELEGRAM_BOT_TOKEN` — Telegram Bot API token for circuit breaker alerts. If absent, alerting is silently skipped.
+- `TELEGRAM_ALERT_CHAT_ID` — Chat ID to send alerts to (matches `TELEGRAM_BOT_TOKEN` bot).
