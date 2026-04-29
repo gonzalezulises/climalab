@@ -1,0 +1,1063 @@
+{
+  "meta": {
+    "client": "Electrisa",
+    "instrument": "ClimaLab Core v4.0",
+    "version": "1.0",
+    "language": "es",
+    "tally_form_id": "kdRj8R",
+    "tally_editor_url": "https://tally.so/forms/kdRj8R/edit",
+    "tally_public_url": "https://tally.so/r/kdRj8R",
+    "status": "DRAFT",
+    "note": "Encuesta de prueba. 107 ítems + 2 verificaciones de atención + 3 preguntas abiertas + eNPS. 4 preguntas demográficas. Escala Likert 1–5."
+  },
+  "title": "ClimaLab — Electrisa",
+  "description": "Encuesta anónima de clima organizacional. Tiempo estimado: 20 minutos.",
+  "welcome": {
+    "heading": "Encuesta de Clima Organizacional",
+    "body": "Tu opinión es confidencial y anónima. Responde con honestidad; no hay respuestas correctas o incorrectas.\n\n- Escala: 1 (Totalmente en desacuerdo) a 5 (Totalmente de acuerdo)\n- Duración estimada: 20 minutos\n- Puedes avanzar a tu ritmo",
+    "button": "Comenzar"
+  },
+  "likertScale": {
+    "type": "likert_1_5",
+    "labels": {
+      "1": "Totalmente en desacuerdo",
+      "2": "En desacuerdo",
+      "3": "Ni de acuerdo ni en desacuerdo",
+      "4": "De acuerdo",
+      "5": "Totalmente de acuerdo"
+    }
+  },
+  "pages": [
+    {
+      "id": "demographics",
+      "title": "Datos demográficos",
+      "subtitle": "Estas preguntas son solo para análisis agregado. No podemos identificarte individualmente.",
+      "blocks": [
+        {
+          "key": "department",
+          "type": "dropdown",
+          "label": "¿En qué departamento trabajas?",
+          "required": true,
+          "target": { "type": "demographic", "meta": "department" },
+          "options": [
+            "ADMINISTRACIÓN",
+            "BODEGA",
+            "CAJA",
+            "CAPITAL HUMANO",
+            "COMPRAS",
+            "CONTABILIDAD",
+            "CRÉDITOS Y COBROS",
+            "ELECTRICAST",
+            "FINANZAS",
+            "GERENCIA",
+            "GERENTE DE SUCURSALES",
+            "I.T.",
+            "PROYECTOS E INDUSTRIAS",
+            "SERVICIO TÉCNICO",
+            "SOLAR",
+            "TRÁFICO Y LOGÍSTICA",
+            "VENTAS"
+          ]
+        },
+        {
+          "key": "branch",
+          "type": "dropdown",
+          "label": "¿En qué sucursal trabajas?",
+          "required": true,
+          "target": { "type": "demographic", "meta": "branch" },
+          "options": [
+            "24 DE DICIEMBRE",
+            "BUGABA",
+            "CACIQUE",
+            "CASA MATRIZ",
+            "CHITRE",
+            "CHORRERA",
+            "COSTA RICA",
+            "DAVID",
+            "INCORSA",
+            "SANTIAGO"
+          ]
+        },
+        {
+          "key": "tenure",
+          "type": "single_choice",
+          "label": "¿Cuánto tiempo llevas en la organización?",
+          "required": true,
+          "target": { "type": "demographic", "meta": "tenure" },
+          "options": ["Menos de 2 años", "De 3 a 5 años", "De 6 a 10 años", "Más de 10 años"]
+        },
+        {
+          "key": "gender",
+          "type": "single_choice",
+          "label": "Género",
+          "required": true,
+          "target": { "type": "demographic", "meta": "gender" },
+          "options": ["femenino", "masculino"]
+        }
+      ]
+    },
+    {
+      "id": "bienestar",
+      "title": "Bienestar",
+      "subtitle": "Cómo te sientes en tu trabajo y entorno. Responde según tu experiencia.",
+      "blocks": [
+        {
+          "key": "item_001",
+          "code": "ORG-1",
+          "dimension": "ORG",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Me siento orgulloso/a de pertenecer a esta organización."
+        },
+        {
+          "key": "item_002",
+          "code": "ORG-2",
+          "dimension": "ORG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Recomendaría esta organización como un buen lugar para trabajar."
+        },
+        {
+          "key": "item_003",
+          "code": "ORG-3",
+          "dimension": "ORG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Los valores de la organización son compatibles con los míos."
+        },
+        {
+          "key": "item_004",
+          "code": "ORG-4",
+          "dimension": "ORG",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Frecuentemente considero buscar empleo en otra organización."
+        },
+        {
+          "key": "item_005",
+          "code": "PRO-1",
+          "dimension": "PRO",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Mi trabajo tiene un propósito claro que me motiva."
+        },
+        {
+          "key": "item_006",
+          "code": "PRO-2",
+          "dimension": "PRO",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Entiendo cómo mi trabajo contribuye a los objetivos de la organización."
+        },
+        {
+          "key": "item_007",
+          "code": "PRO-3",
+          "dimension": "PRO",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las tareas que realizo son significativas y relevantes."
+        },
+        {
+          "key": "item_008",
+          "code": "PRO-4",
+          "dimension": "PRO",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Mi trabajo aporta poco impacto real a la organización."
+        },
+        {
+          "key": "item_094",
+          "code": "PRO-5",
+          "dimension": "PRO",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Siento que mi trabajo contribuye positivamente a la vida de otras personas o a la comunidad."
+        },
+        {
+          "key": "item_009",
+          "code": "SEG-1",
+          "dimension": "SEG",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Me siento seguro/a emocional y psicológicamente en mi lugar de trabajo."
+        },
+        {
+          "key": "item_010",
+          "code": "SEG-2",
+          "dimension": "SEG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización se preocupa genuinamente por mi bienestar."
+        },
+        {
+          "key": "item_011",
+          "code": "SEG-3",
+          "dimension": "SEG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Puedo expresar mis preocupaciones sin temor a represalias."
+        },
+        {
+          "key": "item_012",
+          "code": "SEG-4",
+          "dimension": "SEG",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "En esta organización, cometer un error puede tener consecuencias desproporcionadas."
+        },
+        {
+          "key": "item_085",
+          "code": "SEG-5",
+          "dimension": "SEG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las instalaciones y el entorno físico facilitan un buen ambiente de trabajo."
+        },
+        {
+          "key": "item_013",
+          "code": "BAL-1",
+          "dimension": "BAL",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Puedo mantener un equilibrio saludable entre mi vida personal y laboral."
+        },
+        {
+          "key": "item_014",
+          "code": "BAL-2",
+          "dimension": "BAL",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi carga de trabajo me permite cumplir con mis responsabilidades personales."
+        },
+        {
+          "key": "item_015",
+          "code": "BAL-3",
+          "dimension": "BAL",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización respeta mi tiempo fuera del horario laboral."
+        },
+        {
+          "key": "item_016",
+          "code": "BAL-4",
+          "dimension": "BAL",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Frecuentemente siento que el trabajo invade mi tiempo personal."
+        },
+        {
+          "key": "item_017",
+          "code": "CUI-1",
+          "dimension": "CUI",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "En mi equipo nos apoyamos mutuamente cuando alguien tiene dificultades."
+        },
+        {
+          "key": "item_018",
+          "code": "CUI-2",
+          "dimension": "CUI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización ofrece recursos adecuados para el bienestar de sus empleados."
+        },
+        {
+          "key": "item_019",
+          "code": "CUI-3",
+          "dimension": "CUI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mis compañeros se preocupan genuinamente por mi bienestar."
+        },
+        {
+          "key": "item_020",
+          "code": "CUI-4",
+          "dimension": "CUI",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Cuando tengo un problema personal, me cuesta encontrar apoyo en el trabajo."
+        },
+        {
+          "key": "item_086",
+          "code": "CUI-5",
+          "dimension": "CUI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Confío en la honestidad y buenas intenciones de mis compañeros de trabajo."
+        },
+        {
+          "key": "item_100",
+          "code": "DEM-1",
+          "dimension": "DEM",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Mi carga de trabajo es manejable y razonable."
+        },
+        {
+          "key": "item_101",
+          "code": "DEM-2",
+          "dimension": "DEM",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Los procesos y sistemas de la organización facilitan mi trabajo en lugar de obstaculizarlo."
+        },
+        {
+          "key": "item_102",
+          "code": "DEM-3",
+          "dimension": "DEM",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "La presión por cumplir plazos en mi puesto es excesiva."
+        },
+        {
+          "key": "item_111",
+          "code": "DEM-4",
+          "dimension": "DEM",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Cuento con el tiempo suficiente para realizar mi trabajo con calidad."
+        }
+      ]
+    },
+    {
+      "id": "direccion-supervision",
+      "title": "Dirección y Supervisión",
+      "subtitle": "Tu relación con tu supervisor y la dirección de la organización.",
+      "blocks": [
+        {
+          "key": "item_021",
+          "code": "LID-1",
+          "dimension": "LID",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Mi supervisor me brinda retroalimentación específica que me ayuda a mejorar."
+        },
+        {
+          "key": "item_022",
+          "code": "LID-2",
+          "dimension": "LID",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Puedo acudir a mi supervisor cuando necesito apoyo o tengo una dificultad."
+        },
+        {
+          "key": "item_023",
+          "code": "LID-3",
+          "dimension": "LID",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor demuestra con sus acciones lo que espera del equipo."
+        },
+        {
+          "key": "item_024",
+          "code": "LID-4",
+          "dimension": "LID",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor se interesa genuinamente en mi crecimiento profesional."
+        },
+        {
+          "key": "item_025",
+          "code": "LID-5",
+          "dimension": "LID",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Me cuesta acceder a mi supervisor cuando lo necesito."
+        },
+        {
+          "key": "item_083",
+          "code": "LID-6",
+          "dimension": "LID",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor cumple los compromisos que adquiere con el equipo."
+        },
+        {
+          "key": "item_026",
+          "code": "AUT-1",
+          "dimension": "AUT",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Tengo la libertad de decidir cómo organizar y realizar mi trabajo."
+        },
+        {
+          "key": "item_027",
+          "code": "AUT-2",
+          "dimension": "AUT",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Puedo tomar decisiones importantes relacionadas con mis tareas sin aprobación excesiva."
+        },
+        {
+          "key": "item_028",
+          "code": "AUT-3",
+          "dimension": "AUT",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor confía en mi criterio para resolver problemas."
+        },
+        {
+          "key": "item_029",
+          "code": "AUT-4",
+          "dimension": "AUT",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Siento que me supervisan en exceso, sin permitirme trabajar de forma independiente."
+        },
+        {
+          "key": "item_084",
+          "code": "AUT-5",
+          "dimension": "AUT",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor nos involucra en las decisiones que afectan nuestro trabajo."
+        },
+        {
+          "key": "item_030",
+          "code": "COM-1",
+          "dimension": "COM",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "La comunicación en la organización es clara, oportuna y transparente."
+        },
+        {
+          "key": "item_031",
+          "code": "COM-2",
+          "dimension": "COM",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Tengo acceso a la información que necesito para hacer bien mi trabajo."
+        },
+        {
+          "key": "item_032",
+          "code": "COM-3",
+          "dimension": "COM",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Existen canales efectivos para expresar mis ideas y sugerencias."
+        },
+        {
+          "key": "item_033",
+          "code": "COM-4",
+          "dimension": "COM",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Me entero de decisiones importantes por rumores en lugar de por canales oficiales."
+        },
+        {
+          "key": "item_087",
+          "code": "COM-5",
+          "dimension": "COM",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "En esta organización, dar y recibir retroalimentación constructiva es algo normal y valorado."
+        },
+        {
+          "key": "item_034",
+          "code": "CON-1",
+          "dimension": "CON",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Confío en las decisiones que toma la alta dirección de la organización."
+        },
+        {
+          "key": "item_035",
+          "code": "CON-2",
+          "dimension": "CON",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La dirección actúa de manera coherente con lo que comunica."
+        },
+        {
+          "key": "item_036",
+          "code": "CON-3",
+          "dimension": "CON",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Tengo confianza en la dirección estratégica de la organización."
+        },
+        {
+          "key": "item_037",
+          "code": "CON-4",
+          "dimension": "CON",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "La dirección oculta información sobre la situación real de la organización."
+        },
+        {
+          "key": "item_088",
+          "code": "CON-5",
+          "dimension": "CON",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Todas las personas son tratadas con respeto independientemente de su nivel jerárquico."
+        },
+        {
+          "key": "item_096",
+          "code": "ROL-1",
+          "dimension": "ROL",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Tengo claridad sobre mis responsabilidades y los límites de mi rol."
+        },
+        {
+          "key": "item_097",
+          "code": "ROL-2",
+          "dimension": "ROL",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Sé exactamente lo que se espera de mí en mi puesto de trabajo."
+        },
+        {
+          "key": "item_098",
+          "code": "ROL-3",
+          "dimension": "ROL",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Comprendo cómo mi área contribuye a la dirección estratégica de la organización."
+        },
+        {
+          "key": "item_099",
+          "code": "ROL-4",
+          "dimension": "ROL",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Las expectativas sobre mi desempeño son confusas o contradictorias."
+        },
+        {
+          "key": "item_103",
+          "code": "ROL-5",
+          "dimension": "ROL",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las tareas que realizo corresponden a lo que se espera de mi rol."
+        },
+        {
+          "key": "item_108",
+          "code": "ATT-1",
+          "dimension": null,
+          "is_anchor": false,
+          "is_reverse": false,
+          "is_attention_check": true,
+          "expected": 5,
+          "label": "Para verificar que estás leyendo con atención, selecciona \"Totalmente de acuerdo\"."
+        }
+      ]
+    },
+    {
+      "id": "compensacion",
+      "title": "Compensación",
+      "subtitle": "Cómo percibes tu compensación, reconocimiento y oportunidades.",
+      "blocks": [
+        {
+          "key": "item_038",
+          "code": "CMP-1",
+          "dimension": "CMP",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Considero que mi compensación es justa en relación con mi trabajo y responsabilidades."
+        },
+        {
+          "key": "item_039",
+          "code": "CMP-2",
+          "dimension": "CMP",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi salario es competitivo comparado con posiciones similares en el mercado."
+        },
+        {
+          "key": "item_040",
+          "code": "CMP-3",
+          "dimension": "CMP",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Entiendo claramente cómo se determina mi compensación."
+        },
+        {
+          "key": "item_041",
+          "code": "CMP-4",
+          "dimension": "CMP",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Mi salario es menor a lo que merece el trabajo que realizo."
+        },
+        {
+          "key": "item_042",
+          "code": "REC-1",
+          "dimension": "REC",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Recibo reconocimiento oportuno cuando hago un buen trabajo."
+        },
+        {
+          "key": "item_043",
+          "code": "REC-2",
+          "dimension": "REC",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización valora y celebra los logros de sus empleados."
+        },
+        {
+          "key": "item_044",
+          "code": "REC-3",
+          "dimension": "REC",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Mi supervisor reconoce mis contribuciones al equipo."
+        },
+        {
+          "key": "item_045",
+          "code": "REC-4",
+          "dimension": "REC",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Mi esfuerzo adicional pasa desapercibido en esta organización."
+        },
+        {
+          "key": "item_046",
+          "code": "BEN-1",
+          "dimension": "BEN",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Los beneficios que ofrece la organización responden a mis necesidades."
+        },
+        {
+          "key": "item_047",
+          "code": "BEN-2",
+          "dimension": "BEN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Conozco y aprovecho los beneficios disponibles para mí."
+        },
+        {
+          "key": "item_048",
+          "code": "BEN-3",
+          "dimension": "BEN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización invierte en beneficios que mejoran mi calidad de vida."
+        },
+        {
+          "key": "item_049",
+          "code": "BEN-4",
+          "dimension": "BEN",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Los beneficios de esta organización son inferiores a los de empresas similares."
+        },
+        {
+          "key": "item_050",
+          "code": "EQA-1",
+          "dimension": "EQA",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Los procesos de promoción en la organización son transparentes y justos."
+        },
+        {
+          "key": "item_051",
+          "code": "EQA-2",
+          "dimension": "EQA",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Todos los empleados tienen las mismas oportunidades de desarrollo y ascenso."
+        },
+        {
+          "key": "item_052",
+          "code": "EQA-3",
+          "dimension": "EQA",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las decisiones de promoción se basan en el mérito y desempeño."
+        },
+        {
+          "key": "item_053",
+          "code": "EQA-4",
+          "dimension": "EQA",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "En esta organización, los ascensos dependen más de relaciones que de resultados."
+        },
+        {
+          "key": "item_089",
+          "code": "EQA-5",
+          "dimension": "EQA",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Si considero que he sido tratado/a injustamente, confío en que existe un proceso justo para ser escuchado/a."
+        },
+        {
+          "key": "item_090",
+          "code": "EQA-6",
+          "dimension": "EQA",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "En general, las oportunidades y recompensas se distribuyen de forma justa en relación con el aporte de cada persona."
+        },
+        {
+          "key": "item_054",
+          "code": "NDI-1",
+          "dimension": "NDI",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Las personas son tratadas con justicia independientemente de su edad."
+        },
+        {
+          "key": "item_055",
+          "code": "NDI-2",
+          "dimension": "NDI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las personas son tratadas con justicia independientemente de su raza o etnia."
+        },
+        {
+          "key": "item_056",
+          "code": "NDI-3",
+          "dimension": "NDI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las personas son tratadas con justicia independientemente de su género."
+        },
+        {
+          "key": "item_057",
+          "code": "NDI-4",
+          "dimension": "NDI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las personas son tratadas con justicia independientemente de su orientación sexual."
+        },
+        {
+          "key": "item_058",
+          "code": "NDI-5",
+          "dimension": "NDI",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las personas son tratadas con justicia independientemente de su condición socioeconómica."
+        },
+        {
+          "key": "item_110",
+          "code": "NDI-6",
+          "dimension": "NDI",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "He presenciado situaciones en las que alguien fue tratado de forma diferente por sus características personales."
+        }
+      ]
+    },
+    {
+      "id": "cultura",
+      "title": "Cultura",
+      "subtitle": "Cómo se trabaja y convive en la organización.",
+      "blocks": [
+        {
+          "key": "item_059",
+          "code": "COH-1",
+          "dimension": "COH",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "En mi equipo trabajamos de manera colaborativa para alcanzar los objetivos."
+        },
+        {
+          "key": "item_060",
+          "code": "COH-2",
+          "dimension": "COH",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Existe un fuerte sentido de compañerismo en mi equipo de trabajo."
+        },
+        {
+          "key": "item_061",
+          "code": "COH-3",
+          "dimension": "COH",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Los conflictos en mi equipo se resuelven de manera constructiva."
+        },
+        {
+          "key": "item_062",
+          "code": "COH-4",
+          "dimension": "COH",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "En mi equipo, cada quien trabaja de forma aislada sin colaboración real."
+        },
+        {
+          "key": "item_091",
+          "code": "COH-5",
+          "dimension": "COH",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Cuando alguien se integra al equipo, nos aseguramos de que se sienta bienvenido/a y apoyado/a."
+        },
+        {
+          "key": "item_092",
+          "code": "COH-6",
+          "dimension": "COH",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "En esta organización celebramos los logros y momentos especiales como equipo."
+        },
+        {
+          "key": "item_063",
+          "code": "INN-1",
+          "dimension": "INN",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "En esta organización se fomenta la innovación y las nuevas ideas."
+        },
+        {
+          "key": "item_064",
+          "code": "INN-2",
+          "dimension": "INN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Me siento seguro/a proponiendo ideas nuevas, aunque puedan fallar."
+        },
+        {
+          "key": "item_065",
+          "code": "INN-3",
+          "dimension": "INN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización se adapta eficazmente a los cambios del entorno."
+        },
+        {
+          "key": "item_066",
+          "code": "INN-4",
+          "dimension": "INN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Contamos con herramientas y recursos para implementar mejoras."
+        },
+        {
+          "key": "item_067",
+          "code": "INN-5",
+          "dimension": "INN",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Las nuevas ideas suelen quedar sin implementarse."
+        },
+        {
+          "key": "item_093",
+          "code": "INN-6",
+          "dimension": "INN",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "En mi equipo, expresar una opinión diferente a la mayoría es visto como una contribución valiosa."
+        },
+        {
+          "key": "item_068",
+          "code": "RES-1",
+          "dimension": "RES",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Tengo claridad sobre los objetivos que debo alcanzar en mi puesto."
+        },
+        {
+          "key": "item_069",
+          "code": "RES-2",
+          "dimension": "RES",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Cuento con los recursos necesarios para lograr los resultados esperados."
+        },
+        {
+          "key": "item_070",
+          "code": "RES-3",
+          "dimension": "RES",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Los logros del equipo son reconocidos y compartidos."
+        },
+        {
+          "key": "item_071",
+          "code": "RES-4",
+          "dimension": "RES",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Los objetivos que me piden alcanzar superan los recursos que tengo disponibles."
+        },
+        {
+          "key": "item_112",
+          "code": "RES-5",
+          "dimension": "RES",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "En esta organización, el compromiso con la satisfacción de nuestros clientes o usuarios es claro y compartido."
+        },
+        {
+          "key": "item_072",
+          "code": "DES-1",
+          "dimension": "DES",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "La organización me ofrece oportunidades reales de desarrollo profesional."
+        },
+        {
+          "key": "item_073",
+          "code": "DES-2",
+          "dimension": "DES",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Tengo un plan de carrera claro dentro de la organización."
+        },
+        {
+          "key": "item_074",
+          "code": "DES-3",
+          "dimension": "DES",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Las capacitaciones que recibo son relevantes para mi crecimiento."
+        },
+        {
+          "key": "item_075",
+          "code": "DES-4",
+          "dimension": "DES",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Siento que estoy estancado/a profesionalmente en esta organización."
+        },
+        {
+          "key": "item_104",
+          "code": "APR-1",
+          "dimension": "APR",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "En esta organización aprendemos de nuestros errores y aplicamos esas lecciones para mejorar."
+        },
+        {
+          "key": "item_105",
+          "code": "APR-2",
+          "dimension": "APR",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "El conocimiento y las mejores prácticas se comparten efectivamente entre equipos."
+        },
+        {
+          "key": "item_106",
+          "code": "APR-3",
+          "dimension": "APR",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "La organización invierte en la mejora continua de sus procesos y prácticas."
+        },
+        {
+          "key": "item_107",
+          "code": "APR-4",
+          "dimension": "APR",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Los errores se ocultan en lugar de usarse como oportunidades de mejora."
+        },
+        {
+          "key": "item_109",
+          "code": "ATT-2",
+          "dimension": null,
+          "is_anchor": false,
+          "is_reverse": false,
+          "is_attention_check": true,
+          "expected": 1,
+          "label": "Esta es una pregunta de verificación, selecciona \"Totalmente en desacuerdo\"."
+        }
+      ]
+    },
+    {
+      "id": "engagement",
+      "title": "Engagement y Compromiso",
+      "subtitle": "Tu conexión con tu trabajo y la organización.",
+      "blocks": [
+        {
+          "key": "item_076",
+          "code": "ENG-1",
+          "dimension": "ENG",
+          "is_anchor": true,
+          "is_reverse": false,
+          "label": "Me siento entusiasmado/a con mi trabajo cada día."
+        },
+        {
+          "key": "item_077",
+          "code": "ENG-2",
+          "dimension": "ENG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Me siento conectado/a emocionalmente con la misión de la organización."
+        },
+        {
+          "key": "item_078",
+          "code": "ENG-3",
+          "dimension": "ENG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Estoy dispuesto/a a dar un esfuerzo adicional por el éxito de la organización."
+        },
+        {
+          "key": "item_079",
+          "code": "ENG-4",
+          "dimension": "ENG",
+          "is_anchor": false,
+          "is_reverse": true,
+          "label": "Frecuentemente me siento desmotivado/a y desconectado/a de mi trabajo."
+        },
+        {
+          "key": "item_095",
+          "code": "ENG-5",
+          "dimension": "ENG",
+          "is_anchor": false,
+          "is_reverse": false,
+          "label": "Resulta estimulante y desafiante trabajar en esta organización."
+        }
+      ]
+    },
+    {
+      "id": "enps",
+      "title": "Recomendación",
+      "blocks": [
+        {
+          "key": "enps_score",
+          "type": "rating_0_10",
+          "label": "En una escala de 0 a 10, ¿qué tan probable es que recomiendes esta organización como un lugar para trabajar?",
+          "required": true,
+          "target": { "type": "enps" },
+          "scale_min": 0,
+          "scale_max": 10,
+          "left_label": "Nada probable",
+          "right_label": "Muy probable"
+        }
+      ]
+    },
+    {
+      "id": "open-questions",
+      "title": "Preguntas abiertas",
+      "subtitle": "Tus respuestas abiertas son confidenciales. Son analizadas de forma agregada.",
+      "blocks": [
+        {
+          "key": "open_strength",
+          "type": "long_text",
+          "label": "¿Cuál consideras que es la mayor fortaleza de la organización?",
+          "required": false,
+          "placeholder": "Escribe tu respuesta...",
+          "target": { "type": "open_response", "meta": "strength" }
+        },
+        {
+          "key": "open_improvement",
+          "type": "long_text",
+          "label": "¿Qué aspecto consideras que la organización debería mejorar?",
+          "required": false,
+          "placeholder": "Escribe tu respuesta...",
+          "target": { "type": "open_response", "meta": "improvement" }
+        },
+        {
+          "key": "open_general",
+          "type": "long_text",
+          "label": "¿Hay algo más que quieras compartir?",
+          "required": false,
+          "placeholder": "Escribe tu respuesta...",
+          "target": { "type": "open_response", "meta": "general" }
+        }
+      ]
+    }
+  ],
+  "thanks": {
+    "heading": "¡Gracias por tu participación!",
+    "body": "Tu opinión es muy valiosa. Los resultados se analizan de forma agregada y confidencial."
+  }
+}

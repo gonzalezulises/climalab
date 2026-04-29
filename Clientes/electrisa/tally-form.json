@@ -1,0 +1,1122 @@
+{
+  "form": {
+    "title": "ClimaLab — Electrisa",
+    "language": "es",
+    "progress_bar": true,
+    "save_progress": false
+  },
+  "welcome_page": {
+    "title": "Encuesta de Clima Organizacional",
+    "body": "Tu opinión es **confidencial y anónima**. Responde con honestidad; no hay respuestas correctas o incorrectas.\n\n- Escala: 1 (Totalmente en desacuerdo) a 5 (Totalmente de acuerdo)\n- Duración estimada: **20 minutos**\n- Puedes avanzar a tu ritmo"
+  },
+  "thank_you_page": {
+    "body": "**¡Gracias por tu participación!**\n\nTu opinión es muy valiosa. Los resultados se analizan de forma agregada y confidencial."
+  },
+  "blocks": [
+    {
+      "title": "Datos demográficos",
+      "questions": [
+        {
+          "type": "dropdown",
+          "label": "¿En qué departamento trabajas?",
+          "required": true,
+          "options": [
+            "ADMINISTRACIÓN",
+            "BODEGA",
+            "CAJA",
+            "CAPITAL HUMANO",
+            "COMPRAS",
+            "CONTABILIDAD",
+            "CRÉDITOS Y COBROS",
+            "ELECTRICAST",
+            "FINANZAS",
+            "GERENCIA",
+            "GERENTE DE SUCURSALES",
+            "I.T.",
+            "PROYECTOS E INDUSTRIAS",
+            "SERVICIO TÉCNICO",
+            "SOLAR",
+            "TRÁFICO Y LOGÍSTICA",
+            "VENTAS"
+          ]
+        },
+        {
+          "type": "dropdown",
+          "label": "¿En qué sucursal trabajas?",
+          "required": true,
+          "options": [
+            "24 DE DICIEMBRE",
+            "BUGABA",
+            "CACIQUE",
+            "CASA MATRIZ",
+            "CHITRE",
+            "CHORRERA",
+            "COSTA RICA",
+            "DAVID",
+            "INCORSA",
+            "SANTIAGO"
+          ]
+        },
+        {
+          "type": "single_choice",
+          "label": "¿Cuánto tiempo llevas en la organización?",
+          "required": true,
+          "options": ["Menos de 2 años", "De 3 a 5 años", "De 6 a 10 años", "Más de 10 años"]
+        },
+        {
+          "type": "single_choice",
+          "label": "Género",
+          "required": true,
+          "options": ["femenino", "masculino"]
+        }
+      ]
+    },
+    {
+      "title": "Bienestar",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "Me siento orgulloso/a de pertenecer a esta organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Recomendaría esta organización como un buen lugar para trabajar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los valores de la organización son compatibles con los míos.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Frecuentemente considero buscar empleo en otra organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi trabajo tiene un propósito claro que me motiva.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Entiendo cómo mi trabajo contribuye a los objetivos de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las tareas que realizo son significativas y relevantes.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi trabajo aporta poco impacto real a la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Siento que mi trabajo contribuye positivamente a la vida de otras personas o a la comunidad.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Me siento seguro/a emocional y psicológicamente en mi lugar de trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización se preocupa genuinamente por mi bienestar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Puedo expresar mis preocupaciones sin temor a represalias.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización, cometer un error puede tener consecuencias desproporcionadas.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las instalaciones y el entorno físico facilitan un buen ambiente de trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Puedo mantener un equilibrio saludable entre mi vida personal y laboral.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi carga de trabajo me permite cumplir con mis responsabilidades personales.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización respeta mi tiempo fuera del horario laboral.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Frecuentemente siento que el trabajo invade mi tiempo personal.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En mi equipo nos apoyamos mutuamente cuando alguien tiene dificultades.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización ofrece recursos adecuados para el bienestar de sus empleados.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mis compañeros se preocupan genuinamente por mi bienestar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Cuando tengo un problema personal, me cuesta encontrar apoyo en el trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Confío en la honestidad y buenas intenciones de mis compañeros de trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi carga de trabajo es manejable y razonable.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los procesos y sistemas de la organización facilitan mi trabajo en lugar de obstaculizarlo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La presión por cumplir plazos en mi puesto es excesiva.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Cuento con el tiempo suficiente para realizar mi trabajo con calidad.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        }
+      ]
+    },
+    {
+      "title": "Dirección y Supervisión",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor me brinda retroalimentación específica que me ayuda a mejorar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Puedo acudir a mi supervisor cuando necesito apoyo o tengo una dificultad.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor demuestra con sus acciones lo que espera del equipo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor se interesa genuinamente en mi crecimiento profesional.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Me cuesta acceder a mi supervisor cuando lo necesito.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor cumple los compromisos que adquiere con el equipo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo la libertad de decidir cómo organizar y realizar mi trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Puedo tomar decisiones importantes relacionadas con mis tareas sin aprobación excesiva.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor confía en mi criterio para resolver problemas.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Siento que me supervisan en exceso, sin permitirme trabajar de forma independiente.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor nos involucra en las decisiones que afectan nuestro trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La comunicación en la organización es clara, oportuna y transparente.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo acceso a la información que necesito para hacer bien mi trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Existen canales efectivos para expresar mis ideas y sugerencias.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Me entero de decisiones importantes por rumores en lugar de por canales oficiales.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización, dar y recibir retroalimentación constructiva es algo normal y valorado.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Confío en las decisiones que toma la alta dirección de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La dirección actúa de manera coherente con lo que comunica.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo confianza en la dirección estratégica de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La dirección oculta información sobre la situación real de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Todas las personas son tratadas con respeto independientemente de su nivel jerárquico.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo claridad sobre mis responsabilidades y los límites de mi rol.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Sé exactamente lo que se espera de mí en mi puesto de trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Comprendo cómo mi área contribuye a la dirección estratégica de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las expectativas sobre mi desempeño son confusas o contradictorias.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las tareas que realizo corresponden a lo que se espera de mi rol.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Para verificar que estás leyendo con atención, selecciona \"Totalmente de acuerdo\".",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        }
+      ]
+    },
+    {
+      "title": "Compensación",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "Considero que mi compensación es justa en relación con mi trabajo y responsabilidades.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi salario es competitivo comparado con posiciones similares en el mercado.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Entiendo claramente cómo se determina mi compensación.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi salario es menor a lo que merece el trabajo que realizo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Recibo reconocimiento oportuno cuando hago un buen trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización valora y celebra los logros de sus empleados.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi supervisor reconoce mis contribuciones al equipo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Mi esfuerzo adicional pasa desapercibido en esta organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los beneficios que ofrece la organización responden a mis necesidades.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Conozco y aprovecho los beneficios disponibles para mí.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización invierte en beneficios que mejoran mi calidad de vida.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los beneficios de esta organización son inferiores a los de empresas similares.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los procesos de promoción en la organización son transparentes y justos.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Todos los empleados tienen las mismas oportunidades de desarrollo y ascenso.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las decisiones de promoción se basan en el mérito y desempeño.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización, los ascensos dependen más de relaciones que de resultados.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Si considero que he sido tratado/a injustamente, confío en que existe un proceso justo para ser escuchado/a.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En general, las oportunidades y recompensas se distribuyen de forma justa en relación con el aporte de cada persona.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las personas son tratadas con justicia independientemente de su edad.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las personas son tratadas con justicia independientemente de su raza o etnia.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las personas son tratadas con justicia independientemente de su género.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las personas son tratadas con justicia independientemente de su orientación sexual.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las personas son tratadas con justicia independientemente de su condición socioeconómica.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "He presenciado situaciones en las que alguien fue tratado de forma diferente por sus características personales.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        }
+      ]
+    },
+    {
+      "title": "Cultura",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "En mi equipo trabajamos de manera colaborativa para alcanzar los objetivos.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Existe un fuerte sentido de compañerismo en mi equipo de trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los conflictos en mi equipo se resuelven de manera constructiva.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En mi equipo, cada quien trabaja de forma aislada sin colaboración real.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Cuando alguien se integra al equipo, nos aseguramos de que se sienta bienvenido/a y apoyado/a.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización celebramos los logros y momentos especiales como equipo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización se fomenta la innovación y las nuevas ideas.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Me siento seguro/a proponiendo ideas nuevas, aunque puedan fallar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización se adapta eficazmente a los cambios del entorno.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Contamos con herramientas y recursos para implementar mejoras.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las nuevas ideas suelen quedar sin implementarse.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En mi equipo, expresar una opinión diferente a la mayoría es visto como una contribución valiosa.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo claridad sobre los objetivos que debo alcanzar en mi puesto.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Cuento con los recursos necesarios para lograr los resultados esperados.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los logros del equipo son reconocidos y compartidos.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los objetivos que me piden alcanzar superan los recursos que tengo disponibles.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización, el compromiso con la satisfacción de nuestros clientes o usuarios es claro y compartido.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización me ofrece oportunidades reales de desarrollo profesional.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Tengo un plan de carrera claro dentro de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Las capacitaciones que recibo son relevantes para mi crecimiento.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Siento que estoy estancado/a profesionalmente en esta organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "En esta organización aprendemos de nuestros errores y aplicamos esas lecciones para mejorar.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "El conocimiento y las mejores prácticas se comparten efectivamente entre equipos.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "La organización invierte en la mejora continua de sus procesos y prácticas.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Los errores se ocultan en lugar de usarse como oportunidades de mejora.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Esta es una pregunta de verificación, selecciona \"Totalmente en desacuerdo\".",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        }
+      ]
+    },
+    {
+      "title": "Engagement y Compromiso",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "Me siento entusiasmado/a con mi trabajo cada día.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Me siento conectado/a emocionalmente con la misión de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Estoy dispuesto/a a dar un esfuerzo adicional por el éxito de la organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Frecuentemente me siento desmotivado/a y desconectado/a de mi trabajo.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        },
+        {
+          "type": "linear_scale",
+          "label": "Resulta estimulante y desafiante trabajar en esta organización.",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "min_label": "Totalmente en desacuerdo",
+          "max_label": "Totalmente de acuerdo"
+        }
+      ]
+    },
+    {
+      "title": "Recomendación (eNPS)",
+      "questions": [
+        {
+          "type": "linear_scale",
+          "label": "En una escala de 0 a 10, ¿qué tan probable es que recomiendes esta organización como un lugar para trabajar?",
+          "required": true,
+          "min": 0,
+          "max": 10,
+          "min_label": "Nada probable",
+          "max_label": "Muy probable"
+        }
+      ]
+    },
+    {
+      "title": "Preguntas abiertas",
+      "questions": [
+        {
+          "type": "long_text",
+          "label": "¿Cuál consideras que es la mayor fortaleza de la organización?",
+          "placeholder": "Escribe tu respuesta...",
+          "required": false
+        },
+        {
+          "type": "long_text",
+          "label": "¿Qué aspecto consideras que la organización debería mejorar?",
+          "placeholder": "Escribe tu respuesta...",
+          "required": false
+        },
+        {
+          "type": "long_text",
+          "label": "¿Hay algo más que quieras compartir?",
+          "placeholder": "Escribe tu respuesta...",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "redirectOnCompletion": null,
+    "submissionsLimit": null
+  }
+}
