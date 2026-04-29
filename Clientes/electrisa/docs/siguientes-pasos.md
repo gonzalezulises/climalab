@@ -4,9 +4,9 @@ Form Tally creado como **DRAFT**. Estos son los pasos para dejarlo productivo y 
 
 ## Estado actual
 
-- **Form ID**: `kdRj8R`
-- **Editor**: https://tally.so/forms/kdRj8R/edit
-- **Link público (al publicar)**: https://tally.so/r/kdRj8R
+- **Form ID**: `rj0ZWL`
+- **Editor**: https://tally.so/forms/rj0ZWL/edit
+- **Link público (al publicar)**: https://tally.so/r/rj0ZWL
 - **Contenido**: 117 preguntas en 8 páginas
   - 4 demográficas: departamento (17 opciones), sucursal (10), tenure (4 rangos), género (2 opciones)
   - **Fuente oficial**: `DATA PARA ENCUESTA 2026.xls` (n=310 empleados, hoja `DATA ENCUESTA`)
@@ -16,6 +16,8 @@ Form Tally creado como **DRAFT**. Estos son los pasos para dejarlo productivo y 
   - 3 preguntas abiertas (fortaleza, mejora, general)
 - **Spec submitted a Tally**: [`../tally-form.json`](../tally-form.json)
 - **Metadata semántica** (con `key`, `dimension`, `is_anchor`, `is_reverse`, `target`): [`../form-metadata.json`](../form-metadata.json)
+
+> **Form anterior `kdRj8R` preservado** (PUBLISHED, 6 submissions). No se borra para no perder data. El form productivo a partir de ahora es `rj0ZWL`. Si se quiere cerrar el viejo para que no acepte más respuestas, hacer PATCH `isClosed: true` desde la UI o API.
 
 ## Cambios aplicados (round 1 de feedback)
 
@@ -36,17 +38,17 @@ Form Tally creado como **DRAFT**. Estos son los pasos para dejarlo productivo y 
   - `INN-5`: "Las nuevas ideas suelen quedar sin implementarse."
   - `RES-4`: "Los objetivos que me piden alcanzar superan los recursos que tengo disponibles."
 
-> **Importante**: estos JSONs son la fuente de verdad local. El form ya creado en Tally (`kdRj8R`) **no se actualiza automáticamente**. Para reflejar los cambios hay que (a) reenviar el spec con la skill `tally-form` (puede crear un form nuevo) o (b) editar manualmente en el editor visual.
+> **Importante**: estos JSONs son la fuente de verdad local. El form ya creado en Tally (`rj0ZWL`) **no se actualiza automáticamente**. Para reflejar los cambios hay que (a) reenviar el spec con la skill `tally-form` (puede crear un form nuevo) o (b) editar manualmente en el editor visual.
 
 ## Pasos para cerrar el bucle
 
 ### 1. Publicar el form
 
-1. Entrar a https://tally.so/forms/kdRj8R/edit
+1. Entrar a https://tally.so/forms/rj0ZWL/edit
 2. Aplicar logo y colores de Electrisa (branding no expuesto por API — solo UI)
 3. Revisar orden y copy
 4. **Publicar**
-5. Link público: `https://tally.so/r/kdRj8R`
+5. Link público: `https://tally.so/r/rj0ZWL`
 
 ### 2. Configurar webhook en Tally
 
@@ -71,9 +73,9 @@ La tabla `tally_form_mappings(tally_form_id, tally_field_key, target_type, targe
 
 **Inputs para armar el SQL:**
 
-- `tally_form_id` = `kdRj8R`
+- `tally_form_id` = `rj0ZWL`
 - `campaign_id` del punto 3
-- `tally_field_key` de cada pregunta → hay que obtenerlos con `GET https://api.tally.so/forms/kdRj8R` y extraer los UUIDs de los bloques TITLE/INPUT
+- `tally_field_key` de cada pregunta → hay que obtenerlos con `GET https://api.tally.so/forms/rj0ZWL` y extraer los UUIDs de los bloques TITLE/INPUT
 - `item_id` de cada ítem Core v4.0 → `SELECT id, code FROM items WHERE instrument_id = 'b0000000-0000-0000-0000-000000000001'`
 - El orden de preguntas en Tally respeta `form-metadata.json` (cross-reference por `key` / `code`)
 
