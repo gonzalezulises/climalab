@@ -111,15 +111,25 @@ def fetch_campaign_data(
     meta_map = {r["id"]: r for r in resp_list}
 
     all_responses: list[dict] = []
-    for i in range(0, len(resp_ids), 50):
-        batch = resp_ids[i : i + 50]
-        res = (
-            sb.table("responses")
-            .select("respondent_id, item_id, score")
-            .in_("respondent_id", batch)
-            .execute()
-        )
-        all_responses.extend(res.data or [])
+    page_size = 1000
+    for i in range(0, len(resp_ids), 200):
+        batch = resp_ids[i : i + 200]
+        # Paginate by row range: each batch yields ~109 rows per respondent,
+        # well above PostgREST's default 1000-row cap.
+        start = 0
+        while True:
+            res = (
+                sb.table("responses")
+                .select("respondent_id, item_id, score")
+                .in_("respondent_id", batch)
+                .range(start, start + page_size - 1)
+                .execute()
+            )
+            rows = res.data or []
+            all_responses.extend(rows)
+            if len(rows) < page_size:
+                break
+            start += page_size
 
     resp_dim_scores: dict[str, dict[str, list[float]]] = {
         rid: {c: [] for c in dim_codes} for rid in resp_ids

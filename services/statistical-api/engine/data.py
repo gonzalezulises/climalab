@@ -86,16 +86,26 @@ def load_campaign_response_matrix(
 
     rids = respondent_df["id"].tolist()
     all_responses: list[dict] = []
-    batch_size = 500
+    batch_size = 200
+    page_size = 1000
     for i in range(0, len(rids), batch_size):
         batch = rids[i : i + batch_size]
-        r = (
-            sb.table("responses")
-            .select("respondent_id, item_id, score")
-            .in_("respondent_id", batch)
-            .execute()
-        )
-        all_responses.extend(r.data)
+        # Paginate by row range: PostgREST caps each response at ~1000 rows,
+        # and a batch of N respondents yields N*~109 response rows.
+        start = 0
+        while True:
+            r = (
+                sb.table("responses")
+                .select("respondent_id, item_id, score")
+                .in_("respondent_id", batch)
+                .range(start, start + page_size - 1)
+                .execute()
+            )
+            rows = r.data or []
+            all_responses.extend(rows)
+            if len(rows) < page_size:
+                break
+            start += page_size
 
     response_df = pd.DataFrame(all_responses)
     if response_df.empty:
