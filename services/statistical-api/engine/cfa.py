@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
-from semopy import Model
+from semopy import Model, calc_stats
 
 from engine.data import get_supabase, load_campaign_response_matrix, save_results
 
@@ -17,9 +17,18 @@ def build_cfa_model_spec(item_df: pd.DataFrame) -> str:
     dim_items = item_df.groupby("code")["id"].apply(list).to_dict()
     lines = []
     for dim_code, item_ids in sorted(dim_items.items()):
-        indicators = " + ".join(f"x_{iid[:8]}" for iid in item_ids)
+        indicators = " + ".join(f"x_{_iid(iid)}" for iid in item_ids)
         lines.append(f"{dim_code} =~ {indicators}")
     return "\n".join(lines)
+
+
+def _iid(item_id: str) -> str:
+    """Stable, unique semopy var name from an item UUID.
+
+    Uses the full UUID (dashes stripped); a short prefix collides when item
+    UUIDs share a common prefix (e.g. seed data all starts with e3000000).
+    """
+    return item_id.replace("-", "")
 
 
 def classify_fit(cfi: float, rmsea: float, srmr: float) -> str:
@@ -43,14 +52,22 @@ def run_cfa(campaign_id: str) -> dict:
             f"Respondientes insuficientes para CFA ({n} < {CFA_MIN_N})"
         )
 
-    col_map = {col: f"x_{col[:8]}" for col in matrix.columns}
+    col_map = {col: f"x_{_iid(col)}" for col in matrix.columns}
     matrix = matrix.rename(columns=col_map)
 
     model_spec = build_cfa_model_spec(item_df)
     model = Model(model_spec)
-    model.fit(matrix, obj="DWLS")
+    estimator_used = "DWLS"
+    try:
+        model.fit(matrix, obj="DWLS")
+    except Exception:
+        # semopy's DWLS solver can fail on wide multi-factor models; fall back
+        # to ML (more robust for Likert treated as continuous). Labelled below.
+        model = Model(model_spec)
+        model.fit(matrix)
+        estimator_used = "ML (fallback desde DWLS)"
 
-    stats = model.calc_stats()
+    stats = calc_stats(model)
     chi2 = float(stats.iloc[0].get("chi2", 0))
     df_val = float(stats.iloc[0].get("DoF", 0))
     cfi = float(stats.iloc[0].get("CFI", 0))
@@ -130,7 +147,7 @@ def run_cfa(campaign_id: str) -> dict:
         "factor_correlations": factor_corrs,
         "discriminant_issues": discriminant_issues,
         "sample_n": n,
-        "estimator": "DWLS",
+        "estimator": estimator_used,
         "computed_at": datetime.now(timezone.utc).isoformat(),
         "engine_version": ENGINE_VERSION,
     }
