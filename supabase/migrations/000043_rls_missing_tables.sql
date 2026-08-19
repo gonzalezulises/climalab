@@ -9,7 +9,8 @@
 -- This migration documents the policies applied.
 
 -- 1. analysis_runs
-CREATE POLICY IF NOT EXISTS "authenticated can view org analysis_runs"
+DROP POLICY IF EXISTS "authenticated can view org analysis_runs" ON analysis_runs;
+CREATE POLICY "authenticated can view org analysis_runs"
   ON analysis_runs FOR SELECT
   TO authenticated
   USING (
@@ -20,14 +21,16 @@ CREATE POLICY IF NOT EXISTS "authenticated can view org analysis_runs"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "super_admin can manage analysis_runs"
+DROP POLICY IF EXISTS "super_admin can manage analysis_runs" ON analysis_runs;
+CREATE POLICY "super_admin can manage analysis_runs"
   ON analysis_runs FOR ALL
   TO authenticated
   USING (get_user_role() = 'super_admin')
   WITH CHECK (get_user_role() = 'super_admin');
 
 -- 2. analysis_run_respondent_quality
-CREATE POLICY IF NOT EXISTS "authenticated can view org respondent_quality"
+DROP POLICY IF EXISTS "authenticated can view org respondent_quality" ON analysis_run_respondent_quality;
+CREATE POLICY "authenticated can view org respondent_quality"
   ON analysis_run_respondent_quality FOR SELECT
   TO authenticated
   USING (
@@ -39,14 +42,16 @@ CREATE POLICY IF NOT EXISTS "authenticated can view org respondent_quality"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "super_admin can manage respondent_quality"
+DROP POLICY IF EXISTS "super_admin can manage respondent_quality" ON analysis_run_respondent_quality;
+CREATE POLICY "super_admin can manage respondent_quality"
   ON analysis_run_respondent_quality FOR ALL
   TO authenticated
   USING (get_user_role() = 'super_admin')
   WITH CHECK (get_user_role() = 'super_admin');
 
 -- 3. campaign_instruments (read-only for users, writes via trigger)
-CREATE POLICY IF NOT EXISTS "authenticated can view org campaign_instruments"
+DROP POLICY IF EXISTS "authenticated can view org campaign_instruments" ON campaign_instruments;
+CREATE POLICY "authenticated can view org campaign_instruments"
   ON campaign_instruments FOR SELECT
   TO authenticated
   USING (
@@ -57,26 +62,30 @@ CREATE POLICY IF NOT EXISTS "authenticated can view org campaign_instruments"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "super_admin can manage campaign_instruments"
+DROP POLICY IF EXISTS "super_admin can manage campaign_instruments" ON campaign_instruments;
+CREATE POLICY "super_admin can manage campaign_instruments"
   ON campaign_instruments FOR ALL
   TO authenticated
   USING (get_user_role() = 'super_admin')
   WITH CHECK (get_user_role() = 'super_admin');
 
 -- 4. dimension_taxonomy (global read, admin write)
-CREATE POLICY IF NOT EXISTS "authenticated can view dimension_taxonomy"
+DROP POLICY IF EXISTS "authenticated can view dimension_taxonomy" ON dimension_taxonomy;
+CREATE POLICY "authenticated can view dimension_taxonomy"
   ON dimension_taxonomy FOR SELECT
   TO authenticated
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "super_admin can manage dimension_taxonomy"
+DROP POLICY IF EXISTS "super_admin can manage dimension_taxonomy" ON dimension_taxonomy;
+CREATE POLICY "super_admin can manage dimension_taxonomy"
   ON dimension_taxonomy FOR ALL
   TO authenticated
   USING (get_user_role() = 'super_admin')
   WITH CHECK (get_user_role() = 'super_admin');
 
 -- 5. campaign_ai_insights
-CREATE POLICY IF NOT EXISTS "authenticated can view org ai_insights"
+DROP POLICY IF EXISTS "authenticated can view org ai_insights" ON campaign_ai_insights;
+CREATE POLICY "authenticated can view org ai_insights"
   ON campaign_ai_insights FOR SELECT
   TO authenticated
   USING (
@@ -87,7 +96,8 @@ CREATE POLICY IF NOT EXISTS "authenticated can view org ai_insights"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "org_admin can manage ai_insights"
+DROP POLICY IF EXISTS "org_admin can manage ai_insights" ON campaign_ai_insights;
+CREATE POLICY "org_admin can manage ai_insights"
   ON campaign_ai_insights FOR ALL
   TO authenticated
   USING (
@@ -108,7 +118,8 @@ CREATE POLICY IF NOT EXISTS "org_admin can manage ai_insights"
   );
 
 -- 6. campaign_ai_generation_events
-CREATE POLICY IF NOT EXISTS "authenticated can view org ai_generation_events"
+DROP POLICY IF EXISTS "authenticated can view org ai_generation_events" ON campaign_ai_generation_events;
+CREATE POLICY "authenticated can view org ai_generation_events"
   ON campaign_ai_generation_events FOR SELECT
   TO authenticated
   USING (
@@ -119,7 +130,8 @@ CREATE POLICY IF NOT EXISTS "authenticated can view org ai_generation_events"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "org_admin can insert ai_generation_events"
+DROP POLICY IF EXISTS "org_admin can insert ai_generation_events" ON campaign_ai_generation_events;
+CREATE POLICY "org_admin can insert ai_generation_events"
   ON campaign_ai_generation_events FOR INSERT
   TO authenticated
   WITH CHECK (
