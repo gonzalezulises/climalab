@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "server-only": path.resolve(__dirname, "./vitest-mocks/server-only.ts"),
     },
     exclude: ["node_modules", "supabase/tests/**"],
   },
