@@ -11,7 +11,7 @@
 -- 1. analysis_runs
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'analysis_runs' 
     AND policyname = 'authenticated can view org analysis_runs'
   ) THEN
@@ -30,7 +30,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'analysis_runs' 
     AND policyname = 'super_admin can manage analysis_runs'
   ) THEN
@@ -45,7 +45,7 @@ END $$;
 -- 2. analysis_run_respondent_quality
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'analysis_run_respondent_quality' 
     AND policyname = 'authenticated can view org respondent_quality'
   ) THEN
@@ -65,7 +65,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'analysis_run_respondent_quality' 
     AND policyname = 'super_admin can manage respondent_quality'
   ) THEN
@@ -80,7 +80,7 @@ END $$;
 -- 3. campaign_instruments (read-only for users, writes via trigger)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_instruments' 
     AND policyname = 'authenticated can view org campaign_instruments'
   ) THEN
@@ -99,7 +99,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_instruments' 
     AND policyname = 'super_admin can manage campaign_instruments'
   ) THEN
@@ -114,7 +114,7 @@ END $$;
 -- 4. dimension_taxonomy (global read, admin write)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'dimension_taxonomy' 
     AND policyname = 'authenticated can view dimension_taxonomy'
   ) THEN
@@ -127,7 +127,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'dimension_taxonomy' 
     AND policyname = 'super_admin can manage dimension_taxonomy'
   ) THEN
@@ -142,7 +142,7 @@ END $$;
 -- 5. campaign_ai_insights
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_ai_insights' 
     AND policyname = 'authenticated can view org ai_insights'
   ) THEN
@@ -161,7 +161,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_ai_insights' 
     AND policyname = 'org_admin can manage ai_insights'
   ) THEN
@@ -190,7 +190,7 @@ END $$;
 -- 6. campaign_ai_generation_events
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_ai_generation_events' 
     AND policyname = 'authenticated can view org ai_generation_events'
   ) THEN
@@ -209,7 +209,7 @@ END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
+    SELECT 1 FROM pg_catalog.pg_policies 
     WHERE tablename = 'campaign_ai_generation_events' 
     AND policyname = 'org_admin can insert ai_generation_events'
   ) THEN
