@@ -315,3 +315,6 @@ Optional (Background AI jobs + Alerting):
 - **Decisiones:** `DECISIONS.md` append-only.
 - **Política:** Build libre, deploy con compuerta (POLITICA.md de sdlc-ai-nativo,
   D10). No editar `.github/workflows/required-quality.yml`.
+- **Gates y Agent Notes:** `make gates` corre el registro de verificadores
+  (quick/full). Toda PR no trivial trae o actualiza una Agent Note en
+  `.agents/notes/{lifecycle}/{clase}/` (reglas en `.agents/notes/README.md`).
