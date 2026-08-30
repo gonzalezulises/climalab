@@ -305,3 +305,13 @@ Optional (Background AI jobs + Alerting):
 - `AI_INSIGHT_HOOK_SECRET` — Shared secret for `x-hook-secret` header on `/api/jobs/process-ai-insight`. **If set in production, required** — endpoint returns 401 without it. If absent, `generateAllInsights` falls back to sync execution.
 - `TELEGRAM_BOT_TOKEN` — Telegram Bot API token for circuit breaker alerts. If absent, alerting is silently skipped.
 - `TELEGRAM_ALERT_CHAT_ID` — Chat ID to send alerts to (matches `TELEGRAM_BOT_TOKEN` bot).
+
+## Harness (gobernanza de agentes)
+
+- **Verificación:** `make check` = `npm ci && npm run lint && npm run test && npm run build`.
+  Debe salir 0 antes de cada commit; en CI es el check requerido `Required quality`.
+- **Estado durable:** `feature_list.json` (una feature `active`; `passing` solo lo
+  escribe `scripts/verify-feature.sh`) y `PROGRESS.md` al cierre de sesión.
+- **Decisiones:** `DECISIONS.md` append-only.
+- **Política:** Build libre, deploy con compuerta (POLITICA.md de sdlc-ai-nativo,
+  D10). No editar `.github/workflows/required-quality.yml`.

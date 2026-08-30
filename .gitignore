@@ -41,3 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# awareness email — recipient lists and logs (PII, never commit)
+/scripts/awareness-email/list.csv
+/scripts/awareness-email/list-*.csv
+/scripts/awareness-email/logs/
+
+# harness runtime artifacts
+.harness/traces/traces.jsonl

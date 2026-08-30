@@ -1,0 +1,38 @@
+{
+  "project": "climalab",
+  "last_updated": "2026-08-29",
+  "rules": {
+    "single_active_feature": true,
+    "passing_requires_evidence": true,
+    "state_set_by_harness_only": true,
+    "completable_in_one_session": true,
+    "budgets_enforced": true
+  },
+  "states": {
+    "not_started": "Work has not begun.",
+    "active": "The current task. Only one feature may be active at a time.",
+    "blocked": "Cannot continue until a documented blocker is resolved.",
+    "passing": "Verification ran, evidence is recorded."
+  },
+  "budget_defaults": {
+    "review_rounds_max": 2,
+    "repeated_blocker_max": 3,
+    "stop_condition": "Stop, record the blocker in PROGRESS.md, and escalate to a human. Do not retry, do not refactor around it, do not open a new approach."
+  },
+  "features": [
+    {
+      "id": "F01",
+      "priority": 1,
+      "name": "Stats pipeline & RLS fixes",
+      "description": "Trabajo en curso de la rama fix/stats-pipeline-and-rls: pipeline estadístico (CFA vía stats.rizo.ma) y correcciones RLS. Cerrar, verificar y fusionar a main.",
+      "state": "active",
+      "evidence": null,
+      "layers": ["lint", "test", "build"],
+      "budgets": {
+        "review_rounds_max": 2,
+        "repeated_blocker_max": 3,
+        "stop_condition": "Stop, record the blocker in PROGRESS.md, and escalate to a human. Do not retry, do not refactor around it, do not open a new approach."
+      }
+    }
+  ]
+}
