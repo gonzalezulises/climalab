@@ -11,7 +11,7 @@ Longer decisions get their own file in `docs/decisions/`.
 
 ---
 
-## 2026-08-30 — Adopt the harness
+## 2026-10-30 — Adopt the harness
 
 **Context.** Agent sessions were starting from zero: rediscovering how to build, what was
 half-finished, and what "done" meant.

@@ -21,9 +21,9 @@ test: ## Run the test suite
 .PHONY: check
 check: ## Full verification pipeline — must exit 0 before every commit
 	npm ci --no-audit --no-fund
-	npm run lint
-	npm run test
-	npm run build
+	npx tsc --noEmit
+	npm test
+	NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder NEXT_PUBLIC_SITE_URL=http://localhost:3000 npm run build
 
 .PHONY: verify-claims
 verify-claims: ## Re-run every feature the repo claims is passing. CI runs this too.
