@@ -1,0 +1,7 @@
+{
+  "project": "climalab-gate",
+  "last_updated": "2026-10-30",
+  "level": "lite",
+  "note": "Empty on purpose: the lite harness carries no feature ceremony. verify-claims reports NO_CLAIMS. Re-run harness-init --level full to adopt WIP=1, budgets and evidence.",
+  "features": []
+}
